@@ -1,0 +1,175 @@
+/* CSS Custom Properties - Polaris-like variables */
+:root {
+  --space-100: 0.25rem;
+  /* 4px */
+  --space-200: 0.5rem;
+  /* 8px */
+  --space-300: 0.75rem;
+  /* 12px */
+  --space-400: 1rem;
+  /* 16px */
+  --space-500: 1.25rem;
+  /* 20px */
+
+  --color-border: #E1E3E5;
+  --color-border-secondary: #8C9196;
+  --color-border-focus: #458FFF;
+  --color-border-emphasis: #637381;
+
+  --color-bg: #FFFFFF;
+  --color-bg-surface: #FAFAFA;
+  --color-bg-surface-secondary: #F6F6F7;
+  --color-bg-inverse: #000000;
+
+  --border-radius-200: 8px;
+  --border-radius-300: 12px;
+}
+
+/* ********** MY STYLE ************ */
+/* ********** MY STYLE ************ */
+/* ********** MY STYLE ************ */
+/* ********** MY STYLE ************ */
+/* ********** MY STYLE ************ */
+.index {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.content {
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.gridContainer {
+  display: grid;
+  grid-template-areas:
+    "header header"
+    "settings preview"
+    "toggle toggle";
+  grid-template-columns: 1fr 400px;
+  grid-template-rows: auto 1fr auto;
+  gap: 16px;
+  min-height: 100vh;
+}
+
+
+/* Grid Container */
+.gridContainer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-400);
+  width: 100%;
+}
+
+/* Grid Header */
+.gridHeader {
+  grid-column: 1 / -1;
+  border: 2px dashed var(--color-border-secondary);
+  padding: var(--space-400);
+  border-radius: var(--border-radius-200);
+  background: var(--color-bg-surface);
+}
+
+/* Grid Settings */
+.gridSettings {
+  flex-direction: column;
+  gap: var(--space-400);
+}
+
+/* Grid Preview */
+.gridPreview {
+  flex-direction: column;
+  gap: var(--space-400);
+}
+
+/* Live Preview Styles */
+.previewContainer {
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-300);
+  background: var(--color-bg);
+  padding: var(--space-400);
+  transition: all 0.3s ease;
+}
+
+
+.gridHeader {
+  grid-area: header;
+  padding: 16px 0;
+  border-bottom: 1px solid #E1E3E5;
+}
+
+.gridSettings {
+  grid-area: settings;
+  display: inline;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.fixedPreview {
+  grid-area: preview;
+  position: sticky;
+  top: 16px;
+  height: fit-content;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+}
+
+.previewToggle {
+  grid-area: toggle;
+  display: none;
+  justify-content: center;
+  padding: 16px 0;
+}
+
+/* Preview Style */
+.Polaris-ColorPicker {
+  height: 1rem !important;
+  width: 1rem !important;
+}
+
+.cardPreviewShow {
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.071);
+  font-size: 16.8px;
+  color: #000;
+}
+
+.livePreviewStyle input[type="text"] {
+  width: 100% !important;
+}
+
+.discountDiv .discountButton {
+  padding: 10px 16px !important;
+  margin-top: 24px !important;
+}
+
+
+
+@media (max-width: 768px) {
+  .gridContainer {
+    grid-template-areas:
+      "header"
+      "settings"
+      "preview"
+      "toggle";
+    grid-template-columns: 1fr;
+  }
+
+  .fixedPreview {
+    position: relative;
+    top: 0;
+    max-height: none;
+  }
+
+  .previewToggle {
+    display: flex;
+  }
+
+  .mobileHidden {
+    display: none;
+  }
+}
+

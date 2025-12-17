@@ -1,0 +1,20 @@
+/* styles.module.css (اختياري) */
+.separator {
+  height: 1px;
+  background-color: var(--p-border-subdued);
+  margin: 20px 0;
+}
+
+.sectionTitle {
+  color: var(--p-text);
+  margin-bottom: 8px;
+}
+
+.subduedText {
+  color: var(--p-text-subdued);
+  font-size: 14px;
+}
+
+.margin-bottom-50 {
+  margin-bottom: 50px;
+}

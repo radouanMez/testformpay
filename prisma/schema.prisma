@@ -1,0 +1,452 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Note that some adapters may set a maximum length for the String type by default, please ensure your strings are long
+// enough when changing adapters.
+// See https://www.prisma.io/docs/orm/reference/prisma-schema-reference#string for more information
+datasource db {
+  provider = "sqlite"
+  url      = "file:dev.sqlite"
+}
+
+// ========================================
+// 🎯 ENUMS
+// ========================================
+
+enum FormType {
+  POPUP
+  EMBEDDED
+}
+
+enum FormStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum FieldType {
+  SECTION
+  INPUT
+  BUTTON
+}
+
+enum SubmissionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+// ========================================
+// 🎯 UPSELLS ENUMS
+// ========================================
+
+enum UpsellType {
+  ONE_CLICK
+  ONE_TICK
+}
+
+enum UpsellStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum DiscountType {
+  NONE
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+enum DisplayTime {
+  PRE_PURCHASE
+  POST_PURCHASE
+}
+
+enum TargetType {
+  SPECIFIC_PRODUCTS
+  ALL_PRODUCTS
+  CATEGORIES
+  COLLECTIONS
+}
+
+// ========================================
+// 👤 USER & SESSION MODELS
+// ========================================
+
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  shop         String        @unique
+  name         String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  sessions     Session[]
+  forms        Form[]
+  formConfigs  FormConfig[]
+  formSubmission  FormSubmission[]
+  shippingSettings ShippingSettings? 
+  googleSheetsIntegration GoogleSheetsIntegration? 
+  orders       Order[] 
+  upsells      Upsell[]
+  downsells       Downsell[]
+  quantityOffers  QuantityOffer[]
+  userBlockingSettings UserBlockingSettings[]
+
+  @@map("users")
+}
+
+model Session {
+  id            String    @id @default(cuid())
+  shop          String
+  state         String
+  isOnline      Boolean   @default(false)
+  scope         String?
+  expires       DateTime?
+  accessToken   String
+  firstName     String?
+  lastName      String?
+  email         String?
+  accountOwner  Boolean   @default(false)
+  locale        String?
+  collaborator  Boolean?  @default(false)
+  emailVerified Boolean?  @default(false)
+  
+  userId   String?
+  user     User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  @@unique([shop, userId])
+  @@index([shop])
+
+  @@map("sessions")
+}
+
+// ========================================
+// 🧱 FORMS STRUCTURE
+// ========================================
+
+model Form {
+  id           String         @id @default(cuid())
+  userId       String
+  shop         String
+  name         String
+  formType     FormType       @default(POPUP)
+  status       FormStatus     @default(DRAFT)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  configs      FormConfig[]
+  submissions  FormSubmission[]
+  logs         FormLogs[]
+  @@index([shop])
+
+  @@map("forms")
+}
+
+// ========================================
+// 🧩 FORM CONFIG (core of builder)
+// ========================================
+
+model FormConfig {
+  id          String      @id @default(cuid())
+  formId      String
+  userId      String
+  shop        String
+
+  formType    FormType    @default(POPUP)
+  status      FormStatus  @default(DRAFT)
+  config      Json
+
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  form        Form        @relation(fields: [formId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fields      FormField[]
+  @@index([shop])
+
+  @@map("form_configs")
+}
+
+// ========================================
+// 🧾 FORM FIELDS
+// ========================================
+
+model FormField {
+  id            String     @id @default(cuid())
+  formConfigId  String
+  type          FieldType
+  label         String
+  position      Int
+  required      Boolean     @default(false)
+  visible       Boolean     @default(true)
+  movable       Boolean     @default(true)
+  settings      Json?
+
+  formConfig    FormConfig  @relation(fields: [formConfigId], references: [id], onDelete: Cascade)
+
+  @@index([formConfigId, position])
+  @@map("form_fields")
+}
+
+// ========================================
+// 📨 SUBMISSIONS & LOGS
+// ========================================
+
+model FormSubmission {
+  id             String           @id @default(cuid())
+  formId         String
+  submissionData Json?
+  userId         String
+  shop           String
+  status         SubmissionStatus @default(PENDING)
+  createdAt      DateTime         @default(now())
+
+  @@index([shop])
+
+  form        Form        @relation(fields: [formId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("form_submissions")
+}
+
+model FormLogs {
+  id         String   @id @default(cuid())
+  formId     String
+  shop       String
+  userId     String
+  configData Json
+  createdAt  DateTime @default(now())
+
+  @@index([shop])
+  form  Form  @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  @@map("form_logs")
+}
+
+model ShippingSettings {
+  id         String   @id @default(cuid())
+  shop       String
+  userId     String   @unique
+  rates      Json
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([shop]) 
+
+  @@map("shipping_settings")
+}
+
+model Order {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  shop        String
+  status      String   @default("pending")
+  orderNumber String?  @unique
+
+  customer    Json?
+  shipping    Json?
+  items       Json?
+  discounts   Json?
+  coupons     Json?
+  upsells     Json?
+  totals      Json?
+  metadata    Json?
+
+  customerEmail String?
+  customerPhone String?
+  clientIP      String?
+  totalAmount   Float?
+
+  appliedUpsells       Upsell[]
+  appliedDownsells     Downsell[]
+  appliedQuantityOffers QuantityOffer[]
+  
+  @@map("orders")
+}
+
+model GoogleSheetsIntegration {
+  id        String   @id @default(cuid())
+  shop      String   @unique
+  accessToken String
+  refreshToken String?
+  expiresAt DateTime?
+
+  spreadsheetId String?
+  sheetName String?
+  config   Json?
+  abandonedSheetName String?
+  enabled Boolean @default(false)
+
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([shop]) 
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ========================================
+// 💰 BILLING SYSTEM
+// ========================================
+
+model BillingPlan {
+  id        Int      @id @default(autoincrement())
+  name      String
+  price     Float
+  interval  String   @default("EVERY_30_DAYS")
+  features  Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subscriptions ShopSubscription[]
+}
+
+model ShopSubscription {
+  id           Int      @id @default(autoincrement())
+  shop         String   @unique
+  planId       Int
+  status       String   @default("pending") // pending | active | cancelled
+  subscriptionId String?
+  chargeId     String?  // Shopify charge ID
+  trialEndsAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  plan         BillingPlan  @relation(fields: [planId], references: [id])
+}
+
+model BillingLog {
+  id          Int      @id @default(autoincrement())
+  shop        String
+  action      String       // created | activated | cancelled
+  details     Json?
+  createdAt   DateTime     @default(now())
+}
+
+// ========================================
+// 💰 FRAUD SYSTEM
+// ========================================
+
+model UserBlockingSettings {
+  id        String   @id @default(cuid())
+  shop      String   @unique
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  orderLimitHours Int?       @default(24)
+  quantityLimit   Int?       @default(10)
+  blockedEmails   Json
+  blockedPhones   Json
+  blockedIPs      Json
+  allowedIPs      Json
+  blockedPostalCodes Json
+  allowedPostalCodes Json
+  blockMessage    String     @default("Your order has been blocked due to security reasons.")
+  postalCodeAction String    @default("exclude")
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("user_blocking_settings")
+}
+
+// ========================================
+// 🚀 UPSELLS SYSTEM
+// ========================================
+// ========================================
+// 🚀 UPSELLS SYSTEM
+// ========================================
+
+model Upsell {
+  id             String       @id @default(cuid())
+  shop           String
+  userId         String
+  name           String
+  type           UpsellType   @default(ONE_CLICK)
+  status         UpsellStatus @default(DRAFT)
+
+  basicSettings   Json       
+  displayRules    Json        
+  productSettings Json        
+  designSettings  Json     
+  statistics      Json      
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders          Order[]      
+
+  @@index([shop])
+  @@index([type])
+  @@index([status])
+  @@index([userId])
+  @@map("upsells")
+}
+
+model Downsell {
+  id             String       @id @default(cuid())
+  shop           String
+  userId         String
+  name           String
+  status         UpsellStatus @default(DRAFT)
+
+  basicSettings   Json        
+  displayRules    Json        
+  productSettings Json       
+  designSettings  Json      
+  statistics      Json      
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders          Order[]      
+
+  @@index([shop])
+  @@index([status])
+  @@index([userId])
+  @@map("downsells")
+}
+
+model QuantityOffer {
+  id             String       @id @default(cuid())
+  shop           String
+  userId         String
+  name           String
+  status         UpsellStatus @default(DRAFT)
+
+  rules          Json        
+  tiers          Json        
+  productSettings Json       
+  designSettings  Json       
+  statistics      Json       
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders          Order[]     
+
+  @@index([shop])
+  @@index([status])
+  @@index([userId])
+  @@map("quantity_offers")
+}

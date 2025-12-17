@@ -1,0 +1,665 @@
+@import url('https://fonts.googleapis.com/css2?family=Readex+Pro:wght@160..700&family=Tajawal:wght@200;300;400;500;700;800;900&display=swap');
+
+/* *************** STYLE FORM LIVE PREVIEW *************** */
+/* *************** STYLE FORM LIVE PREVIEW *************** */
+/* *************** STYLE FORM LIVE PREVIEW *************** */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+span,
+button,
+a {
+    font-family: "Readex Pro", sans-serif !important;
+}
+
+.body-content {
+    padding-bottom: 50px !important;
+}
+
+.footer-copywrite {
+    display: flex;
+    justify-content: center;
+    text-align: center;
+    align-items: center;
+    margin-top: 30px !important;
+}
+
+.footer-copywrite .padding-bottom-20 {
+    padding-bottom: 10px !important;
+}
+    
+.Polaris-Tabs__Wrapper li {
+    background-color: #ffffff;
+    padding: 4px 5px 6px !important;
+    border-radius: 9px;
+}
+
+.title-border-bottom {
+    padding: 15px 0px;
+    position: relative;
+    margin-bottom: 15px;
+}
+
+.title-border-bottom::after {
+    content: "";
+    position: absolute;
+    bottom: 8px;
+    left: 0px;
+    right: 0px;
+       border-bottom: 1px solid rgb(216, 216, 216);
+}
+
+#formino-cod-form input {
+    padding: 6px 15px !important;
+    background-color: #fff;
+    color: #000 !important;
+    display: block;
+    width: 100%;
+    margin-bottom: 0;
+    height: 47px;
+    font-size: .95em !important;
+}
+
+#formino-cod-form .Polaris-Label__Text span {
+    font-weight: 700 !important;
+}
+
+#formino-cod-form .Polaris-TextField__Backdrop {
+    border-radius: 0px !important;
+    border: none !important;
+    overflow: none !important;
+    outline-offset: 0em !important;
+    outline: none !important;
+    background-color: transparent !important;
+}
+
+#formino-cod-form .Polaris-TextField__Backdrop:focus {
+    overflow: none !important;
+    outline-offset: 0em !important;
+}
+
+#formino-cod-form .Polaris-TextField__Backdrop:focus-visible {
+    overflow: none !important;
+    outline-offset: 0em !important;
+}
+
+#formino-cod-form input:focus-visible {
+    overflow: none !important;
+    outline-offset: 0em !important;
+}
+
+#formino-cod-form label {
+    font-size: 14px !important;
+    font-weight: 700;
+}
+
+.border-total-summary-formino {
+    border-bottom: 1px solid #d3d3d3;
+}
+
+.listing-country {
+    height: 100%;
+    max-height: 400px;
+    overflow-x: scroll;
+}
+
+.listing-country .Polaris-Box {
+    width: 100%;
+    padding: 0px !important;
+}
+
+.listing-country .Polaris-Box ul {
+    display: flex;
+    flex-wrap: wrap;
+    --pc-block-stack-order: none !important;
+}
+
+.listing-country .Polaris-Box ul li {
+    width: 45%;
+}
+
+.enableOrderTotal {
+    display: flex;
+    gap: 16px;
+}
+
+/* ************************************** */
+/* ************************************** */
+/* **********SHIPPING SETTINGS*********** */
+/* ************************************** */
+/* ************************************** */
+.settings-page-container {
+    position: relative;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.settings-loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 100px 20px;
+    text-align: center;
+}
+
+.settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 32px;
+    padding: 24px;
+}
+
+.shipping-loading-container {
+    display: flex;
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+    align-items: center;
+}
+
+.header-content h2 {
+    margin: 0 0 8px 0;
+}
+
+.shipping-rates-container {
+    margin-bottom: 24px;
+}
+
+.rates-header {
+    padding: 5px 24px 16px;
+    border-bottom: 1px solid #e1e3e5;
+    background: #fafbfb;
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 40px;
+    text-align: center;
+}
+
+.empty-icon {
+    font-size: 50px;
+    margin-bottom: 30px;
+}
+
+.rates-list-container {
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.rate-item {
+    transition: all 0.2s ease;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.rate-item:last-child {
+    border-bottom: none;
+}
+
+.rate-info {
+    flex: 1;
+}
+
+.rate-main {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 8px;
+}
+
+.rate-price .Polaris-Badge {
+    font-size: 14px;
+    font-weight: 600;
+    padding: 4px 12px;
+}
+
+.rate-description {
+    margin: 8px 0;
+    line-height: 1.5;
+}
+
+.conditions-container {
+    margin-top: 12px;
+}
+
+.conditions-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.rate-actions {
+    flex-shrink: 0;
+}
+
+/* Modal Styles */
+.shipping-form-container {
+    padding: 8px 4px;
+}
+
+.form-section {
+    padding: 24px;
+    border-radius: 8px;
+}
+
+.form-section:last-child {
+    margin-bottom: 0;
+}
+
+.form-fields-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.conditions-form {
+    padding: 0px;
+}
+
+.condition-inputs {
+    margin-bottom: 16px;
+}
+
+.condition-select,
+.condition-value {
+    flex: 1;
+}
+
+.active-conditions {
+    margin-top: 16px;
+}
+
+.conditions-list-scroll {
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 12px;
+    padding-right: 8px;
+}
+
+.condition-item {
+    padding: 12px;
+}
+
+.condition-item:last-child {
+    margin-bottom: 0;
+}
+
+/* Scrollbar Styling */
+.rates-list-container::-webkit-scrollbar,
+.conditions-list-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+
+.rates-list-container::-webkit-scrollbar-track,
+.conditions-list-scroll::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.rates-list-container::-webkit-scrollbar-thumb,
+.conditions-list-scroll::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.rates-list-container::-webkit-scrollbar-thumb:hover,
+.conditions-list-scroll::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .shipping-header {
+        flex-direction: column;
+        gap: 16px;
+        text-align: center;
+    }
+
+    .form-fields-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .condition-inputs .Polaris-InlineStack {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .condition-select,
+    .condition-value {
+        width: 100%;
+    }
+
+    .rate-main {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .rate-actions {
+        width: 100%;
+        margin-top: 12px;
+    }
+
+    .rate-actions .Polaris-Button {
+        width: 100%;
+    }
+}
+
+/* Animation Effects */
+.rate-item {
+    animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Enhanced Badge Styles */
+.Polaris-Badge {
+    font-weight: 500;
+    border: 1px solid transparent;
+}
+
+.conditions-list .Polaris-Badge {
+    font-size: 12px;
+    padding: 4px 8px;
+}
+
+/* ************************************** */
+/* ************************************** */
+/* **********SHIPPING SETTINGS*********** */
+/* ************************************** */
+/* ************************************** */
+.visibility-settings-container {
+    position: relative;
+}
+
+.countries-list-container {
+    background: white;
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 12px;
+    border: 1px solid #dde2e6;
+}
+
+.countries-scroll-wrapper {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #e1e3e5;
+    border-radius: 6px;
+    padding: 12px;
+    background: white;
+    margin-top: 8px;
+}
+
+.countries-scroll-wrapper .Polaris-ChoiceList-ChoiceList {
+    max-height: none;
+}
+
+.selected-countries-badges {
+    margin-top: 16px;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+}
+
+.badges-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.included-items-section,
+.excluded-items-section {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 16px;
+    border: 1px solid #e1e3e5;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.action-buttons-group {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.items-list-container {
+    background: #f8f9fa;
+    border-radius: 6px;
+    padding: 16px;
+    border: 1px solid #e9ecef;
+}
+
+.scrollable-list {
+    max-height: 200px;
+    margin-top: 8px;
+    padding-right: 8px;
+}
+
+.scrollable-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.scrollable-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.scrollable-list::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.scrollable-list::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+.list-item-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 8px 0;
+}
+
+.list-item-content:not(:last-child) {
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.order-total-fields {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 16px;
+    border: 1px solid #e1e3e5;
+}
+
+.fields-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    align-items: end;
+}
+
+.field-container {
+    display: flex;
+    flex-direction: column;
+}
+
+@media (max-width: 768px) {
+    .fields-row {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .countries-scroll-wrapper {
+        max-height: 250px;
+    }
+
+    .scrollable-list {
+        max-height: 150px;
+    }
+}
+
+/* تحسينات إضافية للواجهة */
+.visibility-settings-container .Polaris-Card {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.countries-scroll-wrapper .Polaris-ChoiceList-ChoiceLabel {
+    padding: 8px 12px;
+    margin: 2px 0;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.countries-scroll-wrapper .Polaris-ChoiceList-ChoiceLabel:hover {
+    background-color: #f8f9fa;
+}
+
+.page-settings-empty {
+    min-height: 300px !important;
+    height: 100%;
+}
+
+.padding-top-20 {
+    padding-top: 20px !important;
+}
+
+.removeIconButton {
+    border: none;
+    cursor: pointer;
+    background-color: transparent !important;
+}
+
+.removeIconButton .Polaris-Icon {
+    height: 1.5rem;
+    width: 1.5rem;
+}
+
+.removeIconButton .Polaris-Icon svg:hover {
+    color: red;
+}
+
+.settingsSheets .Polaris-Select {
+    min-width: 320px;
+    width: 100%;
+}
+
+.dashboardPage .displayFlexIcon { 
+    display: flex;
+    flex-wrap: wrap;
+    --pc-inline-stack-wrap: wrap;
+}
+
+.dashboardPage .displayFlexIcon p {
+    padding: 3px 0px;
+}
+
+.dashboardPage .displayFlexIcon .Polaris-Icon { 
+    height: 1.45rem;
+    width: 1.45rem;
+    max-height: 100%;
+    max-width: 100%;
+    margin: auto;
+}
+
+.Polaris-TextField__Input input[data-type="first_name"],
+.Polaris-TextField__Input input[data-type="first_name"],
+.Polaris-TextField__Input input[data-type="first_name"] {
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg version='1.1' viewBox='0 0 46.05 50.86' xmlns='http://www.w3.org/2000/svg'%3e%3cg transform='translate(-171.3 -284.5)'%3e%3crect x='171.3' y='284.5' width='44.82' height='50.86' ry='0' fill='%23e1e1e1'/%3e%3crect x='216.1' y='284.5' width='1.229' height='50.86' fill='%23c0c0c0'/%3e%3cpath d='m194.3 309.9c2.111 0 3.82-1.71 3.82-3.82s-1.71-3.82-3.82-3.82-3.82 1.71-3.82 3.82 1.71 3.82 3.82 3.82zm0 1.91c-2.55 0-7.641 1.28-7.641 3.82v0.9551c0 0.5253 0.4298 0.9551 0.9551 0.9551h13.37c0.5253 0 0.9551-0.4298 0.9551-0.9551v-0.9551c0-2.541-5.091-3.82-7.641-3.82z' fill='%231a1a1a'/%3e%3c/g%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-size: 44px auto;
+    background-position: 0 50%;
+    padding-left: calc(44px + 15px) !important;
+}
+
+.titleAdresseShipping {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    margin: 10px 0;
+    padding: 10px 20px;
+    border-radius: 7px;
+}
+
+.titleAdresseShipping h4 {
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.shippingSectionFormino {
+    background: #f8f9fa !important;
+    border: 1px solid #e9ecef !important;
+    margin: 0px 0px !important;
+    padding: 10px 15px !important;
+    border-radius: 7px;
+}
+
+.shippingSectionFormino .ItemShippingFormino {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 8px 15px !important;
+    border: 1px solid #ddd !important;
+    border-radius: 6px !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    background: white !important;
+}
+
+.titleSubscribeFormino {
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
+}
+ 
+.titleSubscribeFormino .descriptionSubscribeFormino {
+    display: block !important;
+    margin-left: 28px !important;
+    width: 100%;
+}
+
+.titleSubscribeFormino .descriptionSubscribeFormino p{
+    padding: 0px 0px 5px !important;
+}
+
+.footer-copywrite a {
+    text-decoration: none;
+    color: #303030;
+    cursor: pointer;
+}
+
+.footer-copywrite a:hover {
+    opacity: 0.8;
+}
+/* NEW STYLE */
+
+/* FULL SCREEN POLARIS MODAL */
+
+.marginBottom10 {
+    margin-bottom: 10px !important;
+}
