@@ -27,10 +27,13 @@ import {
   Box,
   Divider,
   RangeSlider,
-  Checkbox
+  Checkbox,
+  Grid,
+  LegacyCard,
 } from "@shopify/polaris";
 import { useState, useCallback, useMemo, useEffect } from "react";
-import { SearchIcon } from "@shopify/polaris-icons";
+import { SearchIcon, PlusIcon } from "@shopify/polaris-icons";
+import { useNavigate } from "react-router";
 
 // -------------------- Types --------------------
 
@@ -120,6 +123,7 @@ type ButtonSettings = {
 // -------------------- Component --------------------
 
 export default function UpsellCreatePage() {
+  const navigate = useNavigate();
   // Basic Configuration
   const [upsellName, setUpsellName] = useState("");
   const [upsellType, setUpsellType] = useState<UpsellType>("ONE_CLICK");
@@ -205,7 +209,25 @@ export default function UpsellCreatePage() {
 
   const [productTitle, setProductTitle] = useState("");
   const [productDescription, setProductDescription] = useState("");
+
+  const [existingUpsells, setExistingUpsells] = useState<any[]>([]);
+  const [loadingUpsells, setLoadingUpsells] = useState(false);
+
+  const [isCreating, setIsCreating] = useState(false);
+
+  const [editingUpsell, setEditingUpsell] = useState<any>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingUpsellId, setEditingUpsellId] = useState<string | null>(null);
+
   // -------------------- Fetch Products --------------------
+  const getImageMaxWidth = () => {
+    switch (imageSize) {
+      case "SMALL": return "100px";
+      case "MEDIUM": return "200px";
+      case "LARGE": return "300px";
+      default: return "200px";
+    }
+  };
 
   const fetchProducts = useCallback(async () => {
     setLoading(true);
@@ -225,23 +247,41 @@ export default function UpsellCreatePage() {
     setLoading(false);
   }, []);
 
-
   // ---------------- PRICE LOGIC ----------------
-  useEffect(() => { fetchProducts(); }, [fetchProducts]);
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
 
-  const finalPrice = (() => {
-    // if (!upsellProduct) return 0;
-    // if (discountType === "PERCENTAGE") {
-    //   return Math.max(0, upsellProduct.price * (1 - discountValue / 100));
-    // }
-    // if (discountType === "FIXED") {
-    //   return Math.max(0, upsellProduct.price - discountValue);
-    // }
-    // return upsellProduct.price;
-  })();
+  useEffect(() => {
+    fetchExistingUpsells();
+  }, []);
 
+  const fetchExistingUpsells = async () => {
+    setLoadingUpsells(true);
+    try {
+      const response = await fetch("/api/upsells");
+      console.log("Response status:", response.status);
+      console.log("Response headers:", [...response.headers.entries()]);
+      const text = await response.text();
+      console.log("Response text:", text);
+      let data;
+      try {
+        data = JSON.parse(text);
+        console.log("Parsed data:", data);
+      } catch (parseError) {
+        console.error("Failed to parse JSON:", parseError);
+        return;
+      }
+      setExistingUpsells(data.data || data);
+      console.log("*******---------********");
+      console.log(existingUpsells.length);
+    } catch (error) {
+      console.error("Error fetching upsells:", error);
+    } finally {
+      setLoadingUpsells(false);
+    }
+  };
   // -------------------- Product Selection Handlers --------------------
-
   const handleSelectTriggerProduct = useCallback((product: Product) => {
     setSelectedTriggerProducts(prev => {
       const exists = prev.find(p => p.id === product.id);
@@ -264,9 +304,7 @@ export default function UpsellCreatePage() {
   const clearTriggerProducts = useCallback(() => {
     setSelectedTriggerProducts([]);
   }, []);
-
   // -------------------- Discount Calculation --------------------
-
   const calculatedPrice = useMemo(() => {
     if (!selectedUpsellProduct || !selectedUpsellProduct.price) return null;
 
@@ -284,794 +322,1137 @@ export default function UpsellCreatePage() {
     return base;
   }, [selectedUpsellProduct, discountType, discountValue]);
 
+  const fetchSpecificProduct = async (productId: string): Promise<Product | null> => {
+    try {
+      // إذا كان المنتج موجوداً في القائمة المحملة
+      const existingProduct = products.find(p => p.id === productId);
+      if (existingProduct) {
+        return existingProduct;
+      }
 
-  const handleSave = () => {
-    // const payload = {
-    //   trigger:
-    //     triggerMode === "ALL"
-    //       ? "ALL"
-    //       : triggerProducts.map(p => p.id),
-    // upsellProductId: upsellProduct?.id,
-    // discount: { type: discountType, value: discountValue },
-    // design: {
-    //   title,
-    //   subtitle,
-    //   productTitle,
-    //   productDescription,
-    //   addButton: { text: addBtnText, radius: addBtnRadius, shadow: addBtnShadow },
-    //   noButton: { text: noBtnText, radius: noBtnRadius }
-    // }
-    // };
+      // إذا لم يكن موجوداً، جلب تفاصيله من Shopify
+      const PRODUCT_QUERY = `
+      query GetProduct($id: ID!) {
+        product(id: $id) {
+          id
+          title
+          featuredImage { url altText }
+          variants(first: 1) {
+            edges {
+              node {
+                price
+              }
+            }
+          }
+        }
+      }
+    `;
 
+      const response = await fetch("/api/graphql", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: PRODUCT_QUERY,
+          variables: { id: productId }
+        })
+      });
 
-    console.log("UPSSELL SAVE PAYLOAD");
+      const json = await response.json();
+
+      if (json.data?.product) {
+        const productData = json.data.product;
+        const product: Product = {
+          id: productData.id,
+          title: productData.title,
+          price: parseFloat(productData.variants.edges[0].node.price),
+          featuredImage: productData.featuredImage
+        };
+
+        // إضافة المنتج للقائمة المحملة
+        setProducts(prev => [...prev, product]);
+
+        return product;
+      }
+
+      return null;
+    } catch (error) {
+      console.error("Error fetching product:", error);
+      return null;
+    }
   };
+
+  // دالة لملء النموذج عند النقر على Edit
+  const handleEditUpsell = async (upsellId: string) => {
+    try {
+      const response = await fetch(`/api/upsells/${upsellId}`);
+      const result = await response.json();
+
+      if (result.success) {
+        const upsell = result.data;
+        setEditingUpsell(upsell);
+        setIsEditing(true);
+        setIsCreating(true);
+        setEditingUpsellId(upsell.id);
+        setIsEditing(true);
+
+        // ملء النموذج ببيانات الـ upsell
+        setUpsellName(upsell.name);
+        setUpsellType(upsell.type || "ONE_CLICK");
+
+        // ملء إعدادات العرض
+        if (upsell.displayRules) {
+          setTriggerMode(upsell.displayRules.triggerMode || "ALL");
+
+          // تحميل trigger products إذا كانت محددة
+          if (upsell.displayRules.triggerProducts &&
+            upsell.displayRules.triggerProducts !== "ALL" &&
+            Array.isArray(upsell.displayRules.triggerProducts)) {
+
+            const triggerProductIds = upsell.displayRules.triggerProducts;
+            const loadedTriggerProducts: Product[] = [];
+
+            // تحميل كل منتج trigger
+            for (const productId of triggerProductIds) {
+              const product = await fetchSpecificProduct(productId);
+              if (product) {
+                loadedTriggerProducts.push(product);
+              }
+            }
+
+            setSelectedTriggerProducts(loadedTriggerProducts);
+          }
+        }
+
+        // ملء إعدادات الخصم
+        if (upsell.productSettings?.discount) {
+          setDiscountType(upsell.productSettings.discount.type || "NONE");
+          setDiscountValue(upsell.productSettings.discount.value || "");
+        }
+
+        if (upsell.productSettings?.upsellProductId) {
+          const product = await fetchSpecificProduct(upsell.productSettings.upsellProductId);
+          if (product) {
+            setSelectedUpsellProduct(product);
+            console.log("✅ Upsell product loaded:", product.title);
+          } else {
+            console.error("❌ Failed to load upsell product");
+            alert("Could not load the upsell product. Please select it manually.");
+          }
+        }
+
+        if (upsell.displayRules) {
+          setTriggerMode(upsell.displayRules.triggerMode || "ALL");
+
+          // تحميل trigger products إذا كانت محددة
+          if (upsell.displayRules.triggerProducts &&
+            upsell.displayRules.triggerProducts !== "ALL" &&
+            Array.isArray(upsell.displayRules.triggerProducts)) {
+
+            const triggerProductIds = upsell.displayRules.triggerProducts;
+            const loadedTriggerProducts: Product[] = [];
+
+            // تحميل كل منتج trigger
+            for (const productId of triggerProductIds) {
+              const product = await fetchSpecificProduct(productId);
+              if (product) {
+                loadedTriggerProducts.push(product);
+              }
+            }
+
+            setSelectedTriggerProducts(loadedTriggerProducts);
+          }
+        }
+
+        // ملء إعدادات التصميم
+        if (upsell.designSettings) {
+          setTitle(upsell.designSettings.title || "");
+          setSubtitle(upsell.designSettings.subtitle || "");
+          setProductTitle(upsell.designSettings.productTitle || "");
+          setProductDescription(upsell.designSettings.productDescription || "");
+
+          // ملء إعدادات الصورة
+          if (upsell.designSettings.image) {
+            setShowProductImage(upsell.designSettings.image.show || true);
+            setImageSize(upsell.designSettings.image.size || "MEDIUM");
+            setImageBorderRadius(upsell.designSettings.image.borderRadius || 8);
+            setImageShadow(upsell.designSettings.image.shadow || false);
+          }
+
+          // ملء إعدادات الأزرار
+          if (upsell.designSettings.addButton) {
+            setAddButtonSettings({
+              text: upsell.designSettings.addButton.text || "Add to my order",
+              animation: upsell.designSettings.addButton.animation || "NONE",
+              icon: upsell.designSettings.addButton.icon || "",
+              backgroundColor: upsell.designSettings.addButton.backgroundColor || { hue: 0, saturation: 0, brightness: 0, alpha: 1 },
+              textColor: upsell.designSettings.addButton.textColor || { hue: 0, saturation: 0, brightness: 1, alpha: 1 },
+              fontSize: upsell.designSettings.addButton.fontSize || 16,
+              borderRadius: upsell.designSettings.addButton.borderRadius || 8,
+              borderColor: upsell.designSettings.addButton.borderColor || { hue: 0, saturation: 0, brightness: 0, alpha: 1 },
+              borderWidth: upsell.designSettings.addButton.borderWidth || 1,
+              shadow: upsell.designSettings.addButton.shadow || false,
+            });
+          }
+
+          if (upsell.designSettings.noButton) {
+            setNoButtonSettings({
+              text: upsell.designSettings.noButton.text || "No thank you, complete my order",
+              animation: "NONE",
+              icon: "",
+              backgroundColor: upsell.designSettings.noButton.backgroundColor || { hue: 0, saturation: 0, brightness: 1, alpha: 1 },
+              textColor: upsell.designSettings.noButton.textColor || { hue: 0, saturation: 0, brightness: 0, alpha: 1 },
+              fontSize: upsell.designSettings.noButton.fontSize || 16,
+              borderRadius: upsell.designSettings.noButton.borderRadius || 8,
+              borderColor: upsell.designSettings.noButton.borderColor || { hue: 0, saturation: 0, brightness: 0, alpha: 1 },
+              borderWidth: upsell.designSettings.noButton.borderWidth || 1,
+              shadow: upsell.designSettings.noButton.shadow || false,
+            });
+          }
+        }
+
+        setTimeout(() => {
+          const formSection = document.getElementById('upsell-form-section');
+          if (formSection) {
+            formSection.scrollIntoView({ behavior: 'smooth' });
+          }
+        }, 100);
+      }
+    } catch (error) {
+      console.error("Error loading upsell:", error);
+    }
+  };
+
+  // دالة لإعادة تعيين النموذج لإنشاء جديد
+  const handleCreateNew = () => {
+    resetForm();
+    // تمرير الشاشة للنموذج
+    setTimeout(() => {
+      const formSection = document.getElementById('upsell-form-section');
+      if (formSection) {
+        formSection.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 100);
+  };
+
+  // دالة لإعادة تعيين النموذج
+  const resetForm = () => {
+    setUpsellName("");
+    setUpsellType("ONE_CLICK");
+    setTriggerMode("ALL");
+    setSelectedTriggerProducts([]);
+    setSelectedUpsellProduct(null);
+    setDiscountType("NONE");
+    setDiscountValue("");
+    setTitle("Add {product_name} to your order!");
+    setSubtitle("");
+    setProductTitle("");
+    setProductDescription("");
+    setShowProductImage(true);
+    setImageSize("MEDIUM");
+    setImageBorderRadius(8);
+    setImageShadow(false);
+    setAddButtonSettings({
+      text: "Add to my order",
+      animation: "NONE",
+      icon: "",
+      backgroundColor: { hue: 0, saturation: 0, brightness: 0, alpha: 1 },
+      textColor: { hue: 0, saturation: 0, brightness: 1, alpha: 1 },
+      fontSize: 16,
+      borderRadius: 8,
+      borderColor: { hue: 0, saturation: 0, brightness: 0, alpha: 1 },
+      borderWidth: 1,
+      shadow: false,
+    });
+    setNoButtonSettings({
+      text: "No thank you, complete my order",
+      animation: "NONE",
+      icon: "",
+      backgroundColor: { hue: 0, saturation: 0, brightness: 1, alpha: 1 },
+      textColor: { hue: 0, saturation: 0, brightness: 0, alpha: 1 },
+      fontSize: 16,
+      borderRadius: 8,
+      borderColor: { hue: 0, saturation: 0, brightness: 0, alpha: 1 },
+      borderWidth: 1,
+      shadow: false,
+    });
+  };
+
+  // تعديل دالة handleSave للتعامل مع التعديل والإنشاء
+  const handleSave = async () => {
+    // التحقق من البيانات المطلوبة
+    if (!upsellName.trim()) {
+      alert("Please enter an upsell name");
+      return;
+    }
+
+    if (!selectedUpsellProduct) {
+      alert("Please select an upsell product");
+      return;
+    }
+
+    // إعداد payload
+    const upsellPayload = {
+      name: upsellName,
+      type: upsellType,
+      status: "DRAFT",
+      basicSettings: { upsellName, upsellType },
+      displayRules: {
+        triggerMode,
+        triggerProducts: triggerMode === "SPECIFIC"
+          ? selectedTriggerProducts.map(p => p.id)
+          : "ALL",
+      },
+      productSettings: {
+        upsellProductId: selectedUpsellProduct.id,
+        discount: { type: discountType, value: discountValue },
+        price: selectedUpsellProduct.price,
+        calculatedPrice,
+      },
+      designSettings: {
+        title,
+        subtitle,
+        titleColor: colorToRgba(titleColor),
+        subtitleColor: colorToRgba(subtitleColor),
+        priceColor: colorToRgba(priceColor),
+        productTitle,
+        productDescription,
+        image: {
+          show: showProductImage,
+          size: imageSize,
+          borderRadius: imageBorderRadius,
+          shadow: imageShadow,
+        },
+        addButton: {
+          text: addButtonSettings.text,
+          animation: addButtonSettings.animation,
+          icon: addButtonSettings.icon,
+          backgroundColor: colorToRgba(addButtonSettings.backgroundColor),
+          textColor: colorToRgba(addButtonSettings.textColor),
+          fontSize: addButtonSettings.fontSize,
+          borderRadius: addButtonSettings.borderRadius,
+          borderColor: colorToRgba(addButtonSettings.borderColor),
+          borderWidth: addButtonSettings.borderWidth,
+          shadow: addButtonSettings.shadow,
+        },
+        noButton: {
+          text: noButtonSettings.text,
+          backgroundColor: colorToRgba(noButtonSettings.backgroundColor),
+          textColor: colorToRgba(noButtonSettings.textColor),
+          fontSize: noButtonSettings.fontSize,
+          borderRadius: noButtonSettings.borderRadius,
+          borderColor: colorToRgba(noButtonSettings.borderColor),
+          borderWidth: noButtonSettings.borderWidth,
+          shadow: noButtonSettings.shadow,
+        },
+      },
+      statistics: {
+        views: 0,
+        clicks: 0,
+        conversions: 0,
+        revenue: 0,
+      },
+    };
+
+    try {
+      let response;
+
+      if (isEditing && editingUpsell) {
+        // تحديث الـ upsell الموجود
+        response = await fetch(`/api/upsells/${editingUpsell.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(upsellPayload),
+        });
+      } else {
+        // إنشاء upsell جديد
+        response = await fetch("/api/upsells", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(upsellPayload),
+        });
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert(isEditing ? "Upsell updated successfully!" : "Upsell created successfully!");
+
+        // إعادة تعيين النموذج
+        resetForm();
+        setEditingUpsell(null);
+        setIsEditing(false);
+
+        // تحديث قائمة الـ upsells
+        fetchExistingUpsells();
+      } else {
+        throw new Error(result.error || "Failed to save upsell");
+      }
+    } catch (error: any) {
+      console.error("Error saving upsell:", error);
+      alert(`Error saving upsell: ${error.message}`);
+    }
+  };
+
+  const handleCancel = () => {
+    resetForm();
+  };
+
 
   // -------------------- Render --------------------
 
   return (
     <Page
-      title="Create New Upsell"
-      primaryAction={{
-        content: "Save Upsell",
-        onAction: () => {
-          // Save logic here
-          console.log({
-            upsellName,
-            upsellType,
-            triggerMode,
-            triggerProducts: selectedTriggerProducts,
-            upsellProduct: selectedUpsellProduct,
-            discountType,
-            discountValue,
-          });
-        },
-      }}
+      title={isEditing ? `Editing: ${editingUpsell?.name}` : "Upsell Manager"}
+      primaryAction={
+        isCreating ? {
+          content: isEditing ? "Update Upsell" : "Save Upsell",
+          onAction: handleSave,
+        } : {
+          content: "Create New Upsell",
+          icon: PlusIcon,
+          onAction: handleCreateNew,
+        }
+      }
+      secondaryActions={
+        isCreating
+          ? [
+            {
+              content: "Cancel",
+              onAction: () => {
+                resetForm();
+                setEditingUpsell(null);
+                setIsEditing(false);
+                setIsCreating(false);
+              },
+            }
+          ]
+          : undefined
+      }
     >
-      {/* ================= BASIC SETTINGS ================= */}
-      <div className="marginBottom10">
-        <Card>
-          <FormLayout>
-            <TextField
-              autoComplete="off"
-              label="Upsell Name"
-              value={upsellName}
-              onChange={setUpsellName}
-              helpText="Give your upsell a descriptive name for internal use"
-            />
 
-            <Select
-              label="Upsell Type"
-              options={[
-                { label: "One Click", value: "ONE_CLICK" },
-                { label: "Bundle", value: "BUNDLE" },
-                { label: "Discount", value: "DISCOUNT" },
-              ]}
-              value={upsellType}
-              onChange={(v) => setUpsellType(v as UpsellType)}
-            />
-
-            <Divider />
-
-            {/* ================= TRIGGER PRODUCTS ================= */}
-            <TextContainer>
-              <h3>Trigger Products</h3>
-              <p>Show this upsell when customers buy:</p>
-            </TextContainer>
-
-            <Select
-              label=""
-              options={[
-                { label: "All products", value: "ALL" },
-                { label: "Specific products", value: "SPECIFIC" },
-              ]}
-              value={triggerMode}
-              onChange={(v) => setTriggerMode(v as TriggerMode)}
-            />
-
-            {triggerMode === "SPECIFIC" && (
-              <Box paddingBlockStart="400">
-                <InlineStack align="space-between">
-                  <TextContainer>
-                    <p>Selected products ({selectedTriggerProducts.length})</p>
-                  </TextContainer>
-                  <Button size="slim" onClick={() => {
-                    setTriggerModalOpen(true);
-                    fetchProducts();
-                  }}>
-                    {selectedTriggerProducts.length > 0 ? "Add More Products" : "Select Products"}
+      {/* قائمة الـ upsells الموجودة */}
+      {!isCreating && existingUpsells.length > 0 && (
+        <LegacyCard title="Your Upsells" sectioned>
+          <ResourceList
+            items={existingUpsells}
+            loading={loadingUpsells}
+            renderItem={(upsell) => (
+              <ResourceList.Item
+                id={upsell.id}
+                onClick={() => handleEditUpsell(upsell.id)}
+                media={
+                  <Badge
+                    tone={
+                      upsell.status === "ACTIVE" ? "success" :
+                        upsell.status === "DRAFT" ? "warning" :
+                          "critical"
+                    }
+                  >
+                    {upsell.status}
+                  </Badge>
+                }
+              >
+                <InlineStack align="space-between" blockAlign="center">
+                  <div>
+                    <TextContainer>
+                      <p><strong>{upsell.name}</strong></p>
+                      <p>• Type: {upsell.type}</p>
+                      <p>• Created: {new Date(upsell.createdAt).toLocaleDateString()}</p>
+                    </TextContainer>
+                  </div>
+                  <Button
+                    size="slim"
+                    variant="primary"
+                    onClick={() => handleEditUpsell(upsell.id)}
+                  >
+                    Edit
                   </Button>
                 </InlineStack>
-
-                {selectedTriggerProducts.length > 0 && (
-                  <Box paddingBlockStart="200">
-                    <BlockStack gap="200">
-                      {selectedTriggerProducts.map(product => (
-                        <InlineStack key={product.id} align="space-between" blockAlign="center">
-                          <InlineStack gap="200" blockAlign="center">
-                            {product.featuredImage?.url && (
-                              <Thumbnail
-                                source={product.featuredImage.url}
-                                alt={product.title}
-                                size="small"
-                              />
-                            )}
-                            <span>{product.title}</span>
-                          </InlineStack>
-                          <Button
-                            size="micro"
-                            tone="critical"
-                            onClick={() => removeTriggerProduct(product.id)}
-                          >
-                            Remove
-                          </Button>
-                        </InlineStack>
-                      ))}
-                      <Button
-                        size="micro"
-                        tone="critical"
-                        variant="plain"
-                        onClick={clearTriggerProducts}
-                      >
-                        Clear all
-                      </Button>
-                    </BlockStack>
-                  </Box>
-                )}
-
-                {selectedTriggerProducts.length === 0 && (
-                  <EmptyState
-                    heading="No products selected"
-                    action={{
-                      content: "Select Products",
-                      onAction: () => {
-                        setTriggerModalOpen(true);
-                        fetchProducts();
-                      },
-                    }}
-                    image=""
-                  >
-                    <p>Select specific products that will trigger this upsell offer.</p>
-                  </EmptyState>
-                )}
-              </Box>
+              </ResourceList.Item>
             )}
+            emptyState={
+              <EmptyState
+                heading="No upsells yet"
+                action={{
+                  content: "Create your first upsell",
+                  onAction: () => { },
+                }}
+                image=""
+              >
+                <p>Create an upsell to increase your average order value.</p>
+              </EmptyState>
+            }
+          />
+        </LegacyCard>
+      )}
 
-            <Divider />
-
-            {/* ================= UPSELL PRODUCT ================= */}
+      {isEditing && (
+        <Box padding="200" borderRadius="200">
+          <InlineStack align="center" gap="200">
+            <Badge tone="success">Editing Mode</Badge>
             <TextContainer>
-              <h3>Upsell Product</h3>
-              <p>Product to offer as an upsell:</p>
+              <p>You are editing an existing upsell. Changes will update the original.</p>
             </TextContainer>
+          </InlineStack>
+        </Box>
+      )}
 
-            <Card>
-              <InlineStack align="space-between" blockAlign="center">
-                <strong>Selected Upsell Product</strong>
-                <Button
-                  size="slim"
-                  onClick={() => {
-                    setUpsellModalOpen(true);
-                    fetchProducts();
-                  }}
-                >
-                  {selectedUpsellProduct ? "Change Product" : "Select Product"}
-                </Button>
-              </InlineStack>
+      {/* استخدام Grid لتقسيم الصفحة */}
+      {isCreating && (
+        <Grid>
+          {/* العمود الأيسر - الإعدادات */}
+          <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 6, lg: 8, xl: 8 }}>
+            <BlockStack gap="400">
 
-              {selectedUpsellProduct ? (
-                <Box paddingBlockStart="400">
-                  <ResourceList
-                    items={[selectedUpsellProduct]}
-                    renderItem={(product) => (
-                      <ResourceList.Item
-                        id={product.id}
-                        onClick={() => handleSelectUpsellProduct(product)}
-                        media={
-                          product.featuredImage?.url ? (
-                            <Thumbnail
-                              source={product.featuredImage.url}
-                              alt={product.title}
-                            />
-                          ) : undefined
-                        }
-                      >
-                        <InlineStack align="space-between" blockAlign="center">
-                          <div>
-                            <TextContainer>
-                              <p><strong>{product.title}</strong></p>
-                            </TextContainer>
-                          </div>
-                          <Badge tone="success">
-                            {formatPrice(product.price)}
-                          </Badge>
-                        </InlineStack>
-                      </ResourceList.Item>
-                    )}
-                  />
-                </Box>
-              ) : (
-                <Box paddingBlockStart="400">
-                  <EmptyState
-                    heading="No product selected"
-                    action={{
-                      content: "Select Product",
-                      onAction: () => {
-                        setUpsellModalOpen(true);
-                        fetchProducts();
-                      },
-                    }}
-                    image=""
-                  >
-                    <p>Choose which product to offer as an upsell.</p>
-                  </EmptyState>
-                </Box>
-              )}
-            </Card>
-
-            {/* ================= DISCOUNT SETTINGS ================= */}
-            <Select
-              label="Apply this discount"
-              value={discountType}
-              options={[
-                { label: "None", value: "NONE" },
-                { label: "Percentage", value: "PERCENTAGE" },
-                { label: "Fixed Amount", value: "FIXED_AMOUNT" },
-              ]}
-              onChange={(v) => {
-                setDiscountType(v as DiscountType);
-                if (v === "NONE") setDiscountValue("");
-              }}
-            />
-
-            {discountType !== "NONE" && (
-              <TextField
-                autoComplete="off"
-                type="number"
-                label={discountType === "PERCENTAGE" ? "Discount Percentage" : "Discount Amount"}
-                value={discountValue}
-                onChange={setDiscountValue}
-                error={discountError}
-                suffix={discountType === "PERCENTAGE" ? "%" : "$"}
-                helpText={
-                  discountType === "PERCENTAGE"
-                    ? "Enter the percentage discount to apply"
-                    : "Enter the fixed amount discount to apply"
-                }
-              />
-            )}
-
-            {/* في قسم Discount Calculation في Preview */}
-            {selectedUpsellProduct && calculatedPrice !== null && (
-              <Box paddingBlock="400">
-                <BlockStack gap="200">
-                  <p><strong>{selectedUpsellProduct.title}</strong></p>
-
-                  {selectedUpsellProduct.price && (
-                    <InlineStack gap="200" align="start">
-                      {discountType !== "NONE" && (
-                        <>
-                          <s style={{ color: '#999' }}>{formatPrice(selectedUpsellProduct.price)}</s>
-                          <span style={{ color: colorToRgba(priceColor), fontWeight: 'bold' }}>
-                            {formatPrice(calculatedPrice)} {/* الأن calculatedPrice لن تكون null */}
-                          </span>
-                          <Badge tone="success">
-                            {discountType === "PERCENTAGE"
-                              ? `${discountValue}% OFF`
-                              : `$${discountValue} OFF`}
-                          </Badge>
-                        </>
-                      )}
-
-                      {discountType === "NONE" && (
-                        <span style={{ color: colorToRgba(priceColor), fontWeight: 'bold' }}>
-                          {formatPrice(selectedUpsellProduct.price)}
-                        </span>
-                      )}
-                    </InlineStack>
-                  )}
-                </BlockStack>
-              </Box>
-            )}
-
-          </FormLayout>
-        </Card>
-      </div>
-
-      {/* ================= DESIGN SETTINGS ================= */}
-      <div className="marginBottom10">
-        <Card>
-          <TextContainer>
-            <h2>Customize the Design</h2>
-            <p>Customize how the upsell offer appears to customers.</p>
-          </TextContainer>
-
-          <FormLayout>
-            {/* Title Section */}
-            <Card padding="400">
-              <BlockStack gap="200">
-                <TextContainer>
-                  <h3>Title</h3>
-                </TextContainer>
-                <TextField
-                  autoComplete="off"
-                  label="Title Text"
-                  value={title}
-                  onChange={setTitle}
-                  helpText="Shortcodes: {product_name}, {first_name}"
-                />
-                <Box>
-                  <label>Title Color</label>
-                  <ColorPicker color={titleColor} onChange={setTitleColor} allowAlpha />
-                </Box>
-              </BlockStack>
-            </Card>
-
-            {/* Subtitle Section */}
-            {subtitle && (
-              <Card padding="400">
-                <BlockStack gap="200">
-                  <TextContainer>
-                    <h3>Subtitle</h3>
-                  </TextContainer>
+              {/* ================= BASIC SETTINGS ================= */}
+              <LegacyCard title="Basic Settings" sectioned>
+                <FormLayout>
                   <TextField
                     autoComplete="off"
-                    label="Subtitle Text"
-                    value={subtitle}
-                    onChange={setSubtitle}
-                    helpText="Shortcodes: {product_name}, {first_name}"
+                    label="Upsell Name"
+                    value={upsellName}
+                    onChange={setUpsellName}
+                    helpText="Give your upsell a descriptive name for internal use"
                   />
-                  <Box>
-                    <label>Subtitle Color</label>
-                    <ColorPicker color={subtitleColor} onChange={setSubtitleColor} allowAlpha />
-                  </Box>
-                </BlockStack>
-              </Card>
-            )}
 
-            {/* Product Information Section */}
-            <Card padding="400">
-              <BlockStack gap="200">
-                <TextContainer>
-                  <h3>Product Information</h3>
-                </TextContainer>
-                <TextField
-                  autoComplete="off"
-                  label="Custom Product Title"
-                  value={productTitle}
-                  onChange={setProductTitle}
-                  placeholder="Leave empty to use Shopify title"
-                  helpText="Override the product title in the upsell"
-                />
-                <TextField
-                  autoComplete="off"
-                  label="Custom Product Description"
-                  value={productDescription}
-                  onChange={setProductDescription}
-                  multiline={3}
-                  placeholder="Leave empty to use Shopify description"
-                  helpText="Override the product description in the upsell"
-                />
-                <Box>
-                  <label>Product Price Color</label>
-                  <ColorPicker color={priceColor} onChange={setPriceColor} allowAlpha />
-                </Box>
-              </BlockStack>
-            </Card>
-
-            {/* Add to Order Button */}
-            <Card padding="400">
-              <BlockStack gap="300">
-                <TextContainer>
-                  <h3>Add to Order Button</h3>
-                </TextContainer>
-
-                <TextField
-                  autoComplete="off"
-                  label="Button Text"
-                  value={addButtonSettings.text}
-                  onChange={(value) =>
-                    setAddButtonSettings({ ...addButtonSettings, text: value })
-                  }
-                />
-
-                <Select
-                  label="Button Animation"
-                  options={[
-                    { label: "None", value: "NONE" },
-                    { label: "Pulse", value: "PULSE" },
-                    { label: "Bounce", value: "BOUNCE" },
-                  ]}
-                  value={addButtonSettings.animation}
-                  onChange={(value) =>
-                    setAddButtonSettings({ ...addButtonSettings, animation: value as "NONE" | "PULSE" | "BOUNCE" })
-                  }
-                />
-
-                <TextField
-                  autoComplete="off"
-                  label="Button Icon (optional)"
-                  value={addButtonSettings.icon || ""}
-                  onChange={(value) =>
-                    setAddButtonSettings({ ...addButtonSettings, icon: value })
-                  }
-                  helpText="Enter icon name from Shopify icon library"
-                  placeholder="e.g., AddMajor, CheckoutMajor"
-                />
-
-                <InlineStack align="space-between" gap="400">
-                  <Box width="50%">
-                    <label>Background Color</label>
-                    <ColorPicker
-                      color={addButtonSettings.backgroundColor}
-                      onChange={(color) =>
-                        setAddButtonSettings({ ...addButtonSettings, backgroundColor: color })
-                      }
-                      allowAlpha
-                    />
-                  </Box>
-                  <Box width="50%">
-                    <label>Text Color</label>
-                    <ColorPicker
-                      color={addButtonSettings.textColor}
-                      onChange={(color) =>
-                        setAddButtonSettings({ ...addButtonSettings, textColor: color })
-                      }
-                      allowAlpha
-                    />
-                  </Box>
-                </InlineStack>
-
-                <InlineStack align="space-between" gap="400">
-                  <Box width="50%">
-                    <RangeSlider
-                      label="Font Size"
-                      value={addButtonSettings.fontSize}
-                      onChange={(value) => {
-                        const fontSize1Value = typeof value === 'number' ? value : value[0];
-                        setAddButtonSettings({ ...addButtonSettings, fontSize: fontSize1Value })
-                      }
-                      }
-                      min={12}
-                      max={24}
-                      output
-                      suffix="px"
-                    />
-                  </Box>
-                  <Box width="50%">
-                    <RangeSlider
-                      label="Border Radius"
-                      value={addButtonSettings.borderRadius}
-                      onChange={(value) => {
-                        const borderRadiusValue = typeof value === 'number' ? value : value[0];
-                        setAddButtonSettings({ ...addButtonSettings, borderRadius: borderRadiusValue })
-                      }
-                      }
-                      min={0}
-                      max={50}
-                      output
-                      suffix="px"
-                    />
-                  </Box>
-                </InlineStack>
-
-                <InlineStack align="space-between" gap="400">
-                  <Box width="50%">
-                    <label>Border Color</label>
-                    <ColorPicker
-                      color={addButtonSettings.borderColor}
-                      onChange={(color) =>
-                        setAddButtonSettings({ ...addButtonSettings, borderColor: color })
-                      }
-                      allowAlpha
-                    />
-                  </Box>
-                  <Box width="50%">
-                    <RangeSlider
-                      label="Border Width"
-                      value={addButtonSettings.borderWidth}
-                      onChange={(value) => {
-                        const borderWidthValue = typeof value === 'number' ? value : value[0];
-                        setAddButtonSettings({ ...addButtonSettings, borderWidth: borderWidthValue })
-                      }
-                      }
-                      min={0}
-                      max={10}
-                      output
-                      suffix="px"
-                    />
-                  </Box>
-                </InlineStack>
-
-                <Box>
-                  <Checkbox
-                    label="Enable Shadow"
-                    checked={addButtonSettings.shadow}
-                    onChange={(checked) =>
-                      setAddButtonSettings({ ...addButtonSettings, shadow: checked })
-                    }
+                  <Select
+                    label="Upsell Type"
+                    options={[
+                      { label: "One Click", value: "ONE_CLICK" },
+                      { label: "Bundle", value: "BUNDLE" },
+                      { label: "Discount", value: "DISCOUNT" },
+                    ]}
+                    value={upsellType}
+                    onChange={(v) => setUpsellType(v as UpsellType)}
                   />
-                </Box>
-              </BlockStack>
-            </Card>
 
-            {/* No Thank You Button */}
-            <Card padding="400">
-              <BlockStack gap="300">
-                <TextContainer>
-                  <h3>No Thank You Button</h3>
-                </TextContainer>
+                  <Divider />
 
-                <TextField
-                  autoComplete="off"
-                  label="Button Text"
-                  value={noButtonSettings.text}
-                  onChange={(value) =>
-                    setNoButtonSettings({ ...noButtonSettings, text: value })
-                  }
-                />
+                  {/* ================= TRIGGER PRODUCTS ================= */}
+                  <TextContainer>
+                    <h3>Trigger Products</h3>
+                    <p>Show this upsell when customers buy:</p>
+                  </TextContainer>
 
-                <InlineStack align="space-between" gap="400">
-                  <Box width="50%">
-                    <label>Background Color</label>
-                    <ColorPicker
-                      color={noButtonSettings.backgroundColor}
-                      onChange={(color) =>
-                        setNoButtonSettings({ ...noButtonSettings, backgroundColor: color })
-                      }
-                      allowAlpha
-                    />
-                  </Box>
-                  <Box width="50%">
-                    <label>Text Color</label>
-                    <ColorPicker
-                      color={noButtonSettings.textColor}
-                      onChange={(color) =>
-                        setNoButtonSettings({ ...noButtonSettings, textColor: color })
-                      }
-                      allowAlpha
-                    />
-                  </Box>
-                </InlineStack>
-
-                <InlineStack align="space-between" gap="400">
-                  <Box width="50%">
-                    <RangeSlider
-                      label="Font Size"
-                      value={noButtonSettings.fontSize}
-                      onChange={(value) => {
-                        const fontSizeValue = typeof value === 'number' ? value : value[0];
-                        setNoButtonSettings({ ...noButtonSettings, fontSize: fontSizeValue })
-                      }
-                      }
-                      min={12}
-                      max={24}
-                      output
-                      suffix="px"
-                    />
-                  </Box>
-                  <Box width="50%">
-                    <RangeSlider
-                      label="Border Radius"
-                      value={noButtonSettings.borderRadius}
-                      onChange={(value) => {
-                        const borderValue = typeof value === 'number' ? value : value[0];
-                        setNoButtonSettings({ ...noButtonSettings, borderRadius: borderValue })
-                      }
-                      }
-                      min={0}
-                      max={50}
-                      output
-                      suffix="px"
-                    />
-                  </Box>
-                </InlineStack>
-
-                <InlineStack align="space-between" gap="400">
-                  <Box width="50%">
-                    <label>Border Color</label>
-                    <ColorPicker
-                      color={noButtonSettings.borderColor}
-                      onChange={(color) => {
-                        setNoButtonSettings({ ...noButtonSettings, borderColor: color })
-                      }
-                      }
-                      allowAlpha
-                    />
-                  </Box>
-                  <Box width="50%">
-                    <RangeSlider
-                      label="Font Size"
-                      value={addButtonSettings.fontSize}
-                      onChange={(value) => {
-                        const numericValue = typeof value === 'number' ? value : value[0];
-                        setAddButtonSettings({ ...addButtonSettings, fontSize: numericValue });
-                      }}
-                      min={12}
-                      max={24}
-                      output
-                      suffix="px"
-                    />
-                  </Box>
-                </InlineStack>
-
-                <Box>
-                  <Checkbox
-                    label="Enable Shadow"
-                    checked={noButtonSettings.shadow}
-                    onChange={(checked) =>
-                      setNoButtonSettings({ ...noButtonSettings, shadow: checked })
-                    }
+                  <Select
+                    label=""
+                    options={[
+                      { label: "All products", value: "ALL" },
+                      { label: "Specific products", value: "SPECIFIC" },
+                    ]}
+                    value={triggerMode}
+                    onChange={(v) => setTriggerMode(v as TriggerMode)}
                   />
-                </Box>
-              </BlockStack>
-            </Card>
-          </FormLayout>
-        </Card>
-      </div>
 
-      {/* ================= PREVIEW ================= */}
-      <div className="marginBottom10">
-        <Card>
-          <TextContainer>
-            <h2>Preview</h2>
-            <p>See how your upsell offer will appear to customers.</p>
-          </TextContainer>
+                  {triggerMode === "SPECIFIC" && (
+                    <Box paddingBlockStart="400">
+                      <InlineStack align="space-between">
+                        <TextContainer>
+                          <p>Selected products ({selectedTriggerProducts.length})</p>
+                        </TextContainer>
+                        <Button size="slim" onClick={() => {
+                          setTriggerModalOpen(true);
+                          fetchProducts();
+                        }}>
+                          {selectedTriggerProducts.length > 0 ? "Add More Products" : "Select Products"}
+                        </Button>
+                      </InlineStack>
 
-          <Box padding="400" background="bg-surface" borderRadius="200">
-            <BlockStack gap="400">
-              <TextContainer>
-                <h2 style={{ color: colorToRgba(titleColor) }}>
-                  {title.replace('{product_name}', selectedUpsellProduct?.title || 'Product')}
-                </h2>
+                      {/* ... rest of trigger products code ... */}
+                    </Box>
+                  )}
 
-                {subtitle && (
-                  <p style={{ color: colorToRgba(subtitleColor) }}>
-                    {subtitle.replace('{product_name}', selectedUpsellProduct?.title || 'Product')}
-                  </p>
-                )}
+                  <Divider />
 
-                {selectedUpsellProduct && (
-                  <Box paddingBlock="400">
-                    <BlockStack gap="300">
-                      {showProductImage && selectedUpsellProduct.featuredImage?.url && (
-                        <div
-                          style={{
-                            padding: "8px",
-                            backgroundColor: "var(--p-color-bg-surface)",
-                            borderRadius: `${imageBorderRadius}px`,
-                            boxShadow: imageShadow ? '0 4px 12px rgba(0,0,0,0.1)' : 'none',
-                            maxWidth: imageSize === "SMALL" ? "100px" :
-                                      imageSize === "MEDIUM" ? "200px" :
-                                      "300px",
-                            margin: "0 auto",
-                            overflow: "hidden"
-                          }}
-                        >
-                          <Box
-                          padding="200"
-                          background="bg-surface"
-                          >
-                            <img
-                              src={selectedUpsellProduct.featuredImage.url}
-                              alt={selectedUpsellProduct.featuredImage.altText || selectedUpsellProduct.title}
-                              style={{
-                                width: "100%",
-                                height: "auto",
-                                borderRadius: `${imageBorderRadius - 4}px`,
-                                display: "block",
-                              }}
+                  {/* ================= UPSELL PRODUCT ================= */}
+                  <TextContainer>
+                    <h3>Upsell Product</h3>
+                    <p>Product to offer as an upsell:</p>
+                  </TextContainer>
+
+                  <LegacyCard sectioned>
+                    <InlineStack align="space-between" blockAlign="center">
+                      <strong>Selected Upsell Product</strong>
+                      <Button
+                        size="slim"
+                        onClick={() => {
+                          setUpsellModalOpen(true);
+                          fetchProducts();
+                        }}
+                      >
+                        {selectedUpsellProduct ? "Change Product" : "Select Product"}
+                      </Button>
+                    </InlineStack>
+
+                    {selectedUpsellProduct ? (
+                      <Box paddingBlockStart="200">
+                        <InlineStack gap="200" blockAlign="center">
+                          {selectedUpsellProduct.featuredImage?.url && (
+                            <Thumbnail
+                              source={selectedUpsellProduct.featuredImage.url}
+                              alt={selectedUpsellProduct.title}
+                              size="small"
                             />
-                          </Box>
-                        </div>
+                          )}
+                          <div>
+                            <p><strong>{selectedUpsellProduct.title}</strong></p>
+                            <p>{formatPrice(selectedUpsellProduct.price)}</p>
+                            {isEditing && (
+                              <Badge tone="info">Current Upsell Product</Badge>
+                            )}
+                          </div>
+                        </InlineStack>
+                      </Box>
+                    ) : (
+                      <EmptyState
+                        heading={isEditing ? "Loading product..." : "No product selected"}
+                        action={{
+                          content: "Select Product",
+                          onAction: () => setUpsellModalOpen(true),
+                        }}
+                        image=""
+                      >
+                        <p>{isEditing ? "Loading the upsell product..." : "Choose which product to offer as an upsell."}</p>
+                      </EmptyState>
+                    )}
+
+                  </LegacyCard>
+
+                  {/* ================= DISCOUNT SETTINGS ================= */}
+                  <Select
+                    label="Apply this discount"
+                    value={discountType}
+                    options={[
+                      { label: "None", value: "NONE" },
+                      { label: "Percentage", value: "PERCENTAGE" },
+                      { label: "Fixed Amount", value: "FIXED_AMOUNT" },
+                    ]}
+                    onChange={(v) => {
+                      setDiscountType(v as DiscountType);
+                      if (v === "NONE") setDiscountValue("");
+                    }}
+                  />
+
+                  {discountType !== "NONE" && (
+                    <TextField
+                      autoComplete="off"
+                      type="number"
+                      label={discountType === "PERCENTAGE" ? "Discount Percentage" : "Discount Amount"}
+                      value={discountValue}
+                      onChange={setDiscountValue}
+                      error={discountError}
+                      suffix={discountType === "PERCENTAGE" ? "%" : "$"}
+                      helpText={
+                        discountType === "PERCENTAGE"
+                          ? "Enter the percentage discount to apply"
+                          : "Enter the fixed amount discount to apply"
+                      }
+                    />
+                  )}
+                </FormLayout>
+              </LegacyCard>
+
+              {/* ================= DESIGN SETTINGS ================= */}
+              <LegacyCard title="Design Settings" sectioned>
+                <BlockStack gap="400">
+                  {/* Title Section */}
+                  <LegacyCard title="Title & Subtitle" sectioned>
+                    <BlockStack gap="200">
+                      <TextField
+                        autoComplete="off"
+                        label="Title Text"
+                        value={title}
+                        onChange={setTitle}
+                        helpText="Shortcodes: {product_name}, {first_name}"
+                      />
+                      <Box>
+                        <label>Title Color</label>
+                        <ColorPicker color={titleColor} onChange={setTitleColor} allowAlpha />
+                      </Box>
+
+                      <TextField
+                        autoComplete="off"
+                        label="Subtitle Text"
+                        value={subtitle}
+                        onChange={setSubtitle}
+                        helpText="Shortcodes: {product_name}, {first_name}"
+                      />
+                      {subtitle && (
+                        <Box>
+                          <label>Subtitle Color</label>
+                          <ColorPicker color={subtitleColor} onChange={setSubtitleColor} allowAlpha />
+                        </Box>
+                      )}
+                    </BlockStack>
+                  </LegacyCard>
+
+                  {/* Product Information */}
+                  <LegacyCard title="Product Information" sectioned>
+                    <BlockStack gap="200">
+                      <TextField
+                        autoComplete="off"
+                        label="Custom Product Title"
+                        value={productTitle}
+                        onChange={setProductTitle}
+                        placeholder="Leave empty to use Shopify title"
+                        helpText="Override the product title in the upsell"
+                      />
+                      <TextField
+                        autoComplete="off"
+                        label="Custom Product Description"
+                        value={productDescription}
+                        onChange={setProductDescription}
+                        multiline={3}
+                        placeholder="Leave empty to use Shopify description"
+                        helpText="Override the product description in the upsell"
+                      />
+                      <Box>
+                        <label>Product Price Color</label>
+                        <ColorPicker color={priceColor} onChange={setPriceColor} allowAlpha />
+                      </Box>
+                    </BlockStack>
+                  </LegacyCard>
+
+                  {/* Product Image Settings */}
+                  <LegacyCard title="Product Image" sectioned>
+                    <BlockStack gap="200">
+                      <Checkbox
+                        label="Show Product Image"
+                        checked={showProductImage}
+                        onChange={setShowProductImage}
+                      />
+
+                      {showProductImage && (
+                        <>
+                          <Select
+                            label="Image Size"
+                            options={[
+                              { label: "Small", value: "SMALL" },
+                              { label: "Medium", value: "MEDIUM" },
+                              { label: "Large", value: "LARGE" },
+                            ]}
+                            value={imageSize}
+                            onChange={(value) => setImageSize(value as "SMALL" | "MEDIUM" | "LARGE")}
+                          />
+
+                          <RangeSlider
+                            label="Image Border Radius"
+                            value={imageBorderRadius}
+                            onChange={(value) => {
+                              const numericValue = typeof value === 'number' ? value : value[0];
+                              setImageBorderRadius(numericValue);
+                            }}
+                            min={0}
+                            max={50}
+                            output
+                            suffix="px"
+                          />
+
+                          <Checkbox
+                            label="Enable Image Shadow"
+                            checked={imageShadow}
+                            onChange={setImageShadow}
+                          />
+                        </>
+                      )}
+                    </BlockStack>
+                  </LegacyCard>
+
+                  {/* Add to Order Button */}
+                  <LegacyCard title="Add to Order Button" sectioned>
+                    <BlockStack gap="300">
+                      <TextField
+                        autoComplete="off"
+                        label="Button Text"
+                        value={addButtonSettings.text}
+                        onChange={(value) =>
+                          setAddButtonSettings({ ...addButtonSettings, text: value })
+                        }
+                      />
+
+                      <Select
+                        label="Button Animation"
+                        options={[
+                          { label: "None", value: "NONE" },
+                          { label: "Pulse", value: "PULSE" },
+                          { label: "Bounce", value: "BOUNCE" },
+                        ]}
+                        value={addButtonSettings.animation}
+                        onChange={(value) =>
+                          setAddButtonSettings({ ...addButtonSettings, animation: value as "NONE" | "PULSE" | "BOUNCE" })
+                        }
+                      />
+
+                      <InlineStack align="space-between" gap="400">
+                        <Box width="50%">
+                          <label>Background Color</label>
+                          <ColorPicker
+                            color={addButtonSettings.backgroundColor}
+                            onChange={(color) =>
+                              setAddButtonSettings({ ...addButtonSettings, backgroundColor: color })
+                            }
+                            allowAlpha
+                          />
+                        </Box>
+                        <Box width="50%">
+                          <label>Text Color</label>
+                          <ColorPicker
+                            color={addButtonSettings.textColor}
+                            onChange={(color) =>
+                              setAddButtonSettings({ ...addButtonSettings, textColor: color })
+                            }
+                            allowAlpha
+                          />
+                        </Box>
+                      </InlineStack>
+
+                      <InlineStack align="space-between" gap="400">
+                        <Box width="50%">
+                          <RangeSlider
+                            label="Font Size"
+                            value={addButtonSettings.fontSize}
+                            onChange={(value) => {
+                              const numericValue = typeof value === 'number' ? value : value[0];
+                              setAddButtonSettings({ ...addButtonSettings, fontSize: numericValue });
+                            }}
+                            min={12}
+                            max={24}
+                            output
+                            suffix="px"
+                          />
+                        </Box>
+                        <Box width="50%">
+                          <RangeSlider
+                            label="Border Radius"
+                            value={addButtonSettings.borderRadius}
+                            onChange={(value) => {
+                              const numericValue = typeof value === 'number' ? value : value[0];
+                              setAddButtonSettings({ ...addButtonSettings, borderRadius: numericValue });
+                            }}
+                            min={0}
+                            max={50}
+                            output
+                            suffix="px"
+                          />
+                        </Box>
+                      </InlineStack>
+
+                      <InlineStack align="space-between" gap="400">
+                        <Box width="50%">
+                          <label>Border Color</label>
+                          <ColorPicker
+                            color={addButtonSettings.borderColor}
+                            onChange={(color) =>
+                              setAddButtonSettings({ ...addButtonSettings, borderColor: color })
+                            }
+                            allowAlpha
+                          />
+                        </Box>
+                        <Box width="50%">
+                          <RangeSlider
+                            label="Border Width"
+                            value={addButtonSettings.borderWidth}
+                            onChange={(value) => {
+                              const numericValue = typeof value === 'number' ? value : value[0];
+                              setAddButtonSettings({ ...addButtonSettings, borderWidth: numericValue });
+                            }}
+                            min={0}
+                            max={10}
+                            output
+                            suffix="px"
+                          />
+                        </Box>
+                      </InlineStack>
+
+                      <Box>
+                        <Checkbox
+                          label="Enable Shadow"
+                          checked={addButtonSettings.shadow}
+                          onChange={(checked) =>
+                            setAddButtonSettings({ ...addButtonSettings, shadow: checked })
+                          }
+                        />
+                      </Box>
+                    </BlockStack>
+                  </LegacyCard>
+
+                  {/* No Thank You Button */}
+                  <LegacyCard title="No Thank You Button" sectioned>
+                    <BlockStack gap="300">
+                      <TextField
+                        autoComplete="off"
+                        label="Button Text"
+                        value={noButtonSettings.text}
+                        onChange={(value) =>
+                          setNoButtonSettings({ ...noButtonSettings, text: value })
+                        }
+                      />
+
+                      <InlineStack align="space-between" gap="400">
+                        <Box width="50%">
+                          <label>Background Color</label>
+                          <ColorPicker
+                            color={noButtonSettings.backgroundColor}
+                            onChange={(color) =>
+                              setNoButtonSettings({ ...noButtonSettings, backgroundColor: color })
+                            }
+                            allowAlpha
+                          />
+                        </Box>
+                        <Box width="50%">
+                          <label>Text Color</label>
+                          <ColorPicker
+                            color={noButtonSettings.textColor}
+                            onChange={(color) =>
+                              setNoButtonSettings({ ...noButtonSettings, textColor: color })
+                            }
+                            allowAlpha
+                          />
+                        </Box>
+                      </InlineStack>
+
+                      <InlineStack align="space-between" gap="400">
+                        <Box width="50%">
+                          <RangeSlider
+                            label="Font Size"
+                            value={noButtonSettings.fontSize}
+                            onChange={(value) => {
+                              const numericValue = typeof value === 'number' ? value : value[0];
+                              setNoButtonSettings({ ...noButtonSettings, fontSize: numericValue });
+                            }}
+                            min={12}
+                            max={24}
+                            output
+                            suffix="px"
+                          />
+                        </Box>
+                        <Box width="50%">
+                          <RangeSlider
+                            label="Border Radius"
+                            value={noButtonSettings.borderRadius}
+                            onChange={(value) => {
+                              const numericValue = typeof value === 'number' ? value : value[0];
+                              setNoButtonSettings({ ...noButtonSettings, borderRadius: numericValue });
+                            }}
+                            min={0}
+                            max={50}
+                            output
+                            suffix="px"
+                          />
+                        </Box>
+                      </InlineStack>
+
+                      <InlineStack align="space-between" gap="400">
+                        <Box width="50%">
+                          <label>Border Color</label>
+                          <ColorPicker
+                            color={noButtonSettings.borderColor}
+                            onChange={(color) =>
+                              setNoButtonSettings({ ...noButtonSettings, borderColor: color })
+                            }
+                            allowAlpha
+                          />
+                        </Box>
+                        <Box width="50%">
+                          <RangeSlider
+                            label="Border Width"
+                            value={noButtonSettings.borderWidth}
+                            onChange={(value) => {
+                              const numericValue = typeof value === 'number' ? value : value[0];
+                              setNoButtonSettings({ ...noButtonSettings, borderWidth: numericValue });
+                            }}
+                            min={0}
+                            max={10}
+                            output
+                            suffix="px"
+                          />
+                        </Box>
+                      </InlineStack>
+
+                      <Box>
+                        <Checkbox
+                          label="Enable Shadow"
+                          checked={noButtonSettings.shadow}
+                          onChange={(checked) =>
+                            setNoButtonSettings({ ...noButtonSettings, shadow: checked })
+                          }
+                        />
+                      </Box>
+                    </BlockStack>
+                  </LegacyCard>
+                </BlockStack>
+              </LegacyCard>
+            </BlockStack>
+          </Grid.Cell>
+
+          {/* العمود الأيمن - المعاينة */}
+          <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 6, lg: 4, xl: 4 }}>
+            <LegacyCard title="Live Preview" sectioned>
+              <div
+                style={{
+                  position: "sticky",
+                  top: "20px",
+                  maxHeight: "calc(100vh - 100px)",
+                  overflowY: "auto"
+                }}
+              >
+                <Box
+                  padding="400"
+                  background="bg-surface"
+                  borderRadius="200"
+                >
+                  <BlockStack gap="400">
+                    <TextContainer>
+                      <h2 style={{ color: colorToRgba(titleColor) }}>
+                        {title.replace('{product_name}', selectedUpsellProduct?.title || 'Product')}
+                      </h2>
+
+                      {subtitle && (
+                        <p style={{ color: colorToRgba(subtitleColor) }}>
+                          {subtitle.replace('{product_name}', selectedUpsellProduct?.title || 'Product')}
+                        </p>
                       )}
 
-                      {/* معلومات المنتج */}
-                      <BlockStack gap="200">
-                        <p style={{
-                          fontSize: "18px",
-                          fontWeight: "bold",
-                          margin: 0
-                        }}>
-                          {productTitle || selectedUpsellProduct.title}
-                        </p>
+                      {selectedUpsellProduct && (
+                        <Box paddingBlock="400">
+                          <BlockStack gap="300">
+                            {/* صورة المنتج */}
+                            {showProductImage && selectedUpsellProduct.featuredImage?.url && (
+                              <div style={{
+                                borderRadius: `${imageBorderRadius}px`,
+                                boxShadow: imageShadow ? 'var(--p-shadow-300)' : 'none',
+                                maxWidth: getImageMaxWidth(),
+                                margin: "0 auto",
+                                overflow: "hidden",
+                              }}>
+                                <Box
+                                  padding="200"
+                                  background="bg-surface"
+                                >
+                                  <img
+                                    src={selectedUpsellProduct.featuredImage.url}
+                                    alt={selectedUpsellProduct.featuredImage.altText || selectedUpsellProduct.title}
+                                    style={{
+                                      width: "100%",
+                                      height: "auto",
+                                      borderRadius: `${Math.max(imageBorderRadius - 4, 0)}px`,
+                                      display: "block",
+                                    }}
+                                  />
+                                </Box>
+                              </div>
+                            )}
 
-                        {productDescription && (
-                          <p style={{
-                            color: "#666",
-                            margin: 0,
-                            fontSize: "14px"
-                          }}>
-                            {productDescription}
-                          </p>
-                        )}
+                            {/* معلومات المنتج */}
+                            <BlockStack gap="200">
+                              <p style={{
+                                fontSize: "18px",
+                                fontWeight: "bold",
+                                margin: 0
+                              }}>
+                                {productTitle || selectedUpsellProduct.title}
+                              </p>
 
-                        {/* السعر */}
-                        {selectedUpsellProduct.price && (
-                          <InlineStack gap="200" align="start" blockAlign="center">
-                            {discountType !== "NONE" && calculatedPrice && (
-                              <>
-                                <s style={{
-                                  color: '#999',
+                              {productDescription && (
+                                <p style={{
+                                  color: "#666",
+                                  margin: 0,
                                   fontSize: "14px"
                                 }}>
-                                  {formatPrice(selectedUpsellProduct.price)}
-                                </s>
-                                <span style={{
-                                  color: colorToRgba(priceColor),
-                                  fontWeight: 'bold',
-                                  fontSize: "18px"
-                                }}>
-                                  {formatPrice(calculatedPrice)}
-                                </span>
-                                <Badge tone="success">
-                                  {discountType === "PERCENTAGE"
-                                    ? `${discountValue}% OFF`
-                                    : `$${discountValue} OFF`}
-                                </Badge>
-                              </>
-                            )}
+                                  {productDescription}
+                                </p>
+                              )}
 
-                            {discountType === "NONE" && (
-                              <span style={{
-                                color: colorToRgba(priceColor),
-                                fontWeight: 'bold',
-                                fontSize: "18px"
-                              }}>
-                                {formatPrice(selectedUpsellProduct.price)}
-                              </span>
-                            )}
-                          </InlineStack>
-                        )}
-                      </BlockStack>
-                    </BlockStack>
-                  </Box>
-                )}
+                              {/* السعر */}
+                              {selectedUpsellProduct.price && (
+                                <InlineStack gap="200" align="start" blockAlign="center">
+                                  {discountType !== "NONE" && calculatedPrice && (
+                                    <>
+                                      <s style={{
+                                        color: '#999',
+                                        fontSize: "14px"
+                                      }}>
+                                        {formatPrice(selectedUpsellProduct.price)}
+                                      </s>
+                                      <span style={{
+                                        color: colorToRgba(priceColor),
+                                        fontWeight: 'bold',
+                                        fontSize: "18px"
+                                      }}>
+                                        {formatPrice(calculatedPrice)}
+                                      </span>
+                                      <Badge tone="success">
+                                        {discountType === "PERCENTAGE"
+                                          ? `${discountValue}% OFF`
+                                          : `$${discountValue} OFF`}
+                                      </Badge>
+                                    </>
+                                  )}
 
-                {/* الأزرار */}
-                <Box paddingBlockStart="400">
-                  <BlockStack gap="200">
-                    {/* Add to Order Button */}
-                    <div style={{
-                      backgroundColor: colorToRgba(addButtonSettings.backgroundColor),
-                      color: colorToRgba(addButtonSettings.textColor),
-                      fontSize: `${addButtonSettings.fontSize}px`,
-                      borderRadius: `${addButtonSettings.borderRadius}px`,
-                      border: `${addButtonSettings.borderWidth}px solid ${colorToRgba(addButtonSettings.borderColor)}`,
-                      boxShadow: addButtonSettings.shadow ? '0 4px 6px rgba(0,0,0,0.1)' : 'none',
-                      padding: '12px 24px',
-                      textAlign: 'center',
-                      cursor: 'pointer',
-                      animation: addButtonSettings.animation === 'PULSE' ? 'pulse 2s infinite' :
-                        addButtonSettings.animation === 'BOUNCE' ? 'bounce 1s infinite' : 'none',
-                      fontWeight: 'bold',
-                      transition: 'all 0.3s ease',
-                    }}>
-                      {addButtonSettings.text}
-                    </div>
+                                  {discountType === "NONE" && (
+                                    <span style={{
+                                      color: colorToRgba(priceColor),
+                                      fontWeight: 'bold',
+                                      fontSize: "18px"
+                                    }}>
+                                      {formatPrice(selectedUpsellProduct.price)}
+                                    </span>
+                                  )}
+                                </InlineStack>
+                              )}
+                            </BlockStack>
+                          </BlockStack>
+                        </Box>
+                      )}
 
-                    {/* No Thank You Button */}
-                    <div style={{
-                      backgroundColor: colorToRgba(noButtonSettings.backgroundColor),
-                      color: colorToRgba(noButtonSettings.textColor),
-                      fontSize: `${noButtonSettings.fontSize}px`,
-                      borderRadius: `${noButtonSettings.borderRadius}px`,
-                      border: `${noButtonSettings.borderWidth}px solid ${colorToRgba(noButtonSettings.borderColor)}`,
-                      boxShadow: noButtonSettings.shadow ? '0 2px 4px rgba(0,0,0,0.1)' : 'none',
-                      padding: '10px 20px',
-                      textAlign: 'center',
-                      cursor: 'pointer',
-                      transition: 'all 0.3s ease',
-                    }}>
-                      {noButtonSettings.text}
-                    </div>
+                      {/* الأزرار */}
+                      <Box paddingBlockStart="400">
+                        <BlockStack gap="200">
+                          {/* Add to Order Button */}
+                          <div style={{
+                            backgroundColor: colorToRgba(addButtonSettings.backgroundColor),
+                            color: colorToRgba(addButtonSettings.textColor),
+                            fontSize: `${addButtonSettings.fontSize}px`,
+                            borderRadius: `${addButtonSettings.borderRadius}px`,
+                            border: `${addButtonSettings.borderWidth}px solid ${colorToRgba(addButtonSettings.borderColor)}`,
+                            boxShadow: addButtonSettings.shadow ? '0 4px 6px rgba(0,0,0,0.1)' : 'none',
+                            padding: '12px 24px',
+                            textAlign: 'center',
+                            cursor: 'pointer',
+                            animation: addButtonSettings.animation === 'PULSE' ? 'pulse 2s infinite' :
+                              addButtonSettings.animation === 'BOUNCE' ? 'bounce 1s infinite' : 'none',
+                            fontWeight: 'bold',
+                            transition: 'all 0.3s ease',
+                          }}>
+                            {addButtonSettings.text}
+                          </div>
+
+                          {/* No Thank You Button */}
+                          <div style={{
+                            backgroundColor: colorToRgba(noButtonSettings.backgroundColor),
+                            color: colorToRgba(noButtonSettings.textColor),
+                            fontSize: `${noButtonSettings.fontSize}px`,
+                            borderRadius: `${noButtonSettings.borderRadius}px`,
+                            border: `${noButtonSettings.borderWidth}px solid ${colorToRgba(noButtonSettings.borderColor)}`,
+                            boxShadow: noButtonSettings.shadow ? '0 2px 4px rgba(0,0,0,0.1)' : 'none',
+                            padding: '10px 20px',
+                            textAlign: 'center',
+                            cursor: 'pointer',
+                            transition: 'all 0.3s ease',
+                          }}>
+                            {noButtonSettings.text}
+                          </div>
+                        </BlockStack>
+                      </Box>
+                    </TextContainer>
                   </BlockStack>
                 </Box>
-              </TextContainer>
-            </BlockStack>
-          </Box>
-        </Card>
-      </div>
+              </div>
+            </LegacyCard>
+          </Grid.Cell>
+        </Grid>
+      )
+      }
 
       {/* ================= MODALS ================= */}
 
@@ -1212,6 +1593,11 @@ export default function UpsellCreatePage() {
           )}
         </Modal.Section>
       </Modal>
+
+      {/* ================= MODALS ================= */}
+      {/* Keep the existing modals here */}
     </Page>
   );
+
 }
+
