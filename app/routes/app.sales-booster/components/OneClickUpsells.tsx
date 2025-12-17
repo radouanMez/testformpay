@@ -30,8 +30,9 @@ import {
   Checkbox,
   Grid,
   LegacyCard,
+  Popover
 } from "@shopify/polaris";
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { SearchIcon, PlusIcon } from "@shopify/polaris-icons";
 import { useNavigate } from "react-router";
 
@@ -54,6 +55,12 @@ type Product = {
   };
 };
 
+interface SmallColorPickerProps {
+  color: ColorPickerColor;
+  onChange: (color: ColorPickerColor) => void;
+  label: string;
+}
+
 type UpsellType = "ONE_CLICK" | "BUNDLE" | "DISCOUNT";
 type DiscountType = "NONE" | "PERCENTAGE" | "FIXED_AMOUNT";
 type TriggerMode = "ALL" | "SPECIFIC";
@@ -74,7 +81,6 @@ const PRODUCTS_QUERY = `
       }
     }
   `;
-
 // -------------------- Helpers --------------------
 
 const colorToRgba = (color: ColorPickerColor): string => {
@@ -478,36 +484,88 @@ export default function UpsellCreatePage() {
             setImageShadow(upsell.designSettings.image.shadow || false);
           }
 
+          if (upsell.designSettings.titleColor) {
+            const titleColorParsed = typeof upsell.designSettings.titleColor === 'string'
+              ? parseRgbaToColor(upsell.designSettings.titleColor)
+              : upsell.designSettings.titleColor;
+            setTitleColor(titleColorParsed);
+          }
+
+          if (upsell.designSettings.subtitleColor) {
+            const subtitleColorParsed = typeof upsell.designSettings.subtitleColor === 'string'
+              ? parseRgbaToColor(upsell.designSettings.subtitleColor)
+              : upsell.designSettings.subtitleColor;
+            setSubtitleColor(subtitleColorParsed);
+          }
+
+          if (upsell.designSettings.priceColor) {
+            const priceColorParsed = typeof upsell.designSettings.priceColor === 'string'
+              ? parseRgbaToColor(upsell.designSettings.priceColor)
+              : upsell.designSettings.priceColor;
+            setPriceColor(priceColorParsed);
+          }
+
           // ملء إعدادات الأزرار
           if (upsell.designSettings.addButton) {
-            setAddButtonSettings({
-              text: upsell.designSettings.addButton.text || "Add to my order",
-              animation: upsell.designSettings.addButton.animation || "NONE",
-              icon: upsell.designSettings.addButton.icon || "",
-              backgroundColor: upsell.designSettings.addButton.backgroundColor || { hue: 0, saturation: 0, brightness: 0, alpha: 1 },
-              textColor: upsell.designSettings.addButton.textColor || { hue: 0, saturation: 0, brightness: 1, alpha: 1 },
-              fontSize: upsell.designSettings.addButton.fontSize || 16,
-              borderRadius: upsell.designSettings.addButton.borderRadius || 8,
-              borderColor: upsell.designSettings.addButton.borderColor || { hue: 0, saturation: 0, brightness: 0, alpha: 1 },
-              borderWidth: upsell.designSettings.addButton.borderWidth || 1,
-              shadow: upsell.designSettings.addButton.shadow || false,
-            });
+            const addBtn = upsell.designSettings.addButton;
+
+            // تحويل ألوان الخلفية والنص
+            const backgroundColor = typeof addBtn.backgroundColor === 'string'
+              ? parseRgbaToColor(addBtn.backgroundColor)
+              : addBtn.backgroundColor || { hue: 0, saturation: 0, brightness: 0, alpha: 1 };
+
+            const textColor = typeof addBtn.textColor === 'string'
+              ? parseRgbaToColor(addBtn.textColor)
+              : addBtn.textColor || { hue: 0, saturation: 0, brightness: 1, alpha: 1 };
+
+            const borderColor = typeof addBtn.borderColor === 'string'
+              ? parseRgbaToColor(addBtn.borderColor)
+              : addBtn.borderColor || { hue: 0, saturation: 0, brightness: 0, alpha: 1 };
+
+            setAddButtonSettings(prev => ({
+              ...prev,
+              text: addBtn.text || prev.text,
+              animation: addBtn.animation || prev.animation,
+              icon: addBtn.icon || prev.icon,
+              backgroundColor,
+              textColor,
+              fontSize: addBtn.fontSize || prev.fontSize,
+              borderRadius: addBtn.borderRadius || prev.borderRadius,
+              borderColor,
+              borderWidth: addBtn.borderWidth || prev.borderWidth,
+              shadow: addBtn.shadow || prev.shadow,
+            }));
           }
 
           if (upsell.designSettings.noButton) {
-            setNoButtonSettings({
-              text: upsell.designSettings.noButton.text || "No thank you, complete my order",
-              animation: "NONE",
-              icon: "",
-              backgroundColor: upsell.designSettings.noButton.backgroundColor || { hue: 0, saturation: 0, brightness: 1, alpha: 1 },
-              textColor: upsell.designSettings.noButton.textColor || { hue: 0, saturation: 0, brightness: 0, alpha: 1 },
-              fontSize: upsell.designSettings.noButton.fontSize || 16,
-              borderRadius: upsell.designSettings.noButton.borderRadius || 8,
-              borderColor: upsell.designSettings.noButton.borderColor || { hue: 0, saturation: 0, brightness: 0, alpha: 1 },
-              borderWidth: upsell.designSettings.noButton.borderWidth || 1,
-              shadow: upsell.designSettings.noButton.shadow || false,
-            });
+            const noBtn = upsell.designSettings.noButton;
+
+            // تحويل ألوان الخلفية والنص
+            const backgroundColor = typeof noBtn.backgroundColor === 'string'
+              ? parseRgbaToColor(noBtn.backgroundColor)
+              : noBtn.backgroundColor || { hue: 0, saturation: 0, brightness: 1, alpha: 1 };
+
+            const textColor = typeof noBtn.textColor === 'string'
+              ? parseRgbaToColor(noBtn.textColor)
+              : noBtn.textColor || { hue: 0, saturation: 0, brightness: 0, alpha: 1 };
+
+            const borderColor = typeof noBtn.borderColor === 'string'
+              ? parseRgbaToColor(noBtn.borderColor)
+              : noBtn.borderColor || { hue: 0, saturation: 0, brightness: 0, alpha: 1 };
+
+            setNoButtonSettings(prev => ({
+              ...prev,
+              text: noBtn.text || prev.text,
+              backgroundColor,
+              textColor,
+              fontSize: noBtn.fontSize || prev.fontSize,
+              borderRadius: noBtn.borderRadius || prev.borderRadius,
+              borderColor,
+              borderWidth: noBtn.borderWidth || prev.borderWidth,
+              shadow: noBtn.shadow || prev.shadow,
+            }));
           }
+
         }
 
         setTimeout(() => {
@@ -697,9 +755,120 @@ export default function UpsellCreatePage() {
     resetForm();
   };
 
+  const parseRgbaToColor = (rgbaString: string): ColorPickerColor => {
+    // تحويل string مثل "rgba(255, 0, 0, 1)" إلى ColorPickerColor
+    const match = rgbaString.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/i);
+
+    if (!match) {
+      // قيمة افتراضية إذا فشل التحويل
+      console.warn("Failed to parse color:", rgbaString);
+      return { hue: 0, saturation: 0, brightness: 0, alpha: 1 };
+    }
+
+    const r = parseInt(match[1]) / 255;
+    const g = parseInt(match[2]) / 255;
+    const b = parseInt(match[3]) / 255;
+    const alpha = match[4] ? parseFloat(match[4]) : 1;
+
+    // تحويل RGB إلى HSV
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const delta = max - min;
+
+    let hue = 0;
+    if (delta !== 0) {
+      if (max === r) {
+        hue = ((g - b) / delta) % 6;
+      } else if (max === g) {
+        hue = (b - r) / delta + 2;
+      } else {
+        hue = (r - g) / delta + 4;
+      }
+
+      hue = Math.round(hue * 60);
+      if (hue < 0) hue += 360;
+    }
+
+    const saturation = max === 0 ? 0 : delta / max;
+    const brightness = max;
+
+    return {
+      hue,
+      saturation,
+      brightness,
+      alpha
+    };
+  };
+
+
+  const SmallColorPicker = ({ color, onChange, label }: SmallColorPickerProps) => {
+    const [popoverActive, setPopoverActive] = useState(false);
+
+    const [tempColor, setTempColor] = useState(color);
+
+    const togglePopover = useCallback(() => {
+      if (!popoverActive) setTempColor(color);
+      setPopoverActive((active) => !active);
+    }, [popoverActive, color]);
+
+    const handleSave = () => {
+      onChange(tempColor);
+      setPopoverActive(false);
+    };
+
+    const handleCancel = () => {
+      setTempColor(color);
+      setPopoverActive(false);
+    };
+
+    return (
+      <Popover
+        active={popoverActive}
+        activator={
+          <Button
+            size="micro"
+            onClick={togglePopover}
+            accessibilityLabel={label}
+            icon={
+              <div style={{
+                width: 16,
+                height: 16,
+                borderRadius: 3,
+                backgroundColor: colorToRgba(color),
+                border: "1px solid rgba(0,0,0,0.1)"
+              }} />
+            }
+          >
+          </Button>
+        }
+        onClose={handleCancel}
+      >
+        <Box padding="400">
+          <BlockStack gap="300">
+            <div style={{ fontSize: '12px', color: 'var(--p-color-text-secondary)', marginBottom: '8px' }}>
+              {label}
+            </div>
+            <ColorPicker
+              color={tempColor}
+              onChange={(newColor) => setTempColor({ ...newColor, alpha: 1 })}
+            // allowAlpha
+            />
+
+            <InlineStack align="end" gap="200">
+              <Button size="micro" onClick={handleCancel}>Cancel</Button>
+              <Button size="micro" variant="primary" onClick={handleSave}>Save</Button>
+            </InlineStack>
+          </BlockStack>
+        </Box>
+      </Popover>
+    );
+  };
+
+
+
+
 
   // -------------------- Render --------------------
-
   return (
     <Page
       title={isEditing ? `Editing: ${editingUpsell?.name}` : "Upsell Manager"}
@@ -801,7 +970,7 @@ export default function UpsellCreatePage() {
       {isCreating && (
         <Grid>
           {/* العمود الأيسر - الإعدادات */}
-          <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 6, lg: 8, xl: 8 }}>
+          <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 6, lg: 7, xl: 7 }}>
             <BlockStack gap="400">
 
               {/* ================= BASIC SETTINGS ================= */}
@@ -1084,30 +1253,56 @@ export default function UpsellCreatePage() {
                       />
 
                       <InlineStack align="space-between" gap="400">
-                        <Box width="50%">
-                          <label>Background Color</label>
-                          <ColorPicker
+                        <Box width="48%">
+                          <div style={{
+                            fontSize: 'var(--p-font-size-75)',
+                            fontWeight: 'var(--p-font-weight-regular)',
+                            color: 'var(--p-color-text-secondary)',
+                            marginBottom: '4px'
+                          }}>
+                            Background
+                          </div>
+                          <SmallColorPicker
                             color={addButtonSettings.backgroundColor}
-                            onChange={(color) =>
-                              setAddButtonSettings({ ...addButtonSettings, backgroundColor: color })
-                            }
-                            allowAlpha
+                            onChange={(color) => setAddButtonSettings(prev => ({ ...prev, backgroundColor: color }))}
+                            label="Background Color"
                           />
                         </Box>
-                        <Box width="50%">
-                          <label>Text Color</label>
-                          <ColorPicker
+                        <Box width="48%">
+                          <div style={{
+                            fontSize: 'var(--p-font-size-75)',
+                            fontWeight: 'var(--p-font-weight-regular)',
+                            color: 'var(--p-color-text-secondary)',
+                            marginBottom: '4px'
+                          }}>
+                            Text Color
+                          </div>
+                          <SmallColorPicker
                             color={addButtonSettings.textColor}
-                            onChange={(color) =>
+                            onChange={(color: any) =>
                               setAddButtonSettings({ ...addButtonSettings, textColor: color })
                             }
-                            allowAlpha
+                            label="Text Color"
                           />
                         </Box>
-                      </InlineStack>
-
-                      <InlineStack align="space-between" gap="400">
-                        <Box width="50%">
+                        <Box width="48%">
+                          <div style={{
+                            fontSize: 'var(--p-font-size-75)',
+                            fontWeight: 'var(--p-font-weight-regular)',
+                            color: 'var(--p-color-text-secondary)',
+                            marginBottom: '4px'
+                          }}>
+                            Border Color
+                          </div>
+                          <SmallColorPicker
+                            color={addButtonSettings.borderColor}
+                            onChange={(color: any) =>
+                              setAddButtonSettings({ ...addButtonSettings, borderColor: color })
+                            }
+                            label="Text Color"
+                          />
+                        </Box>
+                        <Box width="48%">
                           <RangeSlider
                             label="Font Size"
                             value={addButtonSettings.fontSize}
@@ -1121,7 +1316,7 @@ export default function UpsellCreatePage() {
                             suffix="px"
                           />
                         </Box>
-                        <Box width="50%">
+                        <Box width="48%">
                           <RangeSlider
                             label="Border Radius"
                             value={addButtonSettings.borderRadius}
@@ -1135,20 +1330,8 @@ export default function UpsellCreatePage() {
                             suffix="px"
                           />
                         </Box>
-                      </InlineStack>
 
-                      <InlineStack align="space-between" gap="400">
-                        <Box width="50%">
-                          <label>Border Color</label>
-                          <ColorPicker
-                            color={addButtonSettings.borderColor}
-                            onChange={(color) =>
-                              setAddButtonSettings({ ...addButtonSettings, borderColor: color })
-                            }
-                            allowAlpha
-                          />
-                        </Box>
-                        <Box width="50%">
+                        <Box width="48%">
                           <RangeSlider
                             label="Border Width"
                             value={addButtonSettings.borderWidth}
@@ -1162,17 +1345,17 @@ export default function UpsellCreatePage() {
                             suffix="px"
                           />
                         </Box>
-                      </InlineStack>
 
-                      <Box>
-                        <Checkbox
-                          label="Enable Shadow"
-                          checked={addButtonSettings.shadow}
-                          onChange={(checked) =>
-                            setAddButtonSettings({ ...addButtonSettings, shadow: checked })
-                          }
-                        />
-                      </Box>
+                        <Box>
+                          <Checkbox
+                            label="Enable Shadow"
+                            checked={addButtonSettings.shadow}
+                            onChange={(checked) =>
+                              setAddButtonSettings({ ...addButtonSettings, shadow: checked })
+                            }
+                          />
+                        </Box>
+                      </InlineStack>
                     </BlockStack>
                   </LegacyCard>
 
@@ -1286,7 +1469,7 @@ export default function UpsellCreatePage() {
           </Grid.Cell>
 
           {/* العمود الأيمن - المعاينة */}
-          <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 6, lg: 4, xl: 4 }}>
+          <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 6, lg: 5, xl: 5 }}>
             <LegacyCard title="Live Preview" sectioned>
               <div
                 style={{
@@ -1406,44 +1589,103 @@ export default function UpsellCreatePage() {
                       )}
 
                       {/* الأزرار */}
+                      {/* الأزرار في Live Preview */}
                       <Box paddingBlockStart="400">
                         <BlockStack gap="200">
-                          {/* Add to Order Button */}
-                          <div style={{
-                            backgroundColor: colorToRgba(addButtonSettings.backgroundColor),
-                            color: colorToRgba(addButtonSettings.textColor),
-                            fontSize: `${addButtonSettings.fontSize}px`,
-                            borderRadius: `${addButtonSettings.borderRadius}px`,
-                            border: `${addButtonSettings.borderWidth}px solid ${colorToRgba(addButtonSettings.borderColor)}`,
-                            boxShadow: addButtonSettings.shadow ? '0 4px 6px rgba(0,0,0,0.1)' : 'none',
-                            padding: '12px 24px',
-                            textAlign: 'center',
-                            cursor: 'pointer',
-                            animation: addButtonSettings.animation === 'PULSE' ? 'pulse 2s infinite' :
-                              addButtonSettings.animation === 'BOUNCE' ? 'bounce 1s infinite' : 'none',
-                            fontWeight: 'bold',
-                            transition: 'all 0.3s ease',
-                          }}>
+                          {/* زر Add to Order - استخدم div مع أنماط مخصصة */}
+                          <div
+                            style={{
+                              backgroundColor: colorToRgba(addButtonSettings.backgroundColor),
+                              color: colorToRgba(addButtonSettings.textColor),
+                              fontSize: `${addButtonSettings.fontSize}px`,
+                              borderRadius: `${addButtonSettings.borderRadius}px`,
+                              border: `${addButtonSettings.borderWidth}px solid ${colorToRgba(addButtonSettings.borderColor)}`,
+                              boxShadow: addButtonSettings.shadow
+                                ? `0 4px 12px rgba(0, 0, 0, 0.15)`
+                                : 'none',
+                              padding: '12px 24px',
+                              textAlign: 'center',
+                              cursor: 'pointer',
+                              fontWeight: 'bold',
+                              transition: 'all 0.2s ease',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '8px',
+                              minHeight: `${addButtonSettings.fontSize + 24}px`,
+                              // Animation
+                              animation: addButtonSettings.animation === 'PULSE'
+                                ? 'pulse 2s infinite'
+                                : addButtonSettings.animation === 'BOUNCE'
+                                  ? 'bounce 1s infinite'
+                                  : 'none',
+                            }}
+                            onMouseEnter={(e) => {
+                              // إضافة تأثير hover ديناميكي
+                              if (addButtonSettings.animation === 'NONE') {
+                                e.currentTarget.style.transform = 'translateY(-2px)';
+                                e.currentTarget.style.boxShadow = addButtonSettings.shadow
+                                  ? '0 6px 16px rgba(0, 0, 0, 0.2)'
+                                  : '0 4px 8px rgba(0, 0, 0, 0.1)';
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (addButtonSettings.animation === 'NONE') {
+                                e.currentTarget.style.transform = 'translateY(0)';
+                                e.currentTarget.style.boxShadow = addButtonSettings.shadow
+                                  ? '0 4px 12px rgba(0, 0, 0, 0.15)'
+                                  : 'none';
+                              }
+                            }}
+                          >
+                            {/* أيقونة إذا كانت موجودة */}
+                            {addButtonSettings.icon && (
+                              <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+                                {/* هنا يمكنك إضافة أيقونة حسب الاسم */}
+                                {addButtonSettings.icon}
+                              </span>
+                            )}
                             {addButtonSettings.text}
                           </div>
 
-                          {/* No Thank You Button */}
-                          <div style={{
-                            backgroundColor: colorToRgba(noButtonSettings.backgroundColor),
-                            color: colorToRgba(noButtonSettings.textColor),
-                            fontSize: `${noButtonSettings.fontSize}px`,
-                            borderRadius: `${noButtonSettings.borderRadius}px`,
-                            border: `${noButtonSettings.borderWidth}px solid ${colorToRgba(noButtonSettings.borderColor)}`,
-                            boxShadow: noButtonSettings.shadow ? '0 2px 4px rgba(0,0,0,0.1)' : 'none',
-                            padding: '10px 20px',
-                            textAlign: 'center',
-                            cursor: 'pointer',
-                            transition: 'all 0.3s ease',
-                          }}>
+                          {/* زر No Thank You - استخدم div مع أنماط مخصصة */}
+                          <div
+                            style={{
+                              backgroundColor: colorToRgba(noButtonSettings.backgroundColor),
+                              color: colorToRgba(noButtonSettings.textColor),
+                              fontSize: `${noButtonSettings.fontSize}px`,
+                              borderRadius: `${noButtonSettings.borderRadius}px`,
+                              border: `${noButtonSettings.borderWidth}px solid ${colorToRgba(noButtonSettings.borderColor)}`,
+                              boxShadow: noButtonSettings.shadow
+                                ? `0 2px 8px rgba(0, 0, 0, 0.1)`
+                                : 'none',
+                              padding: '10px 20px',
+                              textAlign: 'center',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              minHeight: `${noButtonSettings.fontSize + 20}px`,
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.transform = 'translateY(-1px)';
+                              e.currentTarget.style.boxShadow = noButtonSettings.shadow
+                                ? '0 4px 12px rgba(0, 0, 0, 0.15)'
+                                : '0 2px 6px rgba(0, 0, 0, 0.08)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.transform = 'translateY(0)';
+                              e.currentTarget.style.boxShadow = noButtonSettings.shadow
+                                ? '0 2px 8px rgba(0, 0, 0, 0.1)'
+                                : 'none';
+                            }}
+                          >
                             {noButtonSettings.text}
                           </div>
                         </BlockStack>
                       </Box>
+
                     </TextContainer>
                   </BlockStack>
                 </Box>
