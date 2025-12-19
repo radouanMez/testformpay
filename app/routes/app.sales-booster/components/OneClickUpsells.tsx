@@ -176,6 +176,8 @@ export default function UpsellCreatePage() {
   const [buttonBgColor, setButtonBgColor] = useState<ColorPickerColor>({ hue: 0, saturation: 0, brightness: 0 });
   const [buttonTextColor, setButtonTextColor] = useState<ColorPickerColor>({ hue: 0, saturation: 0, brightness: 1 });
 
+  const [upsellStatus, setUpsellStatus] = useState<"DRAFT" | "ACTIVE">("DRAFT");
+
   const [addButtonSettings, setAddButtonSettings] = useState<ButtonSettings>({
     text: "Add to my order",
     animation: "NONE",
@@ -403,6 +405,7 @@ export default function UpsellCreatePage() {
 
         setUpsellName(upsell.name);
         setUpsellType(upsell.type || "POST_PURCHASE");
+        setUpsellStatus(upsell.status || "DRAFT");
 
         if (upsell.displayRules) {
           setTriggerMode(upsell.displayRules.triggerMode || "ALL");
@@ -642,6 +645,7 @@ export default function UpsellCreatePage() {
 
   const resetForm = () => {
     setUpsellName("");
+    setUpsellStatus("DRAFT");
     setUpsellType("POST_PURCHASE");
     setTriggerMode("ALL");
     setSelectedTriggerProducts([]);
@@ -700,7 +704,7 @@ export default function UpsellCreatePage() {
     const upsellPayload = {
       name: upsellName,
       type: upsellType,
-      status: "DRAFT",
+      status: upsellStatus,
       basicSettings: { upsellName, upsellType },
       displayRules: {
         triggerMode,
@@ -783,7 +787,7 @@ export default function UpsellCreatePage() {
         setToastError(false);
         setToastActive(true);
         fetchExistingUpsells();
-        setIsCreating(false);
+        // setIsCreating(false);
       } else {
         throw new Error(result.error || "Failed to save upsell");
       }
@@ -940,7 +944,7 @@ export default function UpsellCreatePage() {
             isCreating
               ? [
                 {
-                  content: "Cancel",
+                  content: "Back",
                   onAction: () => {
                     resetForm();
                     setEditingUpsell(null);
@@ -959,7 +963,7 @@ export default function UpsellCreatePage() {
                 items={existingUpsells}
                 loading={loadingUpsells}
                 renderItem={(upsell) => (
-                  <div style={{ border: "1px solid rgb(233 232 232)", borderRadius: "8px", marginBottom: "5px" }}>
+                  <div className="upsellItem" style={{ border: "1px solid rgb(233 232 232)", borderRadius: "8px", marginBottom: "5px" }}>
                     <ResourceList.Item
                       id={upsell.id}
                       onClick={() => { }}
@@ -1056,6 +1060,19 @@ export default function UpsellCreatePage() {
                   {/* ================= BASIC SETTINGS ================= */}
                   <LegacyCard title="Basic Settings" sectioned>
                     <FormLayout>
+                      <div className="custom-switch">
+                        <InlineStack align="space-between">
+                          <h4>Upsell Status</h4>
+                          <label className="switch">
+                            <input
+                              type="checkbox"
+                              checked={upsellStatus === "ACTIVE"}
+                              onChange={(e) => setUpsellStatus(e.target.checked ? "ACTIVE" : "DRAFT")}
+                            />
+                            <span className="slider round"></span>
+                          </label>
+                        </InlineStack>
+                      </div>
                       <TextField
                         autoComplete="off"
                         label="Upsell Name"
@@ -1580,230 +1597,230 @@ export default function UpsellCreatePage() {
 
               <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 6, lg: 5, xl: 5 }}>
                 <div className="previewFullPopup">
-                    <LegacyCard title="Live Preview" sectioned>
-                      <div
-                        className="previewUpsell"
-                        style={{
-                          position: "sticky",
-                          top: "20px",
-                          maxWidth: "400px",
-                          border: "2px solid #ebebeb",
-                          borderRadius: "8px",
-                          padding: "20px"
-                        }}
+                  <LegacyCard title="Live Preview" sectioned>
+                    <div
+                      className="previewUpsell"
+                      style={{
+                        position: "sticky",
+                        top: "20px",
+                        maxWidth: "400px",
+                        border: "2px solid #ebebeb",
+                        borderRadius: "8px",
+                        padding: "20px"
+                      }}
+                    >
+                      <Box
+                        // padding="400"
+                        background="bg-surface"
+                        borderRadius="200"
                       >
-                        <Box
-                          // padding="400"
-                          background="bg-surface"
-                          borderRadius="200"
-                        >
-                          <BlockStack gap="400">
-                            <TextContainer>
-                              <h2 style={{ fontSize: "18px", color: colorToRgba(titleColor), textAlign: "center" }}>
-                                {title.replace('{product_name}', selectedUpsellProduct?.title || 'Product')}
-                              </h2>
+                        <BlockStack gap="400">
+                          <TextContainer>
+                            <h2 style={{ fontSize: "18px", color: colorToRgba(titleColor), textAlign: "center" }}>
+                              {title.replace('{product_name}', selectedUpsellProduct?.title || 'Product')}
+                            </h2>
 
-                              {subtitle && (
-                                <p style={{ color: colorToRgba(subtitleColor), textAlign: "center" }}>
-                                  {subtitle.replace('{product_name}', selectedUpsellProduct?.title || 'Product')}
-                                </p>
-                              )}
+                            {subtitle && (
+                              <p style={{ color: colorToRgba(subtitleColor), textAlign: "center" }}>
+                                {subtitle.replace('{product_name}', selectedUpsellProduct?.title || 'Product')}
+                              </p>
+                            )}
 
-                              {selectedUpsellProduct && (
-                                <Box>
-                                  <BlockStack gap="300">
-                                    {/* صورة المنتج */}
-                                    {showProductImage && selectedUpsellProduct.featuredImage?.url && (
-                                      <div style={{
-                                        borderRadius: `${imageBorderRadius}px`,
-                                        boxShadow: imageShadow ? 'var(--p-shadow-300)' : 'none',
-                                        maxWidth: getImageMaxWidth(),
-                                        margin: "0 auto",
-                                        overflow: "hidden",
+                            {selectedUpsellProduct && (
+                              <Box>
+                                <BlockStack gap="300">
+                                  {/* صورة المنتج */}
+                                  {showProductImage && selectedUpsellProduct.featuredImage?.url && (
+                                    <div style={{
+                                      borderRadius: `${imageBorderRadius}px`,
+                                      boxShadow: imageShadow ? 'var(--p-shadow-300)' : 'none',
+                                      maxWidth: getImageMaxWidth(),
+                                      margin: "0 auto",
+                                      overflow: "hidden",
+                                    }}>
+                                      <Box
+                                        padding="200"
+                                        background="bg-surface"
+                                      >
+                                        <img
+                                          src={selectedUpsellProduct.featuredImage.url}
+                                          alt={selectedUpsellProduct.featuredImage.altText || selectedUpsellProduct.title}
+                                          style={{
+                                            width: "100%",
+                                            height: "auto",
+                                            borderRadius: `${Math.max(imageBorderRadius - 4, 0)}px`,
+                                            display: "block",
+                                          }}
+                                        />
+                                      </Box>
+                                    </div>
+                                  )}
+
+                                  {/* معلومات المنتج */}
+                                  <BlockStack gap="200">
+                                    <p style={{
+                                      fontSize: "18px",
+                                      fontWeight: "bold",
+                                      margin: 0
+                                    }}>
+                                      {productTitle || selectedUpsellProduct.title}
+                                    </p>
+
+                                    {productDescription && (
+                                      <p style={{
+                                        color: "#666",
+                                        margin: 0,
+                                        fontSize: "14px"
                                       }}>
-                                        <Box
-                                          padding="200"
-                                          background="bg-surface"
-                                        >
-                                          <img
-                                            src={selectedUpsellProduct.featuredImage.url}
-                                            alt={selectedUpsellProduct.featuredImage.altText || selectedUpsellProduct.title}
-                                            style={{
-                                              width: "100%",
-                                              height: "auto",
-                                              borderRadius: `${Math.max(imageBorderRadius - 4, 0)}px`,
-                                              display: "block",
-                                            }}
-                                          />
-                                        </Box>
-                                      </div>
+                                        {productDescription}
+                                      </p>
                                     )}
 
-                                    {/* معلومات المنتج */}
-                                    <BlockStack gap="200">
-                                      <p style={{
-                                        fontSize: "18px",
-                                        fontWeight: "bold",
-                                        margin: 0
-                                      }}>
-                                        {productTitle || selectedUpsellProduct.title}
-                                      </p>
-
-                                      {productDescription && (
-                                        <p style={{
-                                          color: "#666",
-                                          margin: 0,
-                                          fontSize: "14px"
-                                        }}>
-                                          {productDescription}
-                                        </p>
-                                      )}
-
-                                      {/* السعر */}
-                                      {selectedUpsellProduct.price && (
-                                        <InlineStack gap="200" align="start" blockAlign="center">
-                                          {discountType !== "NONE" && calculatedPrice && (
-                                            <>
-                                              <s style={{
-                                                color: '#999',
-                                                fontSize: "14px"
-                                              }}>
-                                                {formatPrice(selectedUpsellProduct.price)}
-                                              </s>
-                                              <span style={{
-                                                color: colorToRgba(priceColor),
-                                                fontWeight: 'bold',
-                                                fontSize: "18px"
-                                              }}>
-                                                {formatPrice(calculatedPrice)}
-                                              </span>
-                                              <Badge tone="success">
-                                                {discountType === "PERCENTAGE"
-                                                  ? `${discountValue}% OFF`
-                                                  : `$${discountValue} OFF`}
-                                              </Badge>
-                                            </>
-                                          )}
-
-                                          {discountType === "NONE" && (
+                                    {/* السعر */}
+                                    {selectedUpsellProduct.price && (
+                                      <InlineStack gap="200" align="start" blockAlign="center">
+                                        {discountType !== "NONE" && calculatedPrice && (
+                                          <>
+                                            <s style={{
+                                              color: '#999',
+                                              fontSize: "14px"
+                                            }}>
+                                              {formatPrice(selectedUpsellProduct.price)}
+                                            </s>
                                             <span style={{
                                               color: colorToRgba(priceColor),
                                               fontWeight: 'bold',
                                               fontSize: "18px"
                                             }}>
-                                              {formatPrice(selectedUpsellProduct.price)}
+                                              {formatPrice(calculatedPrice)}
                                             </span>
-                                          )}
-                                        </InlineStack>
-                                      )}
-                                    </BlockStack>
-                                  </BlockStack>
-                                </Box>
-                              )}
+                                            <Badge tone="success">
+                                              {discountType === "PERCENTAGE"
+                                                ? `${discountValue}% OFF`
+                                                : `$${discountValue} OFF`}
+                                            </Badge>
+                                          </>
+                                        )}
 
-                              {/* الأزرار */}
-                              {/* الأزرار في Live Preview */}
-                              <Box paddingBlockStart="400">
-                                <BlockStack gap="200">
-                                  {/* زر Add to Order - استخدم div مع أنماط مخصصة */}
-                                  <div
-                                    style={{
-                                      backgroundColor: colorToRgba(addButtonSettings.backgroundColor),
-                                      color: colorToRgba(addButtonSettings.textColor),
-                                      fontSize: `${addButtonSettings.fontSize}px`,
-                                      borderRadius: `${addButtonSettings.borderRadius}px`,
-                                      border: `${addButtonSettings.borderWidth}px solid ${colorToRgba(addButtonSettings.borderColor)}`,
-                                      boxShadow: addButtonSettings.shadow
-                                        ? `0 4px 12px rgba(0, 0, 0, 0.15)`
-                                        : 'none',
-                                      padding: '12px 24px',
-                                      textAlign: 'center',
-                                      cursor: 'pointer',
-                                      fontWeight: 'bold',
-                                      transition: 'all 0.2s ease',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      gap: '8px',
-                                      minHeight: `${addButtonSettings.fontSize + 24}px`,
-                                      // Animation
-                                      animation: addButtonSettings.animation === 'PULSE'
-                                        ? 'pulse 2s infinite'
-                                        : addButtonSettings.animation === 'BOUNCE'
-                                          ? 'bounce 1s infinite'
-                                          : 'none',
-                                    }}
-                                    onMouseEnter={(e) => {
-                                      // إضافة تأثير hover ديناميكي
-                                      if (addButtonSettings.animation === 'NONE') {
-                                        e.currentTarget.style.transform = 'translateY(-2px)';
-                                        e.currentTarget.style.boxShadow = addButtonSettings.shadow
-                                          ? '0 6px 16px rgba(0, 0, 0, 0.2)'
-                                          : '0 4px 8px rgba(0, 0, 0, 0.1)';
-                                      }
-                                    }}
-                                    onMouseLeave={(e) => {
-                                      if (addButtonSettings.animation === 'NONE') {
-                                        e.currentTarget.style.transform = 'translateY(0)';
-                                        e.currentTarget.style.boxShadow = addButtonSettings.shadow
-                                          ? '0 4px 12px rgba(0, 0, 0, 0.15)'
-                                          : 'none';
-                                      }
-                                    }}
-                                  >
-                                    {/* أيقونة إذا كانت موجودة */}
-                                    {addButtonSettings.icon && (
-                                      <span style={{ display: 'inline-flex', alignItems: 'center' }}>
-                                        {/* هنا يمكنك إضافة أيقونة حسب الاسم */}
-                                        {addButtonSettings.icon}
-                                      </span>
+                                        {discountType === "NONE" && (
+                                          <span style={{
+                                            color: colorToRgba(priceColor),
+                                            fontWeight: 'bold',
+                                            fontSize: "18px"
+                                          }}>
+                                            {formatPrice(selectedUpsellProduct.price)}
+                                          </span>
+                                        )}
+                                      </InlineStack>
                                     )}
-                                    {addButtonSettings.text}
-                                  </div>
-
-                                  {/* زر No Thank You - استخدم div مع أنماط مخصصة */}
-                                  <div
-                                    style={{
-                                      backgroundColor: colorToRgba(noButtonSettings.backgroundColor),
-                                      color: colorToRgba(noButtonSettings.textColor),
-                                      fontSize: `${noButtonSettings.fontSize}px`,
-                                      borderRadius: `${noButtonSettings.borderRadius}px`,
-                                      border: `${noButtonSettings.borderWidth}px solid ${colorToRgba(noButtonSettings.borderColor)}`,
-                                      boxShadow: noButtonSettings.shadow
-                                        ? `0 2px 8px rgba(0, 0, 0, 0.1)`
-                                        : 'none',
-                                      padding: '10px 20px',
-                                      textAlign: 'center',
-                                      cursor: 'pointer',
-                                      transition: 'all 0.2s ease',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      minHeight: `${noButtonSettings.fontSize + 20}px`,
-                                    }}
-                                    onMouseEnter={(e) => {
-                                      e.currentTarget.style.transform = 'translateY(-1px)';
-                                      e.currentTarget.style.boxShadow = noButtonSettings.shadow
-                                        ? '0 4px 12px rgba(0, 0, 0, 0.15)'
-                                        : '0 2px 6px rgba(0, 0, 0, 0.08)';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                      e.currentTarget.style.transform = 'translateY(0)';
-                                      e.currentTarget.style.boxShadow = noButtonSettings.shadow
-                                        ? '0 2px 8px rgba(0, 0, 0, 0.1)'
-                                        : 'none';
-                                    }}
-                                  >
-                                    {noButtonSettings.text}
-                                  </div>
+                                  </BlockStack>
                                 </BlockStack>
                               </Box>
+                            )}
 
-                            </TextContainer>
-                          </BlockStack>
-                        </Box>
-                      </div>
-                    </LegacyCard>
+                            {/* الأزرار */}
+                            {/* الأزرار في Live Preview */}
+                            <Box paddingBlockStart="400">
+                              <BlockStack gap="200">
+                                {/* زر Add to Order - استخدم div مع أنماط مخصصة */}
+                                <div
+                                  style={{
+                                    backgroundColor: colorToRgba(addButtonSettings.backgroundColor),
+                                    color: colorToRgba(addButtonSettings.textColor),
+                                    fontSize: `${addButtonSettings.fontSize}px`,
+                                    borderRadius: `${addButtonSettings.borderRadius}px`,
+                                    border: `${addButtonSettings.borderWidth}px solid ${colorToRgba(addButtonSettings.borderColor)}`,
+                                    boxShadow: addButtonSettings.shadow
+                                      ? `0 4px 12px rgba(0, 0, 0, 0.15)`
+                                      : 'none',
+                                    padding: '12px 24px',
+                                    textAlign: 'center',
+                                    cursor: 'pointer',
+                                    fontWeight: 'bold',
+                                    transition: 'all 0.2s ease',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '8px',
+                                    minHeight: `${addButtonSettings.fontSize + 24}px`,
+                                    // Animation
+                                    animation: addButtonSettings.animation === 'PULSE'
+                                      ? 'pulse 2s infinite'
+                                      : addButtonSettings.animation === 'BOUNCE'
+                                        ? 'bounce 1s infinite'
+                                        : 'none',
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    // إضافة تأثير hover ديناميكي
+                                    if (addButtonSettings.animation === 'NONE') {
+                                      e.currentTarget.style.transform = 'translateY(-2px)';
+                                      e.currentTarget.style.boxShadow = addButtonSettings.shadow
+                                        ? '0 6px 16px rgba(0, 0, 0, 0.2)'
+                                        : '0 4px 8px rgba(0, 0, 0, 0.1)';
+                                    }
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    if (addButtonSettings.animation === 'NONE') {
+                                      e.currentTarget.style.transform = 'translateY(0)';
+                                      e.currentTarget.style.boxShadow = addButtonSettings.shadow
+                                        ? '0 4px 12px rgba(0, 0, 0, 0.15)'
+                                        : 'none';
+                                    }
+                                  }}
+                                >
+                                  {/* أيقونة إذا كانت موجودة */}
+                                  {addButtonSettings.icon && (
+                                    <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+                                      {/* هنا يمكنك إضافة أيقونة حسب الاسم */}
+                                      {addButtonSettings.icon}
+                                    </span>
+                                  )}
+                                  {addButtonSettings.text}
+                                </div>
+
+                                {/* زر No Thank You - استخدم div مع أنماط مخصصة */}
+                                <div
+                                  style={{
+                                    backgroundColor: colorToRgba(noButtonSettings.backgroundColor),
+                                    color: colorToRgba(noButtonSettings.textColor),
+                                    fontSize: `${noButtonSettings.fontSize}px`,
+                                    borderRadius: `${noButtonSettings.borderRadius}px`,
+                                    border: `${noButtonSettings.borderWidth}px solid ${colorToRgba(noButtonSettings.borderColor)}`,
+                                    boxShadow: noButtonSettings.shadow
+                                      ? `0 2px 8px rgba(0, 0, 0, 0.1)`
+                                      : 'none',
+                                    padding: '10px 20px',
+                                    textAlign: 'center',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    minHeight: `${noButtonSettings.fontSize + 20}px`,
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.transform = 'translateY(-1px)';
+                                    e.currentTarget.style.boxShadow = noButtonSettings.shadow
+                                      ? '0 4px 12px rgba(0, 0, 0, 0.15)'
+                                      : '0 2px 6px rgba(0, 0, 0, 0.08)';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.transform = 'translateY(0)';
+                                    e.currentTarget.style.boxShadow = noButtonSettings.shadow
+                                      ? '0 2px 8px rgba(0, 0, 0, 0.1)'
+                                      : 'none';
+                                  }}
+                                >
+                                  {noButtonSettings.text}
+                                </div>
+                              </BlockStack>
+                            </Box>
+
+                          </TextContainer>
+                        </BlockStack>
+                      </Box>
+                    </div>
+                  </LegacyCard>
                 </div>
               </Grid.Cell>
 
