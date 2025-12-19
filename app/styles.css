@@ -663,3 +663,20 @@ a {
 .marginBottom10 {
     margin-bottom: 10px !important;
 }
+
+.Polaris-Frame__Main {
+    border-inline-end: none !important; 
+    position: relative;
+}
+
+.previewFullPopup {
+    width: 100% !important;
+}
+
+.previewUpsell h2 {
+    margin-bottom: 5px !important;
+}
+
+.upsellListingDetails p {
+    margin-top: 5px !important;
+}

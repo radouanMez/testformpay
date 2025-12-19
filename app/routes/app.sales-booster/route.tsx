@@ -57,12 +57,10 @@ export default function UpsellsPage() {
     >
       <Tabs tabs={tabs} selected={selectedTab} onSelect={handleTabChange} fitted>
         <Suspense fallback={<div>Loading...</div>}>
-          <Card>
-            {selectedTab === 0 && <OneClickUpsells />}
-            {selectedTab === 1 && <OneTickUpsells />}
-            {selectedTab === 2 && <Downsells />}
-            {selectedTab === 3 && <QuantityOffers />}
-          </Card>
+          {selectedTab === 0 && <OneClickUpsells />}
+          {selectedTab === 1 && <OneTickUpsells />}
+          {selectedTab === 2 && <Downsells />}
+          {selectedTab === 3 && <QuantityOffers />}
         </Suspense>
       </Tabs>
     </Page>

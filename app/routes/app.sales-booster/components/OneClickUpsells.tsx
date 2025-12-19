@@ -30,7 +30,9 @@ import {
   Checkbox,
   Grid,
   LegacyCard,
-  Popover
+  Popover,
+  Toast,
+  Frame
 } from "@shopify/polaris";
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { SearchIcon, PlusIcon } from "@shopify/polaris-icons";
@@ -61,12 +63,11 @@ interface SmallColorPickerProps {
   label: string;
 }
 
-type UpsellType = "ONE_CLICK" | "BUNDLE" | "DISCOUNT";
+type UpsellType = "POST_PURCHASE" | "Pre_PURCHASE";
 type DiscountType = "NONE" | "PERCENTAGE" | "FIXED_AMOUNT";
 type TriggerMode = "ALL" | "SPECIFIC";
 
 // -------------------- GraphQL --------------------
-
 const PRODUCTS_QUERY = `
     query {
       products(first: 50) {
@@ -84,28 +85,21 @@ const PRODUCTS_QUERY = `
 // -------------------- Helpers --------------------
 
 const colorToRgba = (color: ColorPickerColor): string => {
+  // تحويل HSB إلى RGB
   const { hue, saturation, brightness, alpha = 1 } = color;
-
-  if (saturation === 0) {
-    const v = Math.round(brightness * 255);
-    return `rgba(${v},${v},${v},${alpha})`;
-  }
-
-  const c = (1 - Math.abs(2 * brightness - 1)) * saturation;
-  const x = c * (1 - Math.abs((hue / 60) % 2 - 1));
-  const m = brightness - c / 2;
+  const chroma = brightness * saturation;
+  const x = chroma * (1 - Math.abs(((hue / 60) % 2) - 1));
+  const m = brightness - chroma;
 
   let r = 0, g = 0, b = 0;
-  if (hue < 60) [r, g, b] = [c, x, 0];
-  else if (hue < 120) [r, g, b] = [x, c, 0];
-  else if (hue < 180) [r, g, b] = [0, c, x];
-  else if (hue < 240) [r, g, b] = [0, x, c];
-  else if (hue < 300) [r, g, b] = [x, 0, c];
-  else[r, g, b] = [c, 0, x];
+  if (hue < 60) [r, g, b] = [chroma, x, 0];
+  else if (hue < 120) [r, g, b] = [x, chroma, 0];
+  else if (hue < 180) [r, g, b] = [0, chroma, x];
+  else if (hue < 240) [r, g, b] = [0, x, chroma];
+  else if (hue < 300) [r, g, b] = [x, 0, chroma];
+  else[r, g, b] = [chroma, 0, x];
 
-  return `rgba(${Math.round((r + m) * 255)},${Math.round(
-    (g + m) * 255
-  )},${Math.round((b + m) * 255)},${alpha})`;
+  return `rgba(${Math.round((r + m) * 255)}, ${Math.round((g + m) * 255)}, ${Math.round((b + m) * 255)}, ${alpha})`;
 };
 
 const formatPrice = (price?: number | null): string => {
@@ -132,7 +126,7 @@ export default function UpsellCreatePage() {
   const navigate = useNavigate();
   // Basic Configuration
   const [upsellName, setUpsellName] = useState("");
-  const [upsellType, setUpsellType] = useState<UpsellType>("ONE_CLICK");
+  const [upsellType, setUpsellType] = useState<UpsellType>("POST_PURCHASE");
 
   // Products Data
   const [products, setProducts] = useState<Product[]>([]);
@@ -224,6 +218,16 @@ export default function UpsellCreatePage() {
   const [editingUpsell, setEditingUpsell] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editingUpsellId, setEditingUpsellId] = useState<string | null>(null);
+
+
+  const [toastActive, setToastActive] = useState(false);
+  const [toastContent, setToastContent] = useState("");
+  const [toastError, setToastError] = useState(false);
+
+  const toggleToast = useCallback(() => setToastActive((active) => !active), []);
+
+  const [deleteModalActive, setDeleteModalActive] = useState(false);
+  const [upsellToDelete, setUpsellToDelete] = useState<string | null>(null);
 
   // -------------------- Fetch Products --------------------
   const getImageMaxWidth = () => {
@@ -330,29 +334,27 @@ export default function UpsellCreatePage() {
 
   const fetchSpecificProduct = async (productId: string): Promise<Product | null> => {
     try {
-      // إذا كان المنتج موجوداً في القائمة المحملة
       const existingProduct = products.find(p => p.id === productId);
       if (existingProduct) {
         return existingProduct;
       }
 
-      // إذا لم يكن موجوداً، جلب تفاصيله من Shopify
       const PRODUCT_QUERY = `
-      query GetProduct($id: ID!) {
-        product(id: $id) {
-          id
-          title
-          featuredImage { url altText }
-          variants(first: 1) {
-            edges {
-              node {
-                price
+        query GetProduct($id: ID!) {
+          product(id: $id) {
+            id
+            title
+            featuredImage { url altText }
+            variants(first: 1) {
+              edges {
+                node {
+                  price
+                }
               }
             }
           }
         }
-      }
-    `;
+      `;
 
       const response = await fetch("/api/graphql", {
         method: "POST",
@@ -374,7 +376,6 @@ export default function UpsellCreatePage() {
           featuredImage: productData.featuredImage
         };
 
-        // إضافة المنتج للقائمة المحملة
         setProducts(prev => [...prev, product]);
 
         return product;
@@ -387,7 +388,6 @@ export default function UpsellCreatePage() {
     }
   };
 
-  // دالة لملء النموذج عند النقر على Edit
   const handleEditUpsell = async (upsellId: string) => {
     try {
       const response = await fetch(`/api/upsells/${upsellId}`);
@@ -401,15 +401,12 @@ export default function UpsellCreatePage() {
         setEditingUpsellId(upsell.id);
         setIsEditing(true);
 
-        // ملء النموذج ببيانات الـ upsell
         setUpsellName(upsell.name);
-        setUpsellType(upsell.type || "ONE_CLICK");
+        setUpsellType(upsell.type || "POST_PURCHASE");
 
-        // ملء إعدادات العرض
         if (upsell.displayRules) {
           setTriggerMode(upsell.displayRules.triggerMode || "ALL");
 
-          // تحميل trigger products إذا كانت محددة
           if (upsell.displayRules.triggerProducts &&
             upsell.displayRules.triggerProducts !== "ALL" &&
             Array.isArray(upsell.displayRules.triggerProducts)) {
@@ -417,7 +414,6 @@ export default function UpsellCreatePage() {
             const triggerProductIds = upsell.displayRules.triggerProducts;
             const loadedTriggerProducts: Product[] = [];
 
-            // تحميل كل منتج trigger
             for (const productId of triggerProductIds) {
               const product = await fetchSpecificProduct(productId);
               if (product) {
@@ -429,7 +425,6 @@ export default function UpsellCreatePage() {
           }
         }
 
-        // ملء إعدادات الخصم
         if (upsell.productSettings?.discount) {
           setDiscountType(upsell.productSettings.discount.type || "NONE");
           setDiscountValue(upsell.productSettings.discount.value || "");
@@ -449,7 +444,6 @@ export default function UpsellCreatePage() {
         if (upsell.displayRules) {
           setTriggerMode(upsell.displayRules.triggerMode || "ALL");
 
-          // تحميل trigger products إذا كانت محددة
           if (upsell.displayRules.triggerProducts &&
             upsell.displayRules.triggerProducts !== "ALL" &&
             Array.isArray(upsell.displayRules.triggerProducts)) {
@@ -457,7 +451,6 @@ export default function UpsellCreatePage() {
             const triggerProductIds = upsell.displayRules.triggerProducts;
             const loadedTriggerProducts: Product[] = [];
 
-            // تحميل كل منتج trigger
             for (const productId of triggerProductIds) {
               const product = await fetchSpecificProduct(productId);
               if (product) {
@@ -469,14 +462,12 @@ export default function UpsellCreatePage() {
           }
         }
 
-        // ملء إعدادات التصميم
         if (upsell.designSettings) {
           setTitle(upsell.designSettings.title || "");
           setSubtitle(upsell.designSettings.subtitle || "");
           setProductTitle(upsell.designSettings.productTitle || "");
           setProductDescription(upsell.designSettings.productDescription || "");
 
-          // ملء إعدادات الصورة
           if (upsell.designSettings.image) {
             setShowProductImage(upsell.designSettings.image.show || true);
             setImageSize(upsell.designSettings.image.size || "MEDIUM");
@@ -505,11 +496,9 @@ export default function UpsellCreatePage() {
             setPriceColor(priceColorParsed);
           }
 
-          // ملء إعدادات الأزرار
           if (upsell.designSettings.addButton) {
             const addBtn = upsell.designSettings.addButton;
 
-            // تحويل ألوان الخلفية والنص
             const backgroundColor = typeof addBtn.backgroundColor === 'string'
               ? parseRgbaToColor(addBtn.backgroundColor)
               : addBtn.backgroundColor || { hue: 0, saturation: 0, brightness: 0, alpha: 1 };
@@ -540,7 +529,6 @@ export default function UpsellCreatePage() {
           if (upsell.designSettings.noButton) {
             const noBtn = upsell.designSettings.noButton;
 
-            // تحويل ألوان الخلفية والنص
             const backgroundColor = typeof noBtn.backgroundColor === 'string'
               ? parseRgbaToColor(noBtn.backgroundColor)
               : noBtn.backgroundColor || { hue: 0, saturation: 0, brightness: 1, alpha: 1 };
@@ -580,10 +568,9 @@ export default function UpsellCreatePage() {
     }
   };
 
-  // دالة لإعادة تعيين النموذج لإنشاء جديد
   const handleCreateNew = () => {
     resetForm();
-    // تمرير الشاشة للنموذج
+    setIsCreating(true);
     setTimeout(() => {
       const formSection = document.getElementById('upsell-form-section');
       if (formSection) {
@@ -592,10 +579,70 @@ export default function UpsellCreatePage() {
     }, 100);
   };
 
-  // دالة لإعادة تعيين النموذج
+  const confirmDelete = async () => {
+    if (!upsellToDelete) return;
+
+    try {
+      const response = await fetch(`/api/upsells/${upsellToDelete}`, {
+        method: "DELETE",
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setToastContent("The upsell was successfully deleted");
+        setToastError(false);
+        setToastActive(true);
+
+        setDeleteModalActive(false);
+        setUpsellToDelete(null);
+        fetchExistingUpsells();
+
+      } else {
+        setToastContent("Error: " + result.error);
+        setToastError(true);
+        setToastActive(true);
+      }
+    } catch (error) {
+      setToastContent("An error occurred while connecting to the server.");
+      setToastError(true);
+      setToastActive(true);
+    }
+  };
+
+  const handleDeleteUpsell = async (id: string) => {
+    if (!confirm("هل أنت متأكد من رغبتك في حذف هذا العرض؟")) return;
+
+    try {
+      const response = await fetch(`/api/upsells/${id}`, {
+        method: "DELETE",
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // استخدام الـ State الخاص بك بدلاً من shopify.toast
+        setToastContent("تم حذف العرض بنجاح");
+        setToastError(false);
+        setToastActive(true);
+
+        // توجيه المستخدم للخلف بعد الحذف بـ 2 ثانية ليرى رسالة النجاح
+        setTimeout(() => navigate("/app"), 2000);
+      } else {
+        setToastContent("فشل الحذف: " + result.error);
+        setToastError(true);
+        setToastActive(true);
+      }
+    } catch (error) {
+      setToastContent("حدث خطأ أثناء الاتصال بالخادم");
+      setToastError(true);
+      setToastActive(true);
+    }
+  };
+
   const resetForm = () => {
     setUpsellName("");
-    setUpsellType("ONE_CLICK");
+    setUpsellType("POST_PURCHASE");
     setTriggerMode("ALL");
     setSelectedTriggerProducts([]);
     setSelectedUpsellProduct(null);
@@ -635,20 +682,21 @@ export default function UpsellCreatePage() {
     });
   };
 
-  // تعديل دالة handleSave للتعامل مع التعديل والإنشاء
   const handleSave = async () => {
-    // التحقق من البيانات المطلوبة
     if (!upsellName.trim()) {
-      alert("Please enter an upsell name");
+      setToastContent("Please enter an upsell name");
+      setToastError(true);
+      setToastActive(true);
       return;
     }
 
     if (!selectedUpsellProduct) {
-      alert("Please select an upsell product");
+      setToastContent("Please select an upsell product");
+      setToastError(true);
+      setToastActive(true);
       return;
     }
 
-    // إعداد payload
     const upsellPayload = {
       name: upsellName,
       type: upsellType,
@@ -715,14 +763,12 @@ export default function UpsellCreatePage() {
       let response;
 
       if (isEditing && editingUpsell) {
-        // تحديث الـ upsell الموجود
         response = await fetch(`/api/upsells/${editingUpsell.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(upsellPayload),
         });
       } else {
-        // إنشاء upsell جديد
         response = await fetch("/api/upsells", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -733,26 +779,19 @@ export default function UpsellCreatePage() {
       const result = await response.json();
 
       if (result.success) {
-        alert(isEditing ? "Upsell updated successfully!" : "Upsell created successfully!");
-
-        // إعادة تعيين النموذج
-        resetForm();
-        setEditingUpsell(null);
-        setIsEditing(false);
-
-        // تحديث قائمة الـ upsells
+        setToastContent(isEditing ? "Upsell updated successfully" : "Upsell created successfully");
+        setToastError(false);
+        setToastActive(true);
         fetchExistingUpsells();
+        setIsCreating(false);
       } else {
         throw new Error(result.error || "Failed to save upsell");
       }
     } catch (error: any) {
-      console.error("Error saving upsell:", error);
-      alert(`Error saving upsell: ${error.message}`);
+      setToastContent(`Error saving upsell: ${error.message}`);
+      setToastError(true);
+      setToastActive(true);
     }
-  };
-
-  const handleCancel = () => {
-    resetForm();
   };
 
   const parseRgbaToColor = (rgbaString: string): ColorPickerColor => {
@@ -800,26 +839,28 @@ export default function UpsellCreatePage() {
     };
   };
 
-
   const SmallColorPicker = ({ color, onChange, label }: SmallColorPickerProps) => {
     const [popoverActive, setPopoverActive] = useState(false);
-
     const [tempColor, setTempColor] = useState(color);
+
+    useEffect(() => {
+      setTempColor(color);
+    }, [color]);
 
     const togglePopover = useCallback(() => {
       if (!popoverActive) setTempColor(color);
       setPopoverActive((active) => !active);
     }, [popoverActive, color]);
 
-    const handleSave = () => {
+    const handleSave = useCallback(() => {
       onChange(tempColor);
       setPopoverActive(false);
-    };
+    }, [onChange, tempColor]);
 
-    const handleCancel = () => {
+    const handleCancel = useCallback(() => {
       setTempColor(color);
       setPopoverActive(false);
-    };
+    }, [color]);
 
     return (
       <Popover
@@ -831,27 +872,33 @@ export default function UpsellCreatePage() {
             accessibilityLabel={label}
             icon={
               <div style={{
-                width: 16,
-                height: 16,
-                borderRadius: 3,
+                width: '16px',
+                height: '16px',
+                borderRadius: '3px',
                 backgroundColor: colorToRgba(color),
                 border: "1px solid rgba(0,0,0,0.1)"
               }} />
             }
           >
+            Select
           </Button>
         }
         onClose={handleCancel}
       >
-        <Box padding="400">
+        <Box padding="400" minWidth="200px">
           <BlockStack gap="300">
-            <div style={{ fontSize: '12px', color: 'var(--p-color-text-secondary)', marginBottom: '8px' }}>
+            <div style={{
+              fontSize: 'var(--p-font-size-75)',
+              color: 'var(--p-color-text-secondary)',
+              fontWeight: 'bold'
+            }}>
               {label}
             </div>
+
             <ColorPicker
               color={tempColor}
-              onChange={(newColor) => setTempColor({ ...newColor, alpha: 1 })}
-            // allowAlpha
+              onChange={setTempColor}
+              allowAlpha
             />
 
             <InlineStack align="end" gap="200">
@@ -864,982 +911,1072 @@ export default function UpsellCreatePage() {
     );
   };
 
-
-
-
+  const toastMarkup = toastActive ? (
+    <Toast
+      content={toastContent}
+      onDismiss={toggleToast}
+      error={toastError}
+    />
+  ) : null;
 
   // -------------------- Render --------------------
   return (
-    <Page
-      title={isEditing ? `Editing: ${editingUpsell?.name}` : "Upsell Manager"}
-      primaryAction={
-        isCreating ? {
-          content: isEditing ? "Update Upsell" : "Save Upsell",
-          onAction: handleSave,
-        } : {
-          content: "Create New Upsell",
-          icon: PlusIcon,
-          onAction: handleCreateNew,
-        }
-      }
-      secondaryActions={
-        isCreating
-          ? [
-            {
-              content: "Cancel",
-              onAction: () => {
-                resetForm();
-                setEditingUpsell(null);
-                setIsEditing(false);
-                setIsCreating(false);
-              },
+    <Frame>
+      <div style={{ backgroundColor: 'rgb(241 241 241)', minHeight: '100vh', width: '100%', border: "1px solid rgb(233 232 232)", borderRadius: "8px" }}>
+        {toastMarkup}
+        <Page
+          title={isEditing ? `Editing: ${editingUpsell?.name}` : "Upsell Manager"}
+          primaryAction={
+            isCreating ? {
+              content: isEditing ? "Update Upsell" : "Save Upsell",
+              onAction: handleSave,
+            } : {
+              content: "Create New Upsell",
+              icon: PlusIcon,
+              onAction: handleCreateNew,
             }
-          ]
-          : undefined
-      }
-    >
-
-      {/* قائمة الـ upsells الموجودة */}
-      {!isCreating && existingUpsells.length > 0 && (
-        <LegacyCard title="Your Upsells" sectioned>
-          <ResourceList
-            items={existingUpsells}
-            loading={loadingUpsells}
-            renderItem={(upsell) => (
-              <ResourceList.Item
-                id={upsell.id}
-                onClick={() => handleEditUpsell(upsell.id)}
-                media={
-                  <Badge
-                    tone={
-                      upsell.status === "ACTIVE" ? "success" :
-                        upsell.status === "DRAFT" ? "warning" :
-                          "critical"
-                    }
-                  >
-                    {upsell.status}
-                  </Badge>
+          }
+          secondaryActions={
+            isCreating
+              ? [
+                {
+                  content: "Cancel",
+                  onAction: () => {
+                    resetForm();
+                    setEditingUpsell(null);
+                    setIsEditing(false);
+                    setIsCreating(false);
+                  },
                 }
-              >
-                <InlineStack align="space-between" blockAlign="center">
-                  <div>
-                    <TextContainer>
-                      <p><strong>{upsell.name}</strong></p>
-                      <p>• Type: {upsell.type}</p>
-                      <p>• Created: {new Date(upsell.createdAt).toLocaleDateString()}</p>
-                    </TextContainer>
-                  </div>
-                  <Button
-                    size="slim"
-                    variant="primary"
-                    onClick={() => handleEditUpsell(upsell.id)}
-                  >
-                    Edit
-                  </Button>
-                </InlineStack>
-              </ResourceList.Item>
-            )}
-            emptyState={
-              <EmptyState
-                heading="No upsells yet"
-                action={{
-                  content: "Create your first upsell",
-                  onAction: () => { },
-                }}
-                image=""
-              >
-                <p>Create an upsell to increase your average order value.</p>
-              </EmptyState>
-            }
-          />
-        </LegacyCard>
-      )}
+              ]
+              : undefined
+          }
+        >
 
-      {isEditing && (
-        <Box padding="200" borderRadius="200">
-          <InlineStack align="center" gap="200">
-            <Badge tone="success">Editing Mode</Badge>
-            <TextContainer>
-              <p>You are editing an existing upsell. Changes will update the original.</p>
-            </TextContainer>
-          </InlineStack>
-        </Box>
-      )}
-
-      {/* استخدام Grid لتقسيم الصفحة */}
-      {isCreating && (
-        <Grid>
-          {/* العمود الأيسر - الإعدادات */}
-          <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 6, lg: 7, xl: 7 }}>
-            <BlockStack gap="400">
-
-              {/* ================= BASIC SETTINGS ================= */}
-              <LegacyCard title="Basic Settings" sectioned>
-                <FormLayout>
-                  <TextField
-                    autoComplete="off"
-                    label="Upsell Name"
-                    value={upsellName}
-                    onChange={setUpsellName}
-                    helpText="Give your upsell a descriptive name for internal use"
-                  />
-
-                  <Select
-                    label="Upsell Type"
-                    options={[
-                      { label: "One Click", value: "ONE_CLICK" },
-                      { label: "Bundle", value: "BUNDLE" },
-                      { label: "Discount", value: "DISCOUNT" },
-                    ]}
-                    value={upsellType}
-                    onChange={(v) => setUpsellType(v as UpsellType)}
-                  />
-
-                  <Divider />
-
-                  {/* ================= TRIGGER PRODUCTS ================= */}
-                  <TextContainer>
-                    <h3>Trigger Products</h3>
-                    <p>Show this upsell when customers buy:</p>
-                  </TextContainer>
-
-                  <Select
-                    label=""
-                    options={[
-                      { label: "All products", value: "ALL" },
-                      { label: "Specific products", value: "SPECIFIC" },
-                    ]}
-                    value={triggerMode}
-                    onChange={(v) => setTriggerMode(v as TriggerMode)}
-                  />
-
-                  {triggerMode === "SPECIFIC" && (
-                    <Box paddingBlockStart="400">
-                      <InlineStack align="space-between">
-                        <TextContainer>
-                          <p>Selected products ({selectedTriggerProducts.length})</p>
-                        </TextContainer>
-                        <Button size="slim" onClick={() => {
-                          setTriggerModalOpen(true);
-                          fetchProducts();
-                        }}>
-                          {selectedTriggerProducts.length > 0 ? "Add More Products" : "Select Products"}
-                        </Button>
-                      </InlineStack>
-
-                      {/* ... rest of trigger products code ... */}
-                    </Box>
-                  )}
-
-                  <Divider />
-
-                  {/* ================= UPSELL PRODUCT ================= */}
-                  <TextContainer>
-                    <h3>Upsell Product</h3>
-                    <p>Product to offer as an upsell:</p>
-                  </TextContainer>
-
-                  <LegacyCard sectioned>
-                    <InlineStack align="space-between" blockAlign="center">
-                      <strong>Selected Upsell Product</strong>
-                      <Button
-                        size="slim"
-                        onClick={() => {
-                          setUpsellModalOpen(true);
-                          fetchProducts();
-                        }}
-                      >
-                        {selectedUpsellProduct ? "Change Product" : "Select Product"}
-                      </Button>
-                    </InlineStack>
-
-                    {selectedUpsellProduct ? (
-                      <Box paddingBlockStart="200">
-                        <InlineStack gap="200" blockAlign="center">
-                          {selectedUpsellProduct.featuredImage?.url && (
-                            <Thumbnail
-                              source={selectedUpsellProduct.featuredImage.url}
-                              alt={selectedUpsellProduct.title}
-                              size="small"
-                            />
-                          )}
-                          <div>
-                            <p><strong>{selectedUpsellProduct.title}</strong></p>
-                            <p>{formatPrice(selectedUpsellProduct.price)}</p>
-                            {isEditing && (
-                              <Badge tone="info">Current Upsell Product</Badge>
-                            )}
-                          </div>
-                        </InlineStack>
-                      </Box>
-                    ) : (
-                      <EmptyState
-                        heading={isEditing ? "Loading product..." : "No product selected"}
-                        action={{
-                          content: "Select Product",
-                          onAction: () => setUpsellModalOpen(true),
-                        }}
-                        image=""
-                      >
-                        <p>{isEditing ? "Loading the upsell product..." : "Choose which product to offer as an upsell."}</p>
-                      </EmptyState>
-                    )}
-
-                  </LegacyCard>
-
-                  {/* ================= DISCOUNT SETTINGS ================= */}
-                  <Select
-                    label="Apply this discount"
-                    value={discountType}
-                    options={[
-                      { label: "None", value: "NONE" },
-                      { label: "Percentage", value: "PERCENTAGE" },
-                      { label: "Fixed Amount", value: "FIXED_AMOUNT" },
-                    ]}
-                    onChange={(v) => {
-                      setDiscountType(v as DiscountType);
-                      if (v === "NONE") setDiscountValue("");
-                    }}
-                  />
-
-                  {discountType !== "NONE" && (
-                    <TextField
-                      autoComplete="off"
-                      type="number"
-                      label={discountType === "PERCENTAGE" ? "Discount Percentage" : "Discount Amount"}
-                      value={discountValue}
-                      onChange={setDiscountValue}
-                      error={discountError}
-                      suffix={discountType === "PERCENTAGE" ? "%" : "$"}
-                      helpText={
-                        discountType === "PERCENTAGE"
-                          ? "Enter the percentage discount to apply"
-                          : "Enter the fixed amount discount to apply"
+          {!isCreating && existingUpsells.length > 0 ? (
+            <LegacyCard title="Your Upsells" sectioned>
+              <ResourceList
+                items={existingUpsells}
+                loading={loadingUpsells}
+                renderItem={(upsell) => (
+                  <div style={{ border: "1px solid rgb(233 232 232)", borderRadius: "8px", marginBottom: "5px" }}>
+                    <ResourceList.Item
+                      id={upsell.id}
+                      onClick={() => { }}
+                      persistActions
+                      media={
+                        <Badge
+                          tone={
+                            upsell.status === "ACTIVE" ? "success" :
+                              upsell.status === "DRAFT" ? "warning" :
+                                "critical"
+                          }
+                        >
+                          {upsell.status}
+                        </Badge>
                       }
-                    />
-                  )}
-                </FormLayout>
-              </LegacyCard>
+                    >
+                      <InlineStack align="space-between" blockAlign="center">
+                        <div className="upsellListingDetails">
+                          <TextContainer>
+                            <p><strong>{upsell.name}</strong></p>
+                            <p style={{ color: '#6d7175' }}>• Type: {upsell.type}</p>
+                            <p style={{ color: '#6d7175' }}>• Created: {new Date(upsell.createdAt).toLocaleDateString()}</p>
+                          </TextContainer>
+                        </div>
 
-              {/* ================= DESIGN SETTINGS ================= */}
-              <LegacyCard title="Design Settings" sectioned>
+                        <InlineStack gap="200">
+                          <Button
+                            size="slim"
+                            variant="secondary"
+                            onClick={() => handleEditUpsell(upsell.id)}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            size="slim"
+                            tone="critical"
+                            variant="tertiary"
+                            onClick={() => {
+                              setUpsellToDelete(upsell.id);
+                              setDeleteModalActive(true);
+                            }}
+                          >
+                            Delete
+                          </Button>
+                        </InlineStack>
+                      </InlineStack>
+                    </ResourceList.Item>
+                  </div>
+                )}
+                emptyState={
+                  <EmptyState
+                    heading="No upsells yet"
+                    action={{
+                      content: "Create your first upsell",
+                      onAction: () => { },
+                    }}
+                    image=""
+                  >
+                    <p>Create an upsell to increase your average order value.</p>
+                  </EmptyState>
+                }
+              />
+            </LegacyCard>
+          ) : (
+            !isCreating && (
+              <EmptyState
+                heading="No upsells found"
+                action={{ content: 'Create Upsell', onAction: () => setIsCreating(true) }}
+                image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
+              >
+                <p>You haven't created any upsells yet.</p>
+              </EmptyState>
+            )
+          )}
+
+
+          {isEditing && (
+            <div style={{ marginBottom: "15px", border: "2px solid #f1f1f1", borderRadius: "8px", padding: "5px" }}>
+              <Box>
+                <InlineStack gap="200">
+                  <Badge tone="success">Editing Mode</Badge>
+                  <TextContainer>
+                    <p>You are editing an existing upsell. Changes will update the original.</p>
+                  </TextContainer>
+                </InlineStack>
+              </Box>
+            </div>
+          )}
+
+          {isCreating && (
+            <Grid>
+              <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 6, lg: 7, xl: 7 }}>
                 <BlockStack gap="400">
-                  {/* Title Section */}
-                  <LegacyCard title="Title & Subtitle" sectioned>
-                    <BlockStack gap="200">
+                  {/* ================= BASIC SETTINGS ================= */}
+                  <LegacyCard title="Basic Settings" sectioned>
+                    <FormLayout>
                       <TextField
                         autoComplete="off"
-                        label="Title Text"
-                        value={title}
-                        onChange={setTitle}
-                        helpText="Shortcodes: {product_name}, {first_name}"
+                        label="Upsell Name"
+                        value={upsellName}
+                        onChange={setUpsellName}
+                        helpText="Give your upsell a descriptive name for internal use"
                       />
-                      <Box>
-                        <label>Title Color</label>
-                        <ColorPicker color={titleColor} onChange={setTitleColor} allowAlpha />
-                      </Box>
-
-                      <TextField
-                        autoComplete="off"
-                        label="Subtitle Text"
-                        value={subtitle}
-                        onChange={setSubtitle}
-                        helpText="Shortcodes: {product_name}, {first_name}"
+                      <Select
+                        label="Upsell Type"
+                        options={[
+                          { label: "Post Purchase", value: "POST_PURCHASE" },
+                          { label: "Pre Purchase", value: "PRE_PURCHASE" },
+                        ]}
+                        value={upsellType}
+                        onChange={(v) => setUpsellType(v as UpsellType)}
                       />
-                      {subtitle && (
-                        <Box>
-                          <label>Subtitle Color</label>
-                          <ColorPicker color={subtitleColor} onChange={setSubtitleColor} allowAlpha />
+                      <Divider />
+                      {/* ================= TRIGGER PRODUCTS ================= */}
+                      <TextContainer>
+                        <h3>Trigger Products</h3>
+                        <p>Show this upsell when customers buy:</p>
+                      </TextContainer>
+                      <Select
+                        label=""
+                        options={[
+                          { label: "All products", value: "ALL" },
+                          { label: "Specific products", value: "SPECIFIC" },
+                        ]}
+                        value={triggerMode}
+                        onChange={(v) => setTriggerMode(v as TriggerMode)}
+                      />
+                      {triggerMode === "SPECIFIC" && (
+                        <Box paddingBlockStart="400">
+                          <InlineStack align="space-between">
+                            <TextContainer>
+                              <p>Selected products ({selectedTriggerProducts.length})</p>
+                            </TextContainer>
+                            <Button size="slim" onClick={() => {
+                              setTriggerModalOpen(true);
+                              fetchProducts();
+                            }}>
+                              {selectedTriggerProducts.length > 0 ? "Add More Products" : "Select Products"}
+                            </Button>
+                          </InlineStack>
                         </Box>
                       )}
-                    </BlockStack>
-                  </LegacyCard>
 
-                  {/* Product Information */}
-                  <LegacyCard title="Product Information" sectioned>
-                    <BlockStack gap="200">
-                      <TextField
-                        autoComplete="off"
-                        label="Custom Product Title"
-                        value={productTitle}
-                        onChange={setProductTitle}
-                        placeholder="Leave empty to use Shopify title"
-                        helpText="Override the product title in the upsell"
-                      />
-                      <TextField
-                        autoComplete="off"
-                        label="Custom Product Description"
-                        value={productDescription}
-                        onChange={setProductDescription}
-                        multiline={3}
-                        placeholder="Leave empty to use Shopify description"
-                        helpText="Override the product description in the upsell"
-                      />
-                      <Box>
-                        <label>Product Price Color</label>
-                        <ColorPicker color={priceColor} onChange={setPriceColor} allowAlpha />
-                      </Box>
-                    </BlockStack>
-                  </LegacyCard>
-
-                  {/* Product Image Settings */}
-                  <LegacyCard title="Product Image" sectioned>
-                    <BlockStack gap="200">
-                      <Checkbox
-                        label="Show Product Image"
-                        checked={showProductImage}
-                        onChange={setShowProductImage}
-                      />
-
-                      {showProductImage && (
-                        <>
-                          <Select
-                            label="Image Size"
-                            options={[
-                              { label: "Small", value: "SMALL" },
-                              { label: "Medium", value: "MEDIUM" },
-                              { label: "Large", value: "LARGE" },
-                            ]}
-                            value={imageSize}
-                            onChange={(value) => setImageSize(value as "SMALL" | "MEDIUM" | "LARGE")}
-                          />
-
-                          <RangeSlider
-                            label="Image Border Radius"
-                            value={imageBorderRadius}
-                            onChange={(value) => {
-                              const numericValue = typeof value === 'number' ? value : value[0];
-                              setImageBorderRadius(numericValue);
+                      <Divider />
+                      {/* ================= UPSELL PRODUCT ================= */}
+                      <TextContainer>
+                        <h3>Upsell Product</h3>
+                        <p>Product to offer as an upsell:</p>
+                      </TextContainer>
+                      <LegacyCard sectioned>
+                        <InlineStack align="space-between" blockAlign="center">
+                          <strong>Selected Upsell Product</strong>
+                          <Button
+                            size="slim"
+                            onClick={() => {
+                              setUpsellModalOpen(true);
+                              fetchProducts();
                             }}
-                            min={0}
-                            max={50}
-                            output
-                            suffix="px"
-                          />
+                          >
+                            {selectedUpsellProduct ? "Change Product" : "Select Product"}
+                          </Button>
+                        </InlineStack>
 
-                          <Checkbox
-                            label="Enable Image Shadow"
-                            checked={imageShadow}
-                            onChange={setImageShadow}
-                          />
-                        </>
-                      )}
-                    </BlockStack>
-                  </LegacyCard>
+                        {selectedUpsellProduct ? (
+                          <Box paddingBlockStart="200">
+                            <InlineStack gap="200" blockAlign="center">
+                              {selectedUpsellProduct.featuredImage?.url && (
+                                <Thumbnail
+                                  source={selectedUpsellProduct.featuredImage.url}
+                                  alt={selectedUpsellProduct.title}
+                                  size="small"
+                                />
+                              )}
+                              <div>
+                                <p><strong>{selectedUpsellProduct.title}</strong></p>
+                                <p>{formatPrice(selectedUpsellProduct.price)}</p>
+                                {isEditing && (
+                                  <Badge tone="info">Current Upsell Product</Badge>
+                                )}
+                              </div>
+                            </InlineStack>
+                          </Box>
+                        ) : (
+                          <EmptyState
+                            heading={isEditing ? "Loading product..." : "No product selected"}
+                            action={{
+                              content: "Select Product",
+                              onAction: () => setUpsellModalOpen(true),
+                            }}
+                            image=""
+                          >
+                            <p>{isEditing ? "Loading the upsell product..." : "Choose which product to offer as an upsell."}</p>
+                          </EmptyState>
+                        )}
 
-                  {/* Add to Order Button */}
-                  <LegacyCard title="Add to Order Button" sectioned>
-                    <BlockStack gap="300">
-                      <TextField
-                        autoComplete="off"
-                        label="Button Text"
-                        value={addButtonSettings.text}
-                        onChange={(value) =>
-                          setAddButtonSettings({ ...addButtonSettings, text: value })
-                        }
-                      />
+                      </LegacyCard>
 
+                      {/* ================= DISCOUNT SETTINGS ================= */}
                       <Select
-                        label="Button Animation"
+                        label="Apply this discount"
+                        value={discountType}
                         options={[
                           { label: "None", value: "NONE" },
-                          { label: "Pulse", value: "PULSE" },
-                          { label: "Bounce", value: "BOUNCE" },
+                          { label: "Percentage", value: "PERCENTAGE" },
+                          { label: "Fixed Amount", value: "FIXED_AMOUNT" },
                         ]}
-                        value={addButtonSettings.animation}
-                        onChange={(value) =>
-                          setAddButtonSettings({ ...addButtonSettings, animation: value as "NONE" | "PULSE" | "BOUNCE" })
-                        }
+                        onChange={(v) => {
+                          setDiscountType(v as DiscountType);
+                          if (v === "NONE") setDiscountValue("");
+                        }}
                       />
 
-                      <InlineStack align="space-between" gap="400">
-                        <Box width="48%">
-                          <div style={{
-                            fontSize: 'var(--p-font-size-75)',
-                            fontWeight: 'var(--p-font-weight-regular)',
-                            color: 'var(--p-color-text-secondary)',
-                            marginBottom: '4px'
-                          }}>
-                            Background
-                          </div>
-                          <SmallColorPicker
-                            color={addButtonSettings.backgroundColor}
-                            onChange={(color) => setAddButtonSettings(prev => ({ ...prev, backgroundColor: color }))}
-                            label="Background Color"
-                          />
-                        </Box>
-                        <Box width="48%">
-                          <div style={{
-                            fontSize: 'var(--p-font-size-75)',
-                            fontWeight: 'var(--p-font-weight-regular)',
-                            color: 'var(--p-color-text-secondary)',
-                            marginBottom: '4px'
-                          }}>
-                            Text Color
-                          </div>
-                          <SmallColorPicker
-                            color={addButtonSettings.textColor}
-                            onChange={(color: any) =>
-                              setAddButtonSettings({ ...addButtonSettings, textColor: color })
-                            }
-                            label="Text Color"
-                          />
-                        </Box>
-                        <Box width="48%">
-                          <div style={{
-                            fontSize: 'var(--p-font-size-75)',
-                            fontWeight: 'var(--p-font-weight-regular)',
-                            color: 'var(--p-color-text-secondary)',
-                            marginBottom: '4px'
-                          }}>
-                            Border Color
-                          </div>
-                          <SmallColorPicker
-                            color={addButtonSettings.borderColor}
-                            onChange={(color: any) =>
-                              setAddButtonSettings({ ...addButtonSettings, borderColor: color })
-                            }
-                            label="Text Color"
-                          />
-                        </Box>
-                        <Box width="48%">
-                          <RangeSlider
-                            label="Font Size"
-                            value={addButtonSettings.fontSize}
-                            onChange={(value) => {
-                              const numericValue = typeof value === 'number' ? value : value[0];
-                              setAddButtonSettings({ ...addButtonSettings, fontSize: numericValue });
-                            }}
-                            min={12}
-                            max={24}
-                            output
-                            suffix="px"
-                          />
-                        </Box>
-                        <Box width="48%">
-                          <RangeSlider
-                            label="Border Radius"
-                            value={addButtonSettings.borderRadius}
-                            onChange={(value) => {
-                              const numericValue = typeof value === 'number' ? value : value[0];
-                              setAddButtonSettings({ ...addButtonSettings, borderRadius: numericValue });
-                            }}
-                            min={0}
-                            max={50}
-                            output
-                            suffix="px"
-                          />
-                        </Box>
-
-                        <Box width="48%">
-                          <RangeSlider
-                            label="Border Width"
-                            value={addButtonSettings.borderWidth}
-                            onChange={(value) => {
-                              const numericValue = typeof value === 'number' ? value : value[0];
-                              setAddButtonSettings({ ...addButtonSettings, borderWidth: numericValue });
-                            }}
-                            min={0}
-                            max={10}
-                            output
-                            suffix="px"
-                          />
-                        </Box>
-
-                        <Box>
-                          <Checkbox
-                            label="Enable Shadow"
-                            checked={addButtonSettings.shadow}
-                            onChange={(checked) =>
-                              setAddButtonSettings({ ...addButtonSettings, shadow: checked })
-                            }
-                          />
-                        </Box>
-                      </InlineStack>
-                    </BlockStack>
-                  </LegacyCard>
-
-                  {/* No Thank You Button */}
-                  <LegacyCard title="No Thank You Button" sectioned>
-                    <BlockStack gap="300">
-                      <TextField
-                        autoComplete="off"
-                        label="Button Text"
-                        value={noButtonSettings.text}
-                        onChange={(value) =>
-                          setNoButtonSettings({ ...noButtonSettings, text: value })
-                        }
-                      />
-
-                      <InlineStack align="space-between" gap="400">
-                        <Box width="50%">
-                          <label>Background Color</label>
-                          <ColorPicker
-                            color={noButtonSettings.backgroundColor}
-                            onChange={(color) =>
-                              setNoButtonSettings({ ...noButtonSettings, backgroundColor: color })
-                            }
-                            allowAlpha
-                          />
-                        </Box>
-                        <Box width="50%">
-                          <label>Text Color</label>
-                          <ColorPicker
-                            color={noButtonSettings.textColor}
-                            onChange={(color) =>
-                              setNoButtonSettings({ ...noButtonSettings, textColor: color })
-                            }
-                            allowAlpha
-                          />
-                        </Box>
-                      </InlineStack>
-
-                      <InlineStack align="space-between" gap="400">
-                        <Box width="50%">
-                          <RangeSlider
-                            label="Font Size"
-                            value={noButtonSettings.fontSize}
-                            onChange={(value) => {
-                              const numericValue = typeof value === 'number' ? value : value[0];
-                              setNoButtonSettings({ ...noButtonSettings, fontSize: numericValue });
-                            }}
-                            min={12}
-                            max={24}
-                            output
-                            suffix="px"
-                          />
-                        </Box>
-                        <Box width="50%">
-                          <RangeSlider
-                            label="Border Radius"
-                            value={noButtonSettings.borderRadius}
-                            onChange={(value) => {
-                              const numericValue = typeof value === 'number' ? value : value[0];
-                              setNoButtonSettings({ ...noButtonSettings, borderRadius: numericValue });
-                            }}
-                            min={0}
-                            max={50}
-                            output
-                            suffix="px"
-                          />
-                        </Box>
-                      </InlineStack>
-
-                      <InlineStack align="space-between" gap="400">
-                        <Box width="50%">
-                          <label>Border Color</label>
-                          <ColorPicker
-                            color={noButtonSettings.borderColor}
-                            onChange={(color) =>
-                              setNoButtonSettings({ ...noButtonSettings, borderColor: color })
-                            }
-                            allowAlpha
-                          />
-                        </Box>
-                        <Box width="50%">
-                          <RangeSlider
-                            label="Border Width"
-                            value={noButtonSettings.borderWidth}
-                            onChange={(value) => {
-                              const numericValue = typeof value === 'number' ? value : value[0];
-                              setNoButtonSettings({ ...noButtonSettings, borderWidth: numericValue });
-                            }}
-                            min={0}
-                            max={10}
-                            output
-                            suffix="px"
-                          />
-                        </Box>
-                      </InlineStack>
-
-                      <Box>
-                        <Checkbox
-                          label="Enable Shadow"
-                          checked={noButtonSettings.shadow}
-                          onChange={(checked) =>
-                            setNoButtonSettings({ ...noButtonSettings, shadow: checked })
+                      {discountType !== "NONE" && (
+                        <TextField
+                          autoComplete="off"
+                          type="number"
+                          label={discountType === "PERCENTAGE" ? "Discount Percentage" : "Discount Amount"}
+                          value={discountValue}
+                          onChange={setDiscountValue}
+                          error={discountError}
+                          suffix={discountType === "PERCENTAGE" ? "%" : "$"}
+                          helpText={
+                            discountType === "PERCENTAGE"
+                              ? "Enter the percentage discount to apply"
+                              : "Enter the fixed amount discount to apply"
                           }
                         />
-                      </Box>
+                      )}
+                    </FormLayout>
+                  </LegacyCard>
+
+                  {/* ================= DESIGN SETTINGS ================= */}
+                  <LegacyCard title="Design Settings" sectioned>
+                    <BlockStack gap="400">
+                      {/* Title Section */}
+                      <LegacyCard title="Title & Subtitle" sectioned>
+                        <InlineStack align="space-between" gap="400">
+
+                          <Box width="66%">
+                            <TextField
+                              autoComplete="off"
+                              label="Title Text"
+                              value={title}
+                              onChange={setTitle}
+                              helpText="Shortcodes: {product_name}, {first_name}"
+                            />
+                          </Box>
+
+                          <Box width="30%">
+                            <div style={{
+                              fontSize: 'var(--p-font-size-75)',
+                              fontWeight: 'var(--p-font-weight-regular)',
+                              color: 'var(--p-color-text-secondary)',
+                              marginBottom: '4px'
+                            }}>
+                              Title Color
+                            </div>
+                            <SmallColorPicker
+                              color={titleColor}
+                              onChange={setTitleColor}
+                              label="Title Color"
+                            />
+                          </Box>
+
+                          <Box width="66%">
+                            <TextField
+                              autoComplete="off"
+                              label="Subtitle Text"
+                              value={subtitle}
+                              onChange={setSubtitle}
+                              helpText="Shortcodes: {product_name}, {first_name}"
+                            />
+                          </Box>
+                          {subtitle && (
+                            <Box width="30%">
+                              <div style={{
+                                fontSize: 'var(--p-font-size-75)',
+                                fontWeight: 'var(--p-font-weight-regular)',
+                                color: 'var(--p-color-text-secondary)',
+                                marginBottom: '4px'
+                              }}>
+                                Subtitle Color
+                              </div>
+                              <SmallColorPicker
+                                color={subtitleColor}
+                                onChange={setSubtitleColor}
+                                label="Subtitle Color"
+                              />
+                            </Box>
+                          )}
+                        </InlineStack>
+                      </LegacyCard>
+                      {/* Product Information */}
+                      <LegacyCard title="Product Information" sectioned>
+                        <BlockStack gap="200">
+                          <TextField
+                            autoComplete="off"
+                            label="Custom Product Title"
+                            value={productTitle}
+                            onChange={setProductTitle}
+                            placeholder="Leave empty to use Shopify title"
+                            helpText="Override the product title in the upsell"
+                          />
+                          <TextField
+                            autoComplete="off"
+                            label="Custom Product Description"
+                            value={productDescription}
+                            onChange={setProductDescription}
+                            multiline={3}
+                            placeholder="Leave empty to use Shopify description"
+                            helpText="Override the product description in the upsell"
+                          />
+                          <Box width="48%">
+                            <div style={{
+                              fontSize: 'var(--p-font-size-75)',
+                              fontWeight: 'var(--p-font-weight-regular)',
+                              color: 'var(--p-color-text-secondary)',
+                              marginBottom: '4px'
+                            }}>
+                              Product Price Color
+                            </div>
+                            <SmallColorPicker
+                              color={priceColor}
+                              onChange={setPriceColor}
+                              label="Product Price Color"
+                            />
+                          </Box>
+                        </BlockStack>
+                      </LegacyCard>
+
+                      {/* Product Image Settings */}
+                      <LegacyCard title="Product Image" sectioned>
+                        <BlockStack gap="200">
+                          <Checkbox
+                            label="Show Product Image"
+                            checked={showProductImage}
+                            onChange={setShowProductImage}
+                          />
+                          {showProductImage && (
+                            <>
+                              <Select
+                                label="Image Size"
+                                options={[
+                                  { label: "Small", value: "SMALL" },
+                                  { label: "Medium", value: "MEDIUM" },
+                                  { label: "Large", value: "LARGE" },
+                                ]}
+                                value={imageSize}
+                                onChange={(value) => setImageSize(value as "SMALL" | "MEDIUM" | "LARGE")}
+                              />
+                              <RangeSlider
+                                label="Image Border Radius"
+                                value={imageBorderRadius}
+                                onChange={(value) => {
+                                  const numericValue = typeof value === 'number' ? value : value[0];
+                                  setImageBorderRadius(numericValue);
+                                }}
+                                min={0}
+                                max={50}
+                                output
+                                suffix="px"
+                              />
+                              <Checkbox
+                                label="Enable Image Shadow"
+                                checked={imageShadow}
+                                onChange={setImageShadow}
+                              />
+                            </>
+                          )}
+                        </BlockStack>
+                      </LegacyCard>
+
+                      {/* Add to Order Button */}
+                      <LegacyCard title="Add to Order Button" sectioned>
+                        <BlockStack gap="300">
+                          <TextField
+                            autoComplete="off"
+                            label="Button Text"
+                            value={addButtonSettings.text}
+                            onChange={(value) =>
+                              setAddButtonSettings({ ...addButtonSettings, text: value })
+                            }
+                          />
+                          <Select
+                            label="Button Animation"
+                            options={[
+                              { label: "None", value: "NONE" },
+                              { label: "Pulse", value: "PULSE" },
+                              { label: "Bounce", value: "BOUNCE" },
+                            ]}
+                            value={addButtonSettings.animation}
+                            onChange={(value) =>
+                              setAddButtonSettings({ ...addButtonSettings, animation: value as "NONE" | "PULSE" | "BOUNCE" })
+                            }
+                          />
+                          <InlineStack align="space-between" gap="400">
+                            <Box width="48%">
+                              <div style={{
+                                fontSize: 'var(--p-font-size-75)',
+                                fontWeight: 'var(--p-font-weight-regular)',
+                                color: 'var(--p-color-text-secondary)',
+                                marginBottom: '4px'
+                              }}>
+                                Background
+                              </div>
+                              <SmallColorPicker
+                                color={addButtonSettings.backgroundColor}
+                                onChange={(newColor) => setAddButtonSettings(prev => ({
+                                  ...prev,
+                                  backgroundColor: newColor
+                                }))}
+                                label="Button Background"
+                              />
+                            </Box>
+                            <Box width="48%">
+                              <div style={{
+                                fontSize: 'var(--p-font-size-75)',
+                                fontWeight: 'var(--p-font-weight-regular)',
+                                color: 'var(--p-color-text-secondary)',
+                                marginBottom: '4px'
+                              }}>
+                                Text Color
+                              </div>
+                              <SmallColorPicker
+                                color={addButtonSettings.textColor}
+                                onChange={(color: any) =>
+                                  setAddButtonSettings({ ...addButtonSettings, textColor: color })
+                                }
+                                label="Text Color"
+                              />
+                            </Box>
+                            <Box width="48%">
+                              <div style={{
+                                fontSize: 'var(--p-font-size-75)',
+                                fontWeight: 'var(--p-font-weight-regular)',
+                                color: 'var(--p-color-text-secondary)',
+                                marginBottom: '4px'
+                              }}>
+                                Border Color
+                              </div>
+                              <SmallColorPicker
+                                color={addButtonSettings.borderColor}
+                                onChange={(color: any) =>
+                                  setAddButtonSettings({ ...addButtonSettings, borderColor: color })
+                                }
+                                label="Text Color"
+                              />
+                            </Box>
+                            <Box width="48%">
+                              <RangeSlider
+                                label="Font Size"
+                                value={addButtonSettings.fontSize}
+                                onChange={(value) => {
+                                  const numericValue = typeof value === 'number' ? value : value[0];
+                                  setAddButtonSettings({ ...addButtonSettings, fontSize: numericValue });
+                                }}
+                                min={12}
+                                max={24}
+                                output
+                                suffix="px"
+                              />
+                            </Box>
+                            <Box width="48%">
+                              <RangeSlider
+                                label="Border Radius"
+                                value={addButtonSettings.borderRadius}
+                                onChange={(value) => {
+                                  const numericValue = typeof value === 'number' ? value : value[0];
+                                  setAddButtonSettings({ ...addButtonSettings, borderRadius: numericValue });
+                                }}
+                                min={0}
+                                max={50}
+                                output
+                                suffix="px"
+                              />
+                            </Box>
+                            <Box width="48%">
+                              <RangeSlider
+                                label="Border Width"
+                                value={addButtonSettings.borderWidth}
+                                onChange={(value) => {
+                                  const numericValue = typeof value === 'number' ? value : value[0];
+                                  setAddButtonSettings({ ...addButtonSettings, borderWidth: numericValue });
+                                }}
+                                min={0}
+                                max={10}
+                                output
+                                suffix="px"
+                              />
+                            </Box>
+                            <Box>
+                              <Checkbox
+                                label="Enable Shadow"
+                                checked={addButtonSettings.shadow}
+                                onChange={(checked) =>
+                                  setAddButtonSettings({ ...addButtonSettings, shadow: checked })
+                                }
+                              />
+                            </Box>
+                          </InlineStack>
+                        </BlockStack>
+                      </LegacyCard>
+                      {/* No Thank You Button */}
+                      <LegacyCard title="No Thank You Button" sectioned>
+                        <BlockStack gap="300">
+                          <TextField
+                            autoComplete="off"
+                            label="Button Text"
+                            value={noButtonSettings.text}
+                            onChange={(value) =>
+                              setNoButtonSettings({ ...noButtonSettings, text: value })
+                            }
+                          />
+                          <InlineStack align="space-between" gap="400">
+                            <Box width="48%">
+                              <div style={{
+                                fontSize: 'var(--p-font-size-75)',
+                                fontWeight: 'var(--p-font-weight-regular)',
+                                color: 'var(--p-color-text-secondary)',
+                                marginBottom: '4px'
+                              }}>
+                                Background Color
+                              </div>
+                              <SmallColorPicker
+                                color={noButtonSettings.backgroundColor}
+                                onChange={(color) => setNoButtonSettings(prev => ({ ...prev, backgroundColor: color }))}
+                                label="Background Color"
+                              />
+                            </Box>
+                            <Box width="48%">
+                              <div style={{
+                                fontSize: 'var(--p-font-size-75)',
+                                fontWeight: 'var(--p-font-weight-regular)',
+                                color: 'var(--p-color-text-secondary)',
+                                marginBottom: '4px'
+                              }}>
+                                Text Color
+                              </div>
+                              <SmallColorPicker
+                                color={noButtonSettings.textColor}
+                                onChange={(color) => setNoButtonSettings(prev => ({ ...prev, textColor: color }))}
+                                label="Text Color"
+                              />
+                            </Box>
+                            <Box width="48%">
+                              <RangeSlider
+                                label="Font Size"
+                                value={noButtonSettings.fontSize}
+                                onChange={(value) => {
+                                  const numericValue = typeof value === 'number' ? value : value[0];
+                                  setNoButtonSettings(prev => ({ ...prev, fontSize: numericValue }));
+                                }}
+                                min={12}
+                                max={24}
+                                output
+                                suffix="px"
+                              />
+                            </Box>
+                            <Box width="48%">
+                              <RangeSlider
+                                label="Border Radius"
+                                value={noButtonSettings.borderRadius}
+                                onChange={(value) => {
+                                  const numericValue = typeof value === 'number' ? value : value[0];
+                                  setNoButtonSettings({ ...noButtonSettings, borderRadius: numericValue });
+                                }}
+                                min={0}
+                                max={50}
+                                output
+                                suffix="px"
+                              />
+                            </Box>
+                            <Box width="48%">
+                              <div style={{
+                                fontSize: 'var(--p-font-size-75)',
+                                fontWeight: 'var(--p-font-weight-regular)',
+                                color: 'var(--p-color-text-secondary)',
+                                marginBottom: '4px'
+                              }}>
+                                Border Color
+                              </div>
+                              <SmallColorPicker
+                                color={noButtonSettings.borderColor}
+                                onChange={(color) => setNoButtonSettings(prev => ({ ...prev, borderColor: color }))}
+                                label="Border Color"
+                              />
+                            </Box>
+                            <Box width="48%">
+                              <RangeSlider
+                                label="Border Width"
+                                value={noButtonSettings.borderWidth}
+                                onChange={(value) => {
+                                  const numericValue = typeof value === 'number' ? value : value[0];
+                                  setNoButtonSettings({ ...noButtonSettings, borderWidth: numericValue });
+                                }}
+                                min={0}
+                                max={10}
+                                output
+                                suffix="px"
+                              />
+                            </Box>
+                            <Box>
+                              <Checkbox
+                                label="Enable Shadow"
+                                checked={noButtonSettings.shadow}
+                                onChange={(checked) =>
+                                  setNoButtonSettings({ ...noButtonSettings, shadow: checked })
+                                }
+                              />
+                            </Box>
+                          </InlineStack>
+                        </BlockStack>
+                      </LegacyCard>
                     </BlockStack>
                   </LegacyCard>
                 </BlockStack>
-              </LegacyCard>
-            </BlockStack>
-          </Grid.Cell>
+              </Grid.Cell>
 
-          {/* العمود الأيمن - المعاينة */}
-          <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 6, lg: 5, xl: 5 }}>
-            <LegacyCard title="Live Preview" sectioned>
-              <div
-                style={{
-                  position: "sticky",
-                  top: "20px",
-                  maxHeight: "calc(100vh - 100px)",
-                  overflowY: "auto"
-                }}
-              >
-                <Box
-                  padding="400"
-                  background="bg-surface"
-                  borderRadius="200"
-                >
-                  <BlockStack gap="400">
-                    <TextContainer>
-                      <h2 style={{ color: colorToRgba(titleColor) }}>
-                        {title.replace('{product_name}', selectedUpsellProduct?.title || 'Product')}
-                      </h2>
+              <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 6, lg: 5, xl: 5 }}>
+                <div className="previewFullPopup">
+                    <LegacyCard title="Live Preview" sectioned>
+                      <div
+                        className="previewUpsell"
+                        style={{
+                          position: "sticky",
+                          top: "20px",
+                          maxWidth: "400px",
+                          border: "2px solid #ebebeb",
+                          borderRadius: "8px",
+                          padding: "20px"
+                        }}
+                      >
+                        <Box
+                          // padding="400"
+                          background="bg-surface"
+                          borderRadius="200"
+                        >
+                          <BlockStack gap="400">
+                            <TextContainer>
+                              <h2 style={{ fontSize: "18px", color: colorToRgba(titleColor), textAlign: "center" }}>
+                                {title.replace('{product_name}', selectedUpsellProduct?.title || 'Product')}
+                              </h2>
 
-                      {subtitle && (
-                        <p style={{ color: colorToRgba(subtitleColor) }}>
-                          {subtitle.replace('{product_name}', selectedUpsellProduct?.title || 'Product')}
-                        </p>
-                      )}
-
-                      {selectedUpsellProduct && (
-                        <Box paddingBlock="400">
-                          <BlockStack gap="300">
-                            {/* صورة المنتج */}
-                            {showProductImage && selectedUpsellProduct.featuredImage?.url && (
-                              <div style={{
-                                borderRadius: `${imageBorderRadius}px`,
-                                boxShadow: imageShadow ? 'var(--p-shadow-300)' : 'none',
-                                maxWidth: getImageMaxWidth(),
-                                margin: "0 auto",
-                                overflow: "hidden",
-                              }}>
-                                <Box
-                                  padding="200"
-                                  background="bg-surface"
-                                >
-                                  <img
-                                    src={selectedUpsellProduct.featuredImage.url}
-                                    alt={selectedUpsellProduct.featuredImage.altText || selectedUpsellProduct.title}
-                                    style={{
-                                      width: "100%",
-                                      height: "auto",
-                                      borderRadius: `${Math.max(imageBorderRadius - 4, 0)}px`,
-                                      display: "block",
-                                    }}
-                                  />
-                                </Box>
-                              </div>
-                            )}
-
-                            {/* معلومات المنتج */}
-                            <BlockStack gap="200">
-                              <p style={{
-                                fontSize: "18px",
-                                fontWeight: "bold",
-                                margin: 0
-                              }}>
-                                {productTitle || selectedUpsellProduct.title}
-                              </p>
-
-                              {productDescription && (
-                                <p style={{
-                                  color: "#666",
-                                  margin: 0,
-                                  fontSize: "14px"
-                                }}>
-                                  {productDescription}
+                              {subtitle && (
+                                <p style={{ color: colorToRgba(subtitleColor), textAlign: "center" }}>
+                                  {subtitle.replace('{product_name}', selectedUpsellProduct?.title || 'Product')}
                                 </p>
                               )}
 
-                              {/* السعر */}
-                              {selectedUpsellProduct.price && (
-                                <InlineStack gap="200" align="start" blockAlign="center">
-                                  {discountType !== "NONE" && calculatedPrice && (
-                                    <>
-                                      <s style={{
-                                        color: '#999',
-                                        fontSize: "14px"
+                              {selectedUpsellProduct && (
+                                <Box>
+                                  <BlockStack gap="300">
+                                    {/* صورة المنتج */}
+                                    {showProductImage && selectedUpsellProduct.featuredImage?.url && (
+                                      <div style={{
+                                        borderRadius: `${imageBorderRadius}px`,
+                                        boxShadow: imageShadow ? 'var(--p-shadow-300)' : 'none',
+                                        maxWidth: getImageMaxWidth(),
+                                        margin: "0 auto",
+                                        overflow: "hidden",
                                       }}>
-                                        {formatPrice(selectedUpsellProduct.price)}
-                                      </s>
-                                      <span style={{
-                                        color: colorToRgba(priceColor),
-                                        fontWeight: 'bold',
-                                        fontSize: "18px"
-                                      }}>
-                                        {formatPrice(calculatedPrice)}
-                                      </span>
-                                      <Badge tone="success">
-                                        {discountType === "PERCENTAGE"
-                                          ? `${discountValue}% OFF`
-                                          : `$${discountValue} OFF`}
-                                      </Badge>
-                                    </>
-                                  )}
+                                        <Box
+                                          padding="200"
+                                          background="bg-surface"
+                                        >
+                                          <img
+                                            src={selectedUpsellProduct.featuredImage.url}
+                                            alt={selectedUpsellProduct.featuredImage.altText || selectedUpsellProduct.title}
+                                            style={{
+                                              width: "100%",
+                                              height: "auto",
+                                              borderRadius: `${Math.max(imageBorderRadius - 4, 0)}px`,
+                                              display: "block",
+                                            }}
+                                          />
+                                        </Box>
+                                      </div>
+                                    )}
 
-                                  {discountType === "NONE" && (
-                                    <span style={{
-                                      color: colorToRgba(priceColor),
-                                      fontWeight: 'bold',
-                                      fontSize: "18px"
-                                    }}>
-                                      {formatPrice(selectedUpsellProduct.price)}
-                                    </span>
-                                  )}
-                                </InlineStack>
+                                    {/* معلومات المنتج */}
+                                    <BlockStack gap="200">
+                                      <p style={{
+                                        fontSize: "18px",
+                                        fontWeight: "bold",
+                                        margin: 0
+                                      }}>
+                                        {productTitle || selectedUpsellProduct.title}
+                                      </p>
+
+                                      {productDescription && (
+                                        <p style={{
+                                          color: "#666",
+                                          margin: 0,
+                                          fontSize: "14px"
+                                        }}>
+                                          {productDescription}
+                                        </p>
+                                      )}
+
+                                      {/* السعر */}
+                                      {selectedUpsellProduct.price && (
+                                        <InlineStack gap="200" align="start" blockAlign="center">
+                                          {discountType !== "NONE" && calculatedPrice && (
+                                            <>
+                                              <s style={{
+                                                color: '#999',
+                                                fontSize: "14px"
+                                              }}>
+                                                {formatPrice(selectedUpsellProduct.price)}
+                                              </s>
+                                              <span style={{
+                                                color: colorToRgba(priceColor),
+                                                fontWeight: 'bold',
+                                                fontSize: "18px"
+                                              }}>
+                                                {formatPrice(calculatedPrice)}
+                                              </span>
+                                              <Badge tone="success">
+                                                {discountType === "PERCENTAGE"
+                                                  ? `${discountValue}% OFF`
+                                                  : `$${discountValue} OFF`}
+                                              </Badge>
+                                            </>
+                                          )}
+
+                                          {discountType === "NONE" && (
+                                            <span style={{
+                                              color: colorToRgba(priceColor),
+                                              fontWeight: 'bold',
+                                              fontSize: "18px"
+                                            }}>
+                                              {formatPrice(selectedUpsellProduct.price)}
+                                            </span>
+                                          )}
+                                        </InlineStack>
+                                      )}
+                                    </BlockStack>
+                                  </BlockStack>
+                                </Box>
                               )}
-                            </BlockStack>
+
+                              {/* الأزرار */}
+                              {/* الأزرار في Live Preview */}
+                              <Box paddingBlockStart="400">
+                                <BlockStack gap="200">
+                                  {/* زر Add to Order - استخدم div مع أنماط مخصصة */}
+                                  <div
+                                    style={{
+                                      backgroundColor: colorToRgba(addButtonSettings.backgroundColor),
+                                      color: colorToRgba(addButtonSettings.textColor),
+                                      fontSize: `${addButtonSettings.fontSize}px`,
+                                      borderRadius: `${addButtonSettings.borderRadius}px`,
+                                      border: `${addButtonSettings.borderWidth}px solid ${colorToRgba(addButtonSettings.borderColor)}`,
+                                      boxShadow: addButtonSettings.shadow
+                                        ? `0 4px 12px rgba(0, 0, 0, 0.15)`
+                                        : 'none',
+                                      padding: '12px 24px',
+                                      textAlign: 'center',
+                                      cursor: 'pointer',
+                                      fontWeight: 'bold',
+                                      transition: 'all 0.2s ease',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      gap: '8px',
+                                      minHeight: `${addButtonSettings.fontSize + 24}px`,
+                                      // Animation
+                                      animation: addButtonSettings.animation === 'PULSE'
+                                        ? 'pulse 2s infinite'
+                                        : addButtonSettings.animation === 'BOUNCE'
+                                          ? 'bounce 1s infinite'
+                                          : 'none',
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      // إضافة تأثير hover ديناميكي
+                                      if (addButtonSettings.animation === 'NONE') {
+                                        e.currentTarget.style.transform = 'translateY(-2px)';
+                                        e.currentTarget.style.boxShadow = addButtonSettings.shadow
+                                          ? '0 6px 16px rgba(0, 0, 0, 0.2)'
+                                          : '0 4px 8px rgba(0, 0, 0, 0.1)';
+                                      }
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      if (addButtonSettings.animation === 'NONE') {
+                                        e.currentTarget.style.transform = 'translateY(0)';
+                                        e.currentTarget.style.boxShadow = addButtonSettings.shadow
+                                          ? '0 4px 12px rgba(0, 0, 0, 0.15)'
+                                          : 'none';
+                                      }
+                                    }}
+                                  >
+                                    {/* أيقونة إذا كانت موجودة */}
+                                    {addButtonSettings.icon && (
+                                      <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+                                        {/* هنا يمكنك إضافة أيقونة حسب الاسم */}
+                                        {addButtonSettings.icon}
+                                      </span>
+                                    )}
+                                    {addButtonSettings.text}
+                                  </div>
+
+                                  {/* زر No Thank You - استخدم div مع أنماط مخصصة */}
+                                  <div
+                                    style={{
+                                      backgroundColor: colorToRgba(noButtonSettings.backgroundColor),
+                                      color: colorToRgba(noButtonSettings.textColor),
+                                      fontSize: `${noButtonSettings.fontSize}px`,
+                                      borderRadius: `${noButtonSettings.borderRadius}px`,
+                                      border: `${noButtonSettings.borderWidth}px solid ${colorToRgba(noButtonSettings.borderColor)}`,
+                                      boxShadow: noButtonSettings.shadow
+                                        ? `0 2px 8px rgba(0, 0, 0, 0.1)`
+                                        : 'none',
+                                      padding: '10px 20px',
+                                      textAlign: 'center',
+                                      cursor: 'pointer',
+                                      transition: 'all 0.2s ease',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      minHeight: `${noButtonSettings.fontSize + 20}px`,
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.transform = 'translateY(-1px)';
+                                      e.currentTarget.style.boxShadow = noButtonSettings.shadow
+                                        ? '0 4px 12px rgba(0, 0, 0, 0.15)'
+                                        : '0 2px 6px rgba(0, 0, 0, 0.08)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.transform = 'translateY(0)';
+                                      e.currentTarget.style.boxShadow = noButtonSettings.shadow
+                                        ? '0 2px 8px rgba(0, 0, 0, 0.1)'
+                                        : 'none';
+                                    }}
+                                  >
+                                    {noButtonSettings.text}
+                                  </div>
+                                </BlockStack>
+                              </Box>
+
+                            </TextContainer>
                           </BlockStack>
                         </Box>
-                      )}
-
-                      {/* الأزرار */}
-                      {/* الأزرار في Live Preview */}
-                      <Box paddingBlockStart="400">
-                        <BlockStack gap="200">
-                          {/* زر Add to Order - استخدم div مع أنماط مخصصة */}
-                          <div
-                            style={{
-                              backgroundColor: colorToRgba(addButtonSettings.backgroundColor),
-                              color: colorToRgba(addButtonSettings.textColor),
-                              fontSize: `${addButtonSettings.fontSize}px`,
-                              borderRadius: `${addButtonSettings.borderRadius}px`,
-                              border: `${addButtonSettings.borderWidth}px solid ${colorToRgba(addButtonSettings.borderColor)}`,
-                              boxShadow: addButtonSettings.shadow
-                                ? `0 4px 12px rgba(0, 0, 0, 0.15)`
-                                : 'none',
-                              padding: '12px 24px',
-                              textAlign: 'center',
-                              cursor: 'pointer',
-                              fontWeight: 'bold',
-                              transition: 'all 0.2s ease',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '8px',
-                              minHeight: `${addButtonSettings.fontSize + 24}px`,
-                              // Animation
-                              animation: addButtonSettings.animation === 'PULSE'
-                                ? 'pulse 2s infinite'
-                                : addButtonSettings.animation === 'BOUNCE'
-                                  ? 'bounce 1s infinite'
-                                  : 'none',
-                            }}
-                            onMouseEnter={(e) => {
-                              // إضافة تأثير hover ديناميكي
-                              if (addButtonSettings.animation === 'NONE') {
-                                e.currentTarget.style.transform = 'translateY(-2px)';
-                                e.currentTarget.style.boxShadow = addButtonSettings.shadow
-                                  ? '0 6px 16px rgba(0, 0, 0, 0.2)'
-                                  : '0 4px 8px rgba(0, 0, 0, 0.1)';
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              if (addButtonSettings.animation === 'NONE') {
-                                e.currentTarget.style.transform = 'translateY(0)';
-                                e.currentTarget.style.boxShadow = addButtonSettings.shadow
-                                  ? '0 4px 12px rgba(0, 0, 0, 0.15)'
-                                  : 'none';
-                              }
-                            }}
-                          >
-                            {/* أيقونة إذا كانت موجودة */}
-                            {addButtonSettings.icon && (
-                              <span style={{ display: 'inline-flex', alignItems: 'center' }}>
-                                {/* هنا يمكنك إضافة أيقونة حسب الاسم */}
-                                {addButtonSettings.icon}
-                              </span>
-                            )}
-                            {addButtonSettings.text}
-                          </div>
-
-                          {/* زر No Thank You - استخدم div مع أنماط مخصصة */}
-                          <div
-                            style={{
-                              backgroundColor: colorToRgba(noButtonSettings.backgroundColor),
-                              color: colorToRgba(noButtonSettings.textColor),
-                              fontSize: `${noButtonSettings.fontSize}px`,
-                              borderRadius: `${noButtonSettings.borderRadius}px`,
-                              border: `${noButtonSettings.borderWidth}px solid ${colorToRgba(noButtonSettings.borderColor)}`,
-                              boxShadow: noButtonSettings.shadow
-                                ? `0 2px 8px rgba(0, 0, 0, 0.1)`
-                                : 'none',
-                              padding: '10px 20px',
-                              textAlign: 'center',
-                              cursor: 'pointer',
-                              transition: 'all 0.2s ease',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              minHeight: `${noButtonSettings.fontSize + 20}px`,
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.transform = 'translateY(-1px)';
-                              e.currentTarget.style.boxShadow = noButtonSettings.shadow
-                                ? '0 4px 12px rgba(0, 0, 0, 0.15)'
-                                : '0 2px 6px rgba(0, 0, 0, 0.08)';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.transform = 'translateY(0)';
-                              e.currentTarget.style.boxShadow = noButtonSettings.shadow
-                                ? '0 2px 8px rgba(0, 0, 0, 0.1)'
-                                : 'none';
-                            }}
-                          >
-                            {noButtonSettings.text}
-                          </div>
-                        </BlockStack>
-                      </Box>
-
-                    </TextContainer>
-                  </BlockStack>
-                </Box>
-              </div>
-            </LegacyCard>
-          </Grid.Cell>
-        </Grid>
-      )
-      }
-
-      {/* ================= MODALS ================= */}
-
-      {/* Trigger Products Modal */}
-      <Modal
-        open={triggerModalOpen}
-        onClose={() => setTriggerModalOpen(false)}
-        title="Select Trigger Products"
-        primaryAction={{
-          content: "Done",
-          onAction: () => setTriggerModalOpen(false),
-        }}
-        secondaryActions={[
-          {
-            content: "Clear All",
-            onAction: clearTriggerProducts,
-          },
-        ]}
-      >
-        <Modal.Section>
-          {loading ? (
-            <Box padding="800">
-              <InlineStack align="center">
-                <Spinner />
-              </InlineStack>
-            </Box>
-          ) : (
-            <ResourceList
-              items={products}
-              selectedItems={selectedTriggerProducts.map(p => p.id)}
-              onSelectionChange={(selectedIds) => {
-                // تحديث المنتجات المختارة بناءً على IDs
-                const selectedProducts = products.filter(product =>
-                  selectedIds.includes(product.id)
-                );
-                setSelectedTriggerProducts(selectedProducts);
-              }}
-              renderItem={(product) => {
-                const isSelected = selectedTriggerProducts.some(p => p.id === product.id);
-
-                return (
-                  <ResourceList.Item
-                    id={product.id}
-                    onClick={() => {
-                      // احتفظ بـ onClick للتوافقية
-                      handleSelectTriggerProduct(product);
-                    }}
-                    media={
-                      product.featuredImage?.url ? (
-                        <Thumbnail
-                          source={product.featuredImage.url}
-                          alt={product.title}
-                        />
-                      ) : undefined
-                    }
-                    accessibilityLabel={`Select ${product.title}`}
-                  >
-                    <InlineStack align="space-between" blockAlign="center">
-                      <div>
-                        <TextContainer>
-                          <p><strong>{product.title}</strong></p>
-                          <p>{formatPrice(product.price)}</p>
-                        </TextContainer>
                       </div>
-                      {isSelected && <Badge tone="success">Selected</Badge>}
-                    </InlineStack>
-                  </ResourceList.Item>
-                );
-              }}
-              emptyState={
-                <EmptyState
-                  heading="No products found"
-                  image=""
-                >
-                  <p>No products are available in your store.</p>
-                </EmptyState>
-              }
-            />
-          )}
-        </Modal.Section>
-      </Modal>
+                    </LegacyCard>
+                </div>
+              </Grid.Cell>
 
-      {/* Upsell Product Modal */}
-      <Modal
-        open={upsellModalOpen}
-        onClose={() => setUpsellModalOpen(false)}
-        title="Select Upsell Product"
-        primaryAction={{
-          content: "Cancel",
-          onAction: () => setUpsellModalOpen(false),
-        }}
-      >
-        <Modal.Section>
-          {loading ? (
-            <Box padding="800">
-              <InlineStack align="center">
-                <Spinner />
-              </InlineStack>
-            </Box>
-          ) : (
-            <ResourceList
-              items={products}
-              renderItem={(product) => (
-                <ResourceList.Item
-                  id={product.id}
-                  onClick={() => handleSelectUpsellProduct(product)}
-                  media={
-                    product.featuredImage?.url ? (
-                      <Thumbnail
-                        source={product.featuredImage.url}
-                        alt={product.title}
-                      />
-                    ) : undefined
-                  }
-                >
-                  <InlineStack align="space-between" blockAlign="center">
-                    <div>
-                      <TextContainer>
-                        <p><strong>{product.title}</strong></p>
-                        <p>{formatPrice(product.price)}</p>
-                      </TextContainer>
-                    </div>
-                    {selectedUpsellProduct?.id === product.id && (
-                      <Badge tone="success">Selected</Badge>
-                    )}
+            </Grid>
+          )
+          }
+
+          {/* ================= MODALS ================= */}
+          {/* Keep the existing modals here */}
+
+
+          {/* Trigger Products Modal */}
+          <Modal
+            open={triggerModalOpen}
+            onClose={() => setTriggerModalOpen(false)}
+            title="Select Trigger Products"
+            primaryAction={{
+              content: "Done",
+              onAction: () => setTriggerModalOpen(false),
+            }}
+            secondaryActions={[
+              {
+                content: "Clear All",
+                onAction: clearTriggerProducts,
+              },
+            ]}
+          >
+            <Modal.Section>
+              {loading ? (
+                <Box padding="800">
+                  <InlineStack align="center">
+                    <Spinner />
                   </InlineStack>
-                </ResourceList.Item>
-              )}
-              emptyState={
-                <EmptyState
-                  heading="No products found"
-                  image=""
-                >
-                  <p>No products are available in your store.</p>
-                </EmptyState>
-              }
-            />
-          )}
-        </Modal.Section>
-      </Modal>
+                </Box>
+              ) : (
+                <ResourceList
+                  items={products}
+                  selectedItems={selectedTriggerProducts.map(p => p.id)}
+                  onSelectionChange={(selectedIds) => {
+                    // تحديث المنتجات المختارة بناءً على IDs
+                    const selectedProducts = products.filter(product =>
+                      selectedIds.includes(product.id)
+                    );
+                    setSelectedTriggerProducts(selectedProducts);
+                  }}
+                  renderItem={(product) => {
+                    const isSelected = selectedTriggerProducts.some(p => p.id === product.id);
 
-      {/* ================= MODALS ================= */}
-      {/* Keep the existing modals here */}
-    </Page>
+                    return (
+                      <ResourceList.Item
+                        id={product.id}
+                        onClick={() => {
+                          // احتفظ بـ onClick للتوافقية
+                          handleSelectTriggerProduct(product);
+                        }}
+                        media={
+                          product.featuredImage?.url ? (
+                            <Thumbnail
+                              source={product.featuredImage.url}
+                              alt={product.title}
+                            />
+                          ) : undefined
+                        }
+                        accessibilityLabel={`Select ${product.title}`}
+                      >
+                        <InlineStack align="space-between" blockAlign="center">
+                          <div>
+                            <TextContainer>
+                              <p><strong>{product.title}</strong></p>
+                              <p>{formatPrice(product.price)}</p>
+                            </TextContainer>
+                          </div>
+                          {isSelected && <Badge tone="success">Selected</Badge>}
+                        </InlineStack>
+                      </ResourceList.Item>
+                    );
+                  }}
+                  emptyState={
+                    <EmptyState
+                      heading="No products found"
+                      image=""
+                    >
+                      <p>No products are available in your store.</p>
+                    </EmptyState>
+                  }
+                />
+              )}
+            </Modal.Section>
+          </Modal>
+
+          {/* Upsell Product Modal */}
+          <Modal
+            open={upsellModalOpen}
+            onClose={() => setUpsellModalOpen(false)}
+            title="Select Upsell Product"
+            primaryAction={{
+              content: "Cancel",
+              onAction: () => setUpsellModalOpen(false),
+            }}
+          >
+            <Modal.Section>
+              {loading ? (
+                <Box padding="800">
+                  <InlineStack align="center">
+                    <Spinner />
+                  </InlineStack>
+                </Box>
+              ) : (
+                <ResourceList
+                  items={products}
+                  renderItem={(product) => (
+                    <ResourceList.Item
+                      id={product.id}
+                      onClick={() => handleSelectUpsellProduct(product)}
+                      media={
+                        product.featuredImage?.url ? (
+                          <Thumbnail
+                            source={product.featuredImage.url}
+                            alt={product.title}
+                          />
+                        ) : undefined
+                      }
+                    >
+                      <InlineStack align="space-between" blockAlign="center">
+                        <div>
+                          <TextContainer>
+                            <p><strong>{product.title}</strong></p>
+                            <p>{formatPrice(product.price)}</p>
+                          </TextContainer>
+                        </div>
+                        {selectedUpsellProduct?.id === product.id && (
+                          <Badge tone="success">Selected</Badge>
+                        )}
+                      </InlineStack>
+                    </ResourceList.Item>
+                  )}
+                  emptyState={
+                    <EmptyState
+                      heading="No products found"
+                      image=""
+                    >
+                      <p>No products are available in your store.</p>
+                    </EmptyState>
+                  }
+                />
+              )}
+            </Modal.Section>
+          </Modal>
+
+          <Modal
+            open={deleteModalActive}
+            onClose={() => setDeleteModalActive(false)}
+            title="Are you sure about deleting it?"
+            primaryAction={{
+              content: "Delete",
+              destructive: true,
+              onAction: confirmDelete,
+            }}
+            secondaryActions={[
+              {
+                content: "Cancel",
+                onAction: () => setDeleteModalActive(false),
+              },
+            ]}
+          >
+            <Modal.Section>
+              <p>This offer will be permanently deleted, and this step cannot be undone.</p>
+            </Modal.Section>
+          </Modal>
+
+        </Page>
+      </div>
+    </Frame>
   );
 
 }
-

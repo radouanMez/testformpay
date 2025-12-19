@@ -47,8 +47,8 @@ enum SubmissionStatus {
 // ========================================
 
 enum UpsellType {
-  ONE_CLICK
-  ONE_TICK
+  POST_PURCHASE
+  PRE_PURCHASE
 }
 
 enum UpsellStatus {
@@ -379,7 +379,7 @@ model Upsell {
   shop           String
   userId         String
   name           String
-  type           UpsellType   @default(ONE_CLICK)
+  type           UpsellType   @default(POST_PURCHASE)
   status         UpsellStatus @default(DRAFT)
 
   basicSettings   Json       

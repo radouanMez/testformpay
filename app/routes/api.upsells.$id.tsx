@@ -62,6 +62,7 @@ export const loader: LoaderFunction = async ({ request, params }) => {
         );
     }
 };
+
 // POST/PUT/DELETE في action واحد
 export const action: ActionFunction = async ({ request, params }) => {
     const { session } = await authenticate.admin(request);
