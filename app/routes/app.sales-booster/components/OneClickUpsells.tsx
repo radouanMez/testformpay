@@ -145,6 +145,8 @@ export default function UpsellCreatePage() {
   const [discountType, setDiscountType] = useState<DiscountType>("NONE");
   const [discountValue, setDiscountValue] = useState("");
 
+
+  const [isSaving, setIsSaving] = useState(false);
   // Discount Validation
   const discountError = useMemo(() => {
     const value = Number(discountValue);
@@ -221,7 +223,6 @@ export default function UpsellCreatePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [editingUpsellId, setEditingUpsellId] = useState<string | null>(null);
 
-
   const [toastActive, setToastActive] = useState(false);
   const [toastContent, setToastContent] = useState("");
   const [toastError, setToastError] = useState(false);
@@ -231,6 +232,19 @@ export default function UpsellCreatePage() {
   const [deleteModalActive, setDeleteModalActive] = useState(false);
   const [upsellToDelete, setUpsellToDelete] = useState<string | null>(null);
 
+  // 1. استخراج معرفات المنتجات المستخدمة كـ Upsell في العروض الحالية
+  const usedUpsellProductIds = useMemo(() => {
+    return new Set(
+      existingUpsells
+        .map((u) => u.productSettings?.upsellProductId)
+        .filter((id) => id !== undefined && id !== editingUpsellId) // السماح بالمنتج الحالي إذا كنا في وضع التعديل
+    );
+  }, [existingUpsells, editingUpsellId]);
+
+  // 2. فلترة قائمة المنتجات لاستبعاد المستخدم منها
+  const availableUpsellProducts = useMemo(() => {
+    return products.filter((product) => !usedUpsellProductIds.has(product.id));
+  }, [products, usedUpsellProductIds]);
   // -------------------- Fetch Products --------------------
   const getImageMaxWidth = () => {
     switch (imageSize) {
@@ -407,26 +421,26 @@ export default function UpsellCreatePage() {
         setUpsellType(upsell.type || "POST_PURCHASE");
         setUpsellStatus(upsell.status || "DRAFT");
 
-        if (upsell.displayRules) {
-          setTriggerMode(upsell.displayRules.triggerMode || "ALL");
+        // if (upsell.displayRules) {
+        //   setTriggerMode(upsell.displayRules.triggerMode || "ALL");
 
-          if (upsell.displayRules.triggerProducts &&
-            upsell.displayRules.triggerProducts !== "ALL" &&
-            Array.isArray(upsell.displayRules.triggerProducts)) {
+        //   if (upsell.displayRules.triggerProducts &&
+        //     upsell.displayRules.triggerProducts !== "ALL" &&
+        //     Array.isArray(upsell.displayRules.triggerProducts)) {
 
-            const triggerProductIds = upsell.displayRules.triggerProducts;
-            const loadedTriggerProducts: Product[] = [];
+        //     const triggerProductIds = upsell.displayRules.triggerProducts;
+        //     const loadedTriggerProducts: Product[] = [];
 
-            for (const productId of triggerProductIds) {
-              const product = await fetchSpecificProduct(productId);
-              if (product) {
-                loadedTriggerProducts.push(product);
-              }
-            }
+        //     for (const productId of triggerProductIds) {
+        //       const product = await fetchSpecificProduct(productId);
+        //       if (product) {
+        //         loadedTriggerProducts.push(product);
+        //       }
+        //     }
 
-            setSelectedTriggerProducts(loadedTriggerProducts);
-          }
-        }
+        //     setSelectedTriggerProducts(loadedTriggerProducts);
+        //   }
+        // }
 
         if (upsell.productSettings?.discount) {
           setDiscountType(upsell.productSettings.discount.type || "NONE");
@@ -687,6 +701,9 @@ export default function UpsellCreatePage() {
   };
 
   const handleSave = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
+
     if (!upsellName.trim()) {
       setToastContent("Please enter an upsell name");
       setToastError(true);
@@ -787,14 +804,15 @@ export default function UpsellCreatePage() {
         setToastError(false);
         setToastActive(true);
         fetchExistingUpsells();
-        // setIsCreating(false);
       } else {
+        setIsSaving(false);
         throw new Error(result.error || "Failed to save upsell");
       }
     } catch (error: any) {
       setToastContent(`Error saving upsell: ${error.message}`);
       setToastError(true);
       setToastActive(true);
+      setIsSaving(false);
     }
   };
 
@@ -934,6 +952,8 @@ export default function UpsellCreatePage() {
             isCreating ? {
               content: isEditing ? "Update Upsell" : "Save Upsell",
               onAction: handleSave,
+              loading: isSaving,
+              disabled: isSaving,
             } : {
               content: "Create New Upsell",
               icon: PlusIcon,
@@ -1610,7 +1630,6 @@ export default function UpsellCreatePage() {
                       }}
                     >
                       <Box
-                        // padding="400"
                         background="bg-surface"
                         borderRadius="200"
                       >
@@ -1629,8 +1648,7 @@ export default function UpsellCreatePage() {
                             {selectedUpsellProduct && (
                               <Box>
                                 <BlockStack gap="300">
-                                  {/* صورة المنتج */}
-                                  {showProductImage && selectedUpsellProduct.featuredImage?.url && (
+                                  {showProductImage && selectedUpsellProduct?.featuredImage?.url && (
                                     <div style={{
                                       borderRadius: `${imageBorderRadius}px`,
                                       boxShadow: imageShadow ? 'var(--p-shadow-300)' : 'none',
@@ -1643,8 +1661,8 @@ export default function UpsellCreatePage() {
                                         background="bg-surface"
                                       >
                                         <img
-                                          src={selectedUpsellProduct.featuredImage.url}
-                                          alt={selectedUpsellProduct.featuredImage.altText || selectedUpsellProduct.title}
+                                          src={selectedUpsellProduct?.featuredImage?.url}
+                                          alt={selectedUpsellProduct?.featuredImage?.altText || selectedUpsellProduct?.title || "Product Image"}
                                           style={{
                                             width: "100%",
                                             height: "auto",
@@ -1656,7 +1674,6 @@ export default function UpsellCreatePage() {
                                     </div>
                                   )}
 
-                                  {/* معلومات المنتج */}
                                   <BlockStack gap="200">
                                     <p style={{
                                       fontSize: "18px",
@@ -1718,8 +1735,6 @@ export default function UpsellCreatePage() {
                               </Box>
                             )}
 
-                            {/* الأزرار */}
-                            {/* الأزرار في Live Preview */}
                             <Box paddingBlockStart="400">
                               <BlockStack gap="200">
                                 {/* زر Add to Order - استخدم div مع أنماط مخصصة */}
@@ -1930,7 +1945,7 @@ export default function UpsellCreatePage() {
                 </Box>
               ) : (
                 <ResourceList
-                  items={products}
+                  items={availableUpsellProducts}
                   renderItem={(product) => (
                     <ResourceList.Item
                       id={product.id}
