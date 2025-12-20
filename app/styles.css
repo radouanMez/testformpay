@@ -715,3 +715,19 @@ input:checked + .slider:before { transform: translateX(18px); }
 .upsellItem .Polaris-Badge {
     margin-top: 10px !important;
 }
+
+.plaqueDiscountParent {
+    display: block;
+    margin: 0px auto;
+}
+
+.plaqueDiscount {
+    width: 135px !important;
+    height: 135px !important;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 18px;
+    font-weight: bold; 
+    clip-path: polygon(50% 0%, 58.64% 9.34%, 70.34% 4.32%, 74.43% 16.37%, 87.16% 16.54%, 86% 29.21%, 97.55% 34.55%, 91.34% 45.65%, 99.73% 55.23%, 89.54% 62.85%, 93.30% 75%, 80.89% 77.82%, 79.39% 90.45%, 66.91% 87.98%, 60.40% 98.91%, 50% 91.57%, 39.60% 98.91%, 33.09% 87.98%, 20.61% 90.45%, 19.11% 77.82%, 6.70% 75%, 10.46% 62.85%, 0.27% 55.23%, 8.66% 45.65%, 2.45% 34.55%, 14% 29.21%, 12.84% 16.54%, 25.57% 16.37%, 29.66% 4.32%, 41.36% 9.34%);
+}

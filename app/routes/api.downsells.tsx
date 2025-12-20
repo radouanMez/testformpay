@@ -1,15 +1,15 @@
-// api.upsells.tsx
+// api.downsells.tsx
 import type { ActionFunction, LoaderFunction } from "react-router";
 import { authenticate } from "../shopify.server";
 import { prisma } from "../db.server";
 
-// GET - جلب جميع upsells المتجر
+// GET - جلب جميع الـ downsells الخاصة بالمتجر
 export const loader: LoaderFunction = async ({ request }) => {
     const { session } = await authenticate.admin(request);
     const { shop } = session;
 
     try {
-        const upsells = await prisma.upsell.findMany({
+        const downsells = await prisma.downsell.findMany({
             where: { shop },
             orderBy: { createdAt: "desc" },
             include: {
@@ -22,61 +22,47 @@ export const loader: LoaderFunction = async ({ request }) => {
         });
 
         return new Response(
-            JSON.stringify({ success: true, data: upsells }),
+            JSON.stringify({ success: true, data: downsells }),
             {
                 status: 200,
-                headers: {
-                    "Content-Type": "application/json",
-                },
+                headers: { "Content-Type": "application/json" },
             }
         );
     } catch (error) {
-        console.error("Error fetching upsells:", error);
-
+        console.error("Error fetching downsells:", error);
         return new Response(
-            JSON.stringify({
-                success: false,
-                error: "Failed to fetch upsells"
-            }),
-            {
-                status: 500,
-                headers: {
-                    "Content-Type": "application/json",
-                },
-            }
+            JSON.stringify({ success: false, error: "Failed to fetch downsells" }),
+            { status: 500, headers: { "Content-Type": "application/json" } }
         );
     }
 };
 
-// POST - إنشاء upsell جديد
+// POST - إنشاء downsell جديد
 export const action: ActionFunction = async ({ request }) => {
     const { session } = await authenticate.admin(request);
     const { shop } = session;
 
+    if (request.method !== "POST") {
+        return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405 });
+    }
+
     try {
         const formData = await request.json();
 
-        // البحث عن أو إنشاء المستخدم
-        let user = await prisma.user.findFirst({
-            where: { shop },
-        });
-
+        // جلب المستخدم المرتبط بالمتجر
+        const user = await prisma.user.findFirst({ where: { shop } });
         if (!user) {
-            user = await prisma.user.create({
-                data: {
-                    shop,
-                    email: session.onlineAccessInfo?.associated_user?.email || "admin@shopify.com",
-                },
-            });
+            return new Response(
+                JSON.stringify({ success: false, error: "User not found" }),
+                { status: 404, headers: { "Content-Type": "application/json" } }
+            );
         }
 
-        // إنشاء الـ upsell
-        const upsell = await prisma.upsell.create({
+        const downsell = await prisma.downsell.create({
             data: {
                 shop,
                 userId: user.id,
                 name: formData.name,
-                type: formData.type,
                 status: formData.status || "DRAFT",
                 basicSettings: formData.basicSettings || {},
                 displayRules: formData.displayRules || {},
@@ -92,28 +78,14 @@ export const action: ActionFunction = async ({ request }) => {
         });
 
         return new Response(
-            JSON.stringify({ success: true, data: upsell }),
-            {
-                status: 201,
-                headers: {
-                    "Content-Type": "application/json",
-                },
-            }
+            JSON.stringify({ success: true, data: downsell }),
+            { status: 201, headers: { "Content-Type": "application/json" } }
         );
     } catch (error) {
-        console.error("Error creating upsell:", error);
-
+        console.error("Error creating downsell:", error);
         return new Response(
-            JSON.stringify({
-                success: false,
-                error: "Failed to create upsell"
-            }),
-            {
-                status: 500,
-                headers: {
-                    "Content-Type": "application/json",
-                },
-            }
+            JSON.stringify({ success: false, error: "Failed to create downsell" }),
+            { status: 500, headers: { "Content-Type": "application/json" } }
         );
     }
 };

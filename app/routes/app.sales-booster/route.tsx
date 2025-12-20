@@ -27,7 +27,7 @@ export default function UpsellsPage() {
 
   const tabs = [
     { id: "one-click", content: "One-Click Upsells" },
-    { id: "one-tick", content: "One-Tick Upsells" },
+    // { id: "one-tick", content: "One-Tick Upsells" },
     { id: "downsells", content: "Downsells" },
     { id: "quantity", content: "Quantity Offers" },
   ];
@@ -58,9 +58,9 @@ export default function UpsellsPage() {
       <Tabs tabs={tabs} selected={selectedTab} onSelect={handleTabChange} fitted>
         <Suspense fallback={<div>Loading...</div>}>
           {selectedTab === 0 && <OneClickUpsells />}
-          {selectedTab === 1 && <OneTickUpsells />}
-          {selectedTab === 2 && <Downsells />}
-          {selectedTab === 3 && <QuantityOffers />}
+          {/* {selectedTab === 1 && <OneTickUpsells />} */}
+          {selectedTab === 1 && <Downsells />}
+          {selectedTab === 2 && <QuantityOffers />}
         </Suspense>
       </Tabs>
     </Page>

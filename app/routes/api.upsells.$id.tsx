@@ -1,3 +1,4 @@
+// api.upsells.$id.tsx
 import type { ActionFunction, LoaderFunction } from "react-router";
 import { authenticate } from "../shopify.server";
 import { prisma } from "../db.server";

@@ -231,7 +231,7 @@ export default function UpsellCreatePage() {
 
   const [deleteModalActive, setDeleteModalActive] = useState(false);
   const [upsellToDelete, setUpsellToDelete] = useState<string | null>(null);
-
+  const [isLoading, setIsLoading] = useState(true);
   // 1. استخراج معرفات المنتجات المستخدمة كـ Upsell في العروض الحالية
   const usedUpsellProductIds = useMemo(() => {
     return new Set(
@@ -278,8 +278,20 @@ export default function UpsellCreatePage() {
     fetchProducts();
   }, [fetchProducts]);
 
+  // useEffect(() => {
+  //   fetchExistingUpsells();
+  // }, []);
+
   useEffect(() => {
-    fetchExistingUpsells();
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        fetchExistingUpsells();
+      } finally {
+        setIsLoading(false); // تم الانتهاء من التحميل
+      }
+    };
+    loadData();
   }, []);
 
   const fetchExistingUpsells = async () => {
@@ -420,27 +432,6 @@ export default function UpsellCreatePage() {
         setUpsellName(upsell.name);
         setUpsellType(upsell.type || "POST_PURCHASE");
         setUpsellStatus(upsell.status || "DRAFT");
-
-        // if (upsell.displayRules) {
-        //   setTriggerMode(upsell.displayRules.triggerMode || "ALL");
-
-        //   if (upsell.displayRules.triggerProducts &&
-        //     upsell.displayRules.triggerProducts !== "ALL" &&
-        //     Array.isArray(upsell.displayRules.triggerProducts)) {
-
-        //     const triggerProductIds = upsell.displayRules.triggerProducts;
-        //     const loadedTriggerProducts: Product[] = [];
-
-        //     for (const productId of triggerProductIds) {
-        //       const product = await fetchSpecificProduct(productId);
-        //       if (product) {
-        //         loadedTriggerProducts.push(product);
-        //       }
-        //     }
-
-        //     setSelectedTriggerProducts(loadedTriggerProducts);
-        //   }
-        // }
 
         if (upsell.productSettings?.discount) {
           setDiscountType(upsell.productSettings.discount.type || "NONE");
@@ -804,6 +795,7 @@ export default function UpsellCreatePage() {
         setToastError(false);
         setToastActive(true);
         fetchExistingUpsells();
+        setIsSaving(false);
       } else {
         setIsSaving(false);
         throw new Error(result.error || "Failed to save upsell");
@@ -977,13 +969,33 @@ export default function UpsellCreatePage() {
           }
         >
 
-          {!isCreating && existingUpsells.length > 0 ? (
+          {loadingUpsells ? (
+            <Card>
+              <Box padding="1000">
+                <BlockStack align="center" inlineAlign="center" gap="400">
+                  <Spinner size="large" />
+                  <p style={{ color: 'var(--p-color-text-secondary)' }}>Loading your offers...</p>
+                </BlockStack>
+              </Box>
+            </Card>
+          ) : isCreating ? (
+            /* 2. وضع الإنشاء/التعديل: هنا يظهر الفورم (Form) */
+            <div className="upsellFormArea">
+            </div>
+          ) : existingUpsells.length > 0 ? (
             <LegacyCard title="Your Upsells" sectioned>
               <ResourceList
                 items={existingUpsells}
-                loading={loadingUpsells}
                 renderItem={(upsell) => (
-                  <div className="upsellItem" style={{ border: "1px solid rgb(233 232 232)", borderRadius: "8px", marginBottom: "5px" }}>
+                  <div
+                    className="upsellItem"
+                    style={{
+                      border: "1px solid rgb(233 232 232)",
+                      borderRadius: "8px",
+                      marginBottom: "8px",
+                      padding: "4px"
+                    }}
+                  >
                     <ResourceList.Item
                       id={upsell.id}
                       onClick={() => { }}
@@ -992,8 +1004,7 @@ export default function UpsellCreatePage() {
                         <Badge
                           tone={
                             upsell.status === "ACTIVE" ? "success" :
-                              upsell.status === "DRAFT" ? "warning" :
-                                "critical"
+                              upsell.status === "DRAFT" ? "warning" : "critical"
                           }
                         >
                           {upsell.status}
@@ -1004,8 +1015,10 @@ export default function UpsellCreatePage() {
                         <div className="upsellListingDetails">
                           <TextContainer>
                             <p><strong>{upsell.name}</strong></p>
-                            <p style={{ color: '#6d7175' }}>• Type: {upsell.type}</p>
-                            <p style={{ color: '#6d7175' }}>• Created: {new Date(upsell.createdAt).toLocaleDateString()}</p>
+                            <p style={{ color: '#6d7175', fontSize: '13px' }}>• Type: {upsell.type}</p>
+                            <p style={{ color: '#6d7175', fontSize: '13px' }}>
+                              • Created: {new Date(upsell.createdAt).toLocaleDateString()}
+                            </p>
                           </TextContainer>
                         </div>
 
@@ -1033,32 +1046,20 @@ export default function UpsellCreatePage() {
                     </ResourceList.Item>
                   </div>
                 )}
-                emptyState={
-                  <EmptyState
-                    heading="No upsells yet"
-                    action={{
-                      content: "Create your first upsell",
-                      onAction: () => { },
-                    }}
-                    image=""
-                  >
-                    <p>Create an upsell to increase your average order value.</p>
-                  </EmptyState>
-                }
               />
             </LegacyCard>
           ) : (
-            !isCreating && (
-              <EmptyState
-                heading="No upsells found"
-                action={{ content: 'Create Upsell', onAction: () => setIsCreating(true) }}
-                image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
-              >
-                <p>You haven't created any upsells yet.</p>
-              </EmptyState>
-            )
+            <EmptyState
+              heading="No upsells found"
+              action={{
+                content: 'Create Upsell',
+                onAction: () => setIsCreating(true)
+              }}
+              image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
+            >
+              <p>You haven't created any upsells yet. Create an upsell to increase your average order value.</p>
+            </EmptyState>
           )}
-
 
           {isEditing && (
             <div style={{ marginBottom: "15px", border: "2px solid #f1f1f1", borderRadius: "8px", padding: "5px" }}>
@@ -1616,7 +1617,12 @@ export default function UpsellCreatePage() {
               </Grid.Cell>
 
               <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 6, lg: 5, xl: 5 }}>
-                <div className="previewFullPopup">
+                <div style={{
+                  position: "sticky",
+                  top: "20px",
+                  zIndex: 1,
+                  height: "fit-content"
+                }}>
                   <LegacyCard title="Live Preview" sectioned>
                     <div
                       className="previewUpsell"
