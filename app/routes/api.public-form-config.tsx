@@ -13,7 +13,6 @@ const createJsonResponse = (data: any, status: number = 200) => {
         },
     });
 };
-
 // ✅ API عام لجلب إعدادات الفورم وأيضًا إعدادات الشحن
 export const loader: LoaderFunction = async ({ request }) => {
     try {

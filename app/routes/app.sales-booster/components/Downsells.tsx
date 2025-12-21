@@ -252,6 +252,33 @@ export default function DownsellManager() {
   const [deleteModalActive, setDeleteModalActive] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
+  const usedProductIds = useMemo(() => {
+    return downsells
+      .filter(ds => ds.id !== editingId) // استثناء العرض الحالي إذا كنا في وضع التعديل لكي لا يختفي منتجه
+      .map(ds => ds.productSettings?.productId)
+      .filter(Boolean);
+  }, [downsells, editingId]);
+
+  const availableProducts = useMemo(() => {
+    return products.filter(product => {
+      const currentEditingDownsell = downsells.find(d => d.id === editingId);
+      const currentProductId = currentEditingDownsell?.productSettings?.productId;
+
+      return !usedProductIds.includes(product.id) || product.id === currentProductId;
+    });
+  }, [products, usedProductIds, editingId, downsells]);
+
+  const discountErrorMessage = useMemo(() => {
+    const val = Number(discountValue);
+    if (discountType === "PERCENTAGE" && (val < 0 || val > 100)) {
+      return "Value must be between 0% and 100%";
+    }
+    if (discountType === "FIXED_AMOUNT" && selectedDownsellProduct && val > (selectedDownsellProduct.price || 0)) {
+      return `Discount exceeds product price (${formatPrice(selectedDownsellProduct.price)})`;
+    }
+    return ""; // نص فارغ يعني لا يوجد خطأ
+  }, [discountValue, discountType, selectedDownsellProduct]);
+
   // --- GraphQL Query ---
   const PRODUCTS_QUERY = `
     query {
@@ -458,6 +485,13 @@ export default function DownsellManager() {
       return;
     }
 
+    if (discountErrorMessage) {
+      setToastContent(discountErrorMessage);
+      setToastError(true);
+      setToastActive(true);
+      return;
+    }
+
     setIsSaving(true);
 
     const payload = {
@@ -567,6 +601,22 @@ export default function DownsellManager() {
     }
   };
 
+  const getProductName = (downsell: any): string => {
+    // الطريقة 1: إذا كان اسم المنتج مخزن مباشرة
+    if (downsell.productSettings?.productTitle) {
+      return downsell.productSettings.productTitle;
+    }
+
+    // الطريقة 2: البحث عن المنتج في قائمة products
+    const productId = downsell.productSettings?.productId;
+    if (productId) {
+      const product = products.find(p => p.id === productId);
+      return product?.title || "Unknown Product";
+    }
+
+    return "No Product Selected";
+  };
+
   // --- List View ---
   const listView = (
     <Page
@@ -588,8 +638,10 @@ export default function DownsellManager() {
         ) : downsells.length > 0 ? (
           <LegacyCard title="Your Downsells" sectioned>
             <ResourceList
+              resourceName={{ singular: 'downsell', plural: 'downsells' }}
               items={downsells}
               renderItem={(downsell) => (
+
                 <div
                   className="downsellItem"
                   style={{
@@ -619,6 +671,8 @@ export default function DownsellManager() {
                         <TextContainer>
                           <p><strong>{downsell.name}</strong></p>
                           <p style={{ color: '#6d7175', fontSize: '13px' }}>
+                            • Product: {getProductName(downsell)}
+                            <br />
                             • Created: {new Date(downsell.createdAt).toLocaleDateString()}
                           </p>
                         </TextContainer>
@@ -787,16 +841,16 @@ export default function DownsellManager() {
                       onChange={(value) => setDiscountType(value as DiscountType)}
                     />
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <TextField
-                      autoComplete="off"
-                      label="Value"
-                      type="number"
-                      value={discountValue}
-                      onChange={setDiscountValue}
-                      suffix={discountType === "PERCENTAGE" ? "%" : "$"}
-                    />
-                  </div>
+                  <TextField
+                    autoComplete="off"
+                    label="Value"
+                    type="number"
+                    value={discountValue}
+                    onChange={setDiscountValue}
+                    suffix={discountType === "PERCENTAGE" ? "%" : "$"}
+                    error={discountErrorMessage ? true : false}
+                    helpText={discountErrorMessage || (discountType === "PERCENTAGE" ? "Enter percentage" : "Enter amount")}
+                  />
                 </InlineStack>
 
                 <Checkbox
@@ -1344,7 +1398,7 @@ export default function DownsellManager() {
               </Box>
             ) : (
               <ResourceList
-                items={products}
+                items={products.filter(product => !usedProductIds.includes(product.id))}
                 renderItem={(product) => (
                   <ResourceList.Item
                     id={product.id}

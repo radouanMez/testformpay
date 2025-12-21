@@ -68,7 +68,6 @@ export const action: ActionFunction = async ({ request }) => {
                 },
             });
         }
-
         // ابحث عن config الحالي أو أنشئ جديدًا
         const existingConfig = await prisma.formConfig.findFirst({
             where: { formId: form.id, isActive: true },
