@@ -1,4 +1,4 @@
-console.log("CODFORMPAY V.1.0.3");
+console.log("CODFORMPAY V.1.0.8");
 
 class ProductPageDetector {
     constructor() {
@@ -346,22 +346,34 @@ class ProductFormBuilder {
         this.isFormOpen = false;
         this.configButton = null;
 
+        this.downsellShown = false;
+        this.activeDiscount = null;
+        this.originalFormHTML = null;
+
+        this.apiBaseUrl = "https://damages-nominations-henderson-nut.trycloudflare.com";
+
         this.init();
     }
 
-
     async init() {
+        console.log('Page init')
         if (!this.detector.isProductPage) {
             return;
         }
+
+        console.log('Product Page 1')
 
         await this.detector.extractProductData();
         await this.fetchFormConfig();
 
         this.applyPopupModalStyles();
 
+        // console.log(this.config);
+        // console.log(this.config.config);
+
         // بناء الفورم حسب النوع
         if (this.config.form.formType === 'EMBEDDED') {
+            console.log('Product Page EMBEDDED')
             this.createEmbeddedForm();
         } else {
             this.createPopupForm();
@@ -376,20 +388,23 @@ class ProductFormBuilder {
     }
 
     async fetchFormConfig() {
+        const shop = window.Shopify?.shop || this.extractShopFromDOM();
         try {
-            const shop = window.Shopify?.shop || this.extractShopFromDOM();
-            const response = await fetch(`https://cod.formpaycod.com/api/public-form-config?shop=${shop}`);
-
-            if (response.ok) {
-                this.config = await response.json();
-
+            const response = await fetch(`${this.apiBaseUrl}/api/public-form-config?shop=${shop}`);
+            const data = await response.json();
+            if (data.success) {
+                console.log(data)
+                this.config = data.config;
+                this.formConfig = data.form;
+                this.upsells = data.config.offers?.upsells || [];
+                this.downsells = data.config.offers?.downsells || [];
+                console.log(this.config.shipping)
                 if (this.config.shipping && this.config.shipping.length > 0) {
                     this.currentShipping = this.config.shipping[0];
                 }
             }
         } catch (error) {
-            console.error('Error fetching form config:', error);
-            this.config = this.getDefaultConfig();
+            console.error("Error fetching config:", error);
         }
     }
 
@@ -550,7 +565,6 @@ class ProductFormBuilder {
         }
     }
 
-    // 👇 أضف هنا الدالة داخل الكلاس
     hsbToRgba({ hue, saturation, brightness, alpha }) {
         const h = hue;
         const s = saturation;
@@ -915,15 +929,15 @@ class ProductFormBuilder {
 
     renderSubscribeField(field) {
         return `
-    <div class="titleSubscribeFormino">
-      <input type="checkbox" id="forminoSubscribe" name="forminoSubscribe" value="true">
-      <label for="forminoSubscribe">${field.subscribeSettings?.label}</label>
-      <div class="descriptionSubscribeFormino">
-        <p>${field.subscribeSettings?.description}</p>
-        <p>${field.subscribeSettings?.privacyText}</p>
-      </div>
-    </div>
-    `;
+            <div class="titleSubscribeFormino">
+            <input type="checkbox" id="forminoSubscribe" name="forminoSubscribe" value="true">
+            <label for="forminoSubscribe">${field.subscribeSettings?.label}</label>
+            <div class="descriptionSubscribeFormino">
+                <p>${field.subscribeSettings?.description}</p>
+                <p>${field.subscribeSettings?.privacyText}</p>
+            </div>
+            </div>
+        `;
     }
 
     getButtonIcon(icon) {
@@ -1048,39 +1062,57 @@ class ProductFormBuilder {
         });
     }
 
-    closePopupModal() {
+    closePopupModal(forceClose = false) {
+        console.log('🔒 Closing popup modal, downsellShown:', this.downsellShown, 'forceClose:', forceClose);
+
+        // إذا كان forceClose = true، أغلق مباشرة
+        if (!forceClose && this.config.form.formType !== 'EMBEDDED' && !this.downsellShown && this.downsells && this.downsells.length > 0) {
+            const downsellOffer = this.getMatchingDownsell();
+            if (downsellOffer) {
+                console.log('🎁 Showing downsell offer:', downsellOffer.name);
+                this.showDownsellPopup(downsellOffer);
+                this.downsellShown = true;
+                return false; // لم يتم الإغلاق بعد
+            }
+        }
+
+        // الإغلاق الفعلي
         const modalOverlay = document.getElementById('formino-modal-overlay');
         if (modalOverlay) {
-            // إضافة animation للإغلاق
+            console.log('👋 Removing modal overlay');
             modalOverlay.style.animation = 'forminoPopupSlideOut 0.3s ease-in';
-
             setTimeout(() => {
-                modalOverlay.remove();
+                if (modalOverlay.parentNode) {
+                    modalOverlay.remove();
+                }
                 this.isFormOpen = false;
+                this.downsellShown = false;
+                this.activeDiscount = null;
+                this.originalFormHTML = null;
+                console.log('✅ Modal fully closed');
             }, 300);
         }
+
+        return true; // تم الإغلاق
     }
 
-
     setupFormHandlers() {
-        document.addEventListener('click', (e) => {
-            const btn = e.target.closest('.formino-submit-button');
-            if (!btn) return;
+        const form = document.getElementById('formino-main-form');
+        if (!form) return;
 
-            const form = document.getElementById('formino-main-form');
-            if (form && !form.contains(btn)) {
-                e.preventDefault();
-                form.requestSubmit();
-            }
-        });
-
-        document.addEventListener('submit', async (e) => {
-            if (e.target.id !== 'formino-main-form') return;
+        // 1. معالجة الإرسال (Submit)
+        // نستخدم "onsubmit" مباشرة لضمان وجود مستمع واحد فقط في كل مرة يتم فيها بناء الفورم
+        form.onsubmit = async (e) => {
             e.preventDefault();
 
-            const form = e.target;
+            // حماية إضافية لمنع الإرسال المزدوج
+            if (this.isSubmitting) return;
+
             const btn = form.querySelector('.formino-submit-button');
-            if (btn) btn.classList.add('loading');
+            if (btn) {
+                btn.classList.add('loading');
+                btn.disabled = true; // تعطيل الزر فوراً
+            }
 
             try {
                 await this.handleFormSubmit(e);
@@ -1091,38 +1123,67 @@ class ProductFormBuilder {
                     message: '⚠️ Failed to send order. Please try again.'
                 });
             } finally {
-                if (btn) btn.classList.remove('loading');
-            }
-        });
-
-        // 📌 3. Event delegation لتغييرات الشحن
-        document.addEventListener('change', (e) => {
-            if (e.target.name === 'shipping_method' && this.config?.shipping) {
-                const selectedRate = this.config.shipping.find(rate => rate.id === e.target.value);
-                if (selectedRate) {
-                    this.currentShipping = selectedRate;
-                    this.updateFormTotals();
-
-                    // تأثير التحديد البصري
-                    document.querySelectorAll('.formino-shipping-option').forEach(option => {
-                        option.style.background = 'white';
-                        option.style.borderColor = '#ddd';
-                    });
-
-                    const selectedOption = e.target.closest('.formino-shipping-option');
-                    if (selectedOption) {
-                        selectedOption.style.background = '#f8fff8';
-                        selectedOption.style.borderColor = '#008060';
-                    }
+                // ملاحظة: handleFormSubmit قد يحتوي على منطق إعادة تفعيل الزر أيضاً
+                if (btn) {
+                    btn.classList.remove('loading');
+                    btn.disabled = false;
                 }
             }
+        };
+
+        // 2. معالجة الضغط على الزر (Click Delegation)
+        // إذا كان الزر خارج الفورم تقنياً أو يحتاج تحفيز يدوي
+        const submitBtn = form.querySelector('.formino-submit-button');
+        if (submitBtn) {
+            submitBtn.onclick = (e) => {
+                if (!form.checkValidity()) {
+                    // اترك المتصفح يظهر أخطاء التحقق الأصلية
+                }
+            };
+        }
+
+        // 3. معالجة خيارات الشحن (Shipping Changes)
+        const shippingOptions = form.querySelectorAll('input[name="shipping_method"]');
+        shippingOptions.forEach(radio => {
+            // نستخدمonclick بدلاً من onchange أحياناً يكون أكثر استقراراً في الراديو بوتون
+            radio.onclick = (e) => {
+                const val = e.target.value;
+
+                // التأكد من وجود إعدادات الشحن وتجنب التكرار إذا كان هو الخيار المختار فعلياً
+                if (this.config?.shipping) {
+                    const selectedRate = this.config.shipping.find(rate => rate.id === val);
+
+                    // تحقق بسيط: لا تقم بالتحديث إذا كان هذا الشحن هو المختار مسبقاً (لتجنب اللوب)
+                    if (selectedRate && (!this.currentShipping || this.currentShipping.id !== selectedRate.id)) {
+                        this.currentShipping = selectedRate;
+
+                        // تحديث الأرقام فقط دون لمس الـ inputs الخاصة بالشحن داخل الدالة
+                        this.updateFormTotals();
+
+                        // التنسيق البصري - نغير الكلاسات بدلاً من الـ Style المباشر لتجنب مشاكل المتصفح
+                        form.querySelectorAll('.formino-shipping-option').forEach(option => {
+                            option.style.backgroundColor = 'white';
+                            option.style.borderColor = '#ddd';
+                        });
+
+                        const selectedOption = e.target.closest('.formino-shipping-option');
+                        if (selectedOption) {
+                            selectedOption.style.backgroundColor = '#f8fff8';
+                            selectedOption.style.borderColor = '#008060';
+                        }
+                    }
+                }
+            };
         });
 
-        // 📌 4. (اختياري) أي أحداث إضافية مستقبلية (ex: تغيير Variant أو خصم)
-        // document.addEventListener('change', (e) => {
-        //   if (e.target.name === 'variant') this.updateFormTotals();
-        // });
-
+        // 4. معالجة تحديث الكمية (إذا كان لديك حقل كمية)
+        const qtyInput = form.querySelector('input[name="quantity"]');
+        if (qtyInput) {
+            qtyInput.onchange = (e) => {
+                this.currentQuantity = parseInt(e.target.value) || 1;
+                this.updateFormTotals();
+            };
+        }
     }
 
     setupValidation() {
@@ -1240,8 +1301,6 @@ class ProductFormBuilder {
         return emailRegex.test(email.trim());
     }
 
-
-
     async handleFormSubmit(e) {
         e.preventDefault();
 
@@ -1305,6 +1364,11 @@ class ProductFormBuilder {
             };
 
             const result = await this.submitOrder(payload);
+            console.log(result)
+
+            // if (!result) {
+            //     throw new Error("No response from server");
+            // }
 
             if (result.error === "order_blocked") {
                 this.showBlockedUserMessage(result.message);
@@ -1330,13 +1394,20 @@ class ProductFormBuilder {
 
     async submitOrder(payload = {}) {
         try {
-            const formData = payload.fields || this.collectFormData?.() || {};
+            if (this.isSubmitting) {
+                console.warn("⚠️ إرسال قيد التنفيذ بالفعل...");
+                return { success: false, error: "already_submitting" };
+            }
 
+            this.isSubmitting = true;
+            console.log("Submitting Order...");
+            const formData = payload.fields || this.collectFormData?.() || {};
             const formDataToSend = new FormData();
 
             const shop = window.Shopify?.shop || this.extractShopFromDOM() || window.location.hostname;
             formDataToSend.append('shop', shop);
 
+            // إضافة بيانات العميل
             formDataToSend.append('first_name', formData.first_name || '');
             formDataToSend.append('last_name', formData.last_name || '');
             formDataToSend.append('address', formData.address || '');
@@ -1347,6 +1418,7 @@ class ProductFormBuilder {
             formDataToSend.append('zip_code', formData.zip_code || '');
             formDataToSend.append('email', formData.email || '');
 
+            // معالجة الشحن
             const shipping = payload.shipping || this.currentShipping || formData.shipping || null;
             if (shipping) {
                 formDataToSend.append('shipping_method', shipping.id || '');
@@ -1355,32 +1427,60 @@ class ProductFormBuilder {
                 formDataToSend.append('shipping_method', formData.shipping_method || '');
             }
 
-            const product = payload.product || this.currentProduct || formData.product || {};
-            formDataToSend.append('product', JSON.stringify(product));
+            // --- إصلاح السعر وتطبيق الخصم ---
 
+            // 1. جلب بيانات المنتج
+            const product = payload.product || this.currentProduct || formData.product || {};
+
+            // 2. تحديد السعر النهائي
+            // إذا كان هناك خصم مفعل، نستخدم activeDiscount.newPrice (وهو بوحدة العملة العادية، مثل 500)
+            // إذا لم يوجد، نأخذ السعر الحالي ونقسمه على 100 لتحويله من سنتات إلى وحدة (50000 -> 500)
+            let finalPriceUnit = 0;
+
+            if (this.activeDiscount) {
+                finalPriceUnit = this.activeDiscount.newPrice;
+                // إضافة وسم (Tag) أو ملاحظة بأن الخصم تم تطبيقه
+                formDataToSend.append('discount_applied', JSON.stringify(this.activeDiscount));
+
+                // تحديث سعر المنتج في الأوبجكت المرسل
+                // ملاحظة: هذا يعتمد على كيفية قراءة الباك إند للسعر.
+                // عادة يجب إرسال السعر المعدل في مصفوفة items أو كحقل منفصل price_override
+                product.price = finalPriceUnit; // نعيده للسنتات داخل الأوبجكت لأن شوبيفاي يخزن بالسنت
+            } else {
+                finalPriceUnit = (this.detector.getCurrentPrice());
+            }
+
+            formDataToSend.append('product', JSON.stringify(product));
             formDataToSend.append('variantId', payload.variantId || formData.variantId || '');
             formDataToSend.append('quantity', formData.quantity?.toString() || '1');
 
+            // 3. إرسال السعر الصريح (Override Price)
+            // نرسل السعر بوحدة العملة (500) لكي يفهمه الباك اند بشكل صحيح
+            formDataToSend.append('custom_price', finalPriceUnit);
+
+            // حساب التوتالات النهائية للإرسال
+            const shippingPrice = shipping ? shipping.price : 0;
             const totals = {
-                subtotal: payload.subtotal || this.currentSubtotal || 0,
-                total: payload.total || this.calculateTotal?.() || this.currentSubtotal || 0,
+                subtotal: finalPriceUnit,
+                total: finalPriceUnit + shippingPrice,
                 timestamp: new Date().toISOString()
             };
             formDataToSend.append('totals', JSON.stringify(totals));
 
             formDataToSend.append('config', JSON.stringify(this.config || {}));
 
+            // الإرسال للسيرفر
             const response = await fetch(
-                'https://cod.formpaycod.com/api/create-order',
+                `${this.apiBaseUrl}/api/create-order`,
                 {
                     method: 'POST',
                     body: formDataToSend
                 }
             );
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
+            // if (!response.ok) {
+            //     throw new Error(`HTTP error! Status: ${response.status}`);
+            // }
 
             const result = await response.json();
 
@@ -1910,40 +2010,311 @@ class ProductFormBuilder {
         const form = document.getElementById('formino-main-form');
         if (!form) return;
 
-        const inputs = form.querySelectorAll('input, textarea, select');
+        // 1. مسح القيم النصية فقط (الاسم، الهاتف، إلخ)
+        const inputs = form.querySelectorAll('.formino-input');
         inputs.forEach(input => {
-            if (input.type === 'text' || input.type === 'email' || input.type === 'tel') {
-                input.value = '';
-            } else if (input.type === 'radio' || input.type === 'checkbox') {
-                input.checked = false;
-            }
+            input.value = '';
+            const parent = input.closest('.formino-group-input');
+            if (parent) parent.classList.remove('error');
         });
 
-        const shippingRadios = form.querySelectorAll('input[name="shipping_method"]');
-        if (shippingRadios.length > 0) {
-            shippingRadios[0].checked = true;
-            this.currentShipping = this.config?.shipping?.[0] || null;
+        // 2. مسح رسائل الخطأ
+        form.querySelectorAll('.formino-error-message').forEach(m => m.remove());
+
+        // 3. التعامل الآمن مع زر الإرسال
+        const submitButton = form.querySelector('.formino-submit-button');
+        if (submitButton) {
+            // إزالة كلاس التحميل الذي يجعل النص شفافاً عادةً
+            submitButton.classList.remove('loading');
+            submitButton.disabled = false;
+
+            // بدلاً من مسح كل الـ style، نقوم فقط بإعادة إظهار النص
+            // إذا كان كود الإرسال يغير color إلى transparent، نعيده هنا للأبيض
+            submitButton.style.color = "rgba(255,255,255,1)";
+
+            // التأكد من بقاء الخلفية سوداء كما في الـ HTML الأصلي الخاص بك
+            submitButton.style.backgroundColor = "rgba(0,0,0,1)";
         }
 
+        // 4. تحديث التوتالات لإعادة السعر للوضع الطبيعي
+        this.updateFormTotals();
+    }
+
+
+    applySubmitButtonStyles() {
+        const btn = document.querySelector('.formino-submit-button');
+        if (!btn || !this.configButton) return;
+
+        const s = this.configButton;
+
+        btn.style.backgroundColor = s.backgroundColor;
+        btn.style.color = s.textColor;
+        btn.style.fontSize = s.fontSize + 'px';
+        btn.style.borderRadius = s.borderRadius + 'px';
+        btn.style.border = `${s.borderWidth}px solid ${s.borderColor}`;
+        btn.style.width = '100%';
+    }
+
+
+    // دالة استخراج ID من GID
+    extractIdFromGid(gid) {
+        if (!gid) return null;
+        const parts = gid.split('/');
+        return parts[parts.length - 1];
+    }
+
+    closePopupModal() {
+        if (this.config.form.formType !== 'EMBEDDED' && !this.downsellShown && this.downsells && this.downsells.length > 0) {
+            const downsellOffer = this.getMatchingDownsell();
+            if (downsellOffer) {
+                this.showDownsellPopup(downsellOffer);
+                this.downsellShown = true;
+                return;
+            }
+        }
+
+        const modalOverlay = document.getElementById('formino-modal-overlay');
+        if (modalOverlay) {
+            modalOverlay.style.animation = 'forminoPopupSlideOut 0.3s ease-in';
+            setTimeout(() => {
+                modalOverlay.remove();
+                this.isFormOpen = false;
+                this.downsellShown = false;
+                this.activeDiscount = null;
+                this.originalFormHTML = null;
+            }, 300);
+        }
+    }
+
+    getMatchingDownsell() {
+        if (!this.detector.currentProduct) return null;
+        const currentId = this.detector.currentProduct.id.toString();
+
+        return this.downsells.find(offer => {
+            const offerProductId = this.extractIdFromGid(offer.productSettings.productId);
+            return offerProductId === currentId && offer.status === 'ACTIVE';
+        });
+    }
+
+    showDownsellPopup(offer) {
+        console.log('🔄 Preparing downsell popup for:', offer.name);
+
+        const contentDiv = document.querySelector('.formino-modal-content');
+        if (!contentDiv) {
+            console.error('❌ No modal content found');
+            return;
+        }
+
+        // حفظ الفورم الأصلي فقط إذا لم يكن محفوظاً بالفعل
+        if (!this.originalFormHTML) {
+            this.originalFormHTML = contentDiv.innerHTML;
+            console.log('💾 Saved original form HTML');
+        }
+
+        const styles = offer.designSettings;
+        let discountDisplay = "";
+
+        if (offer.productSettings.discountType === 'PERCENTAGE') {
+            discountDisplay = `${offer.productSettings.discountValue}% OFF`;
+        } else {
+            discountDisplay = `-${offer.productSettings.discountValue} ${this.config.form.currency || 'MAD'}`;
+        }
+
+        const downsellHTML = `
+            <div class="formino-downsell-container" style="text-align: center; padding: 30px; max-width: 500px; margin: 0 auto;">
+                <button type="button" class="formino-close-button" 
+                    style="position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 24px; cursor: pointer; color: #666;"
+                    id="close-downsell-early">
+                    &times;
+                </button>
+                
+                <h2 style="color: ${styles.titleColor?.color || '#d32f2f'}; font-size: ${styles.titleFontSize}px; margin-bottom: 10px;">
+                    ${styles.title || 'Wait! Special Offer'}
+                </h2>
+                
+                <p style="color: ${styles.subtitleColor?.color || '#555'}; font-size: 16px; margin-bottom: 25px;">
+                    ${styles.subtitle || "Complete your order now and get a discount!"}
+                </p>
+                
+                <div style="background: #f0fdf4; padding: 25px; border-radius: 10px; margin-bottom: 30px; border: 2px dashed #008060;">
+                    <h3 style="margin: 0 0 10px 0; color: #008060; font-size: 22px;">
+                        GET IT FOR <span style="font-weight:bold; color: #d32f2f;">${discountDisplay}</span>
+                    </h3>
+                    <p style="color: #666; margin: 0; font-size: 14px;">
+                        Limited time offer - valid now only!
+                    </p>
+                </div>
+
+                <div style="display: flex; gap: 15px; flex-direction: column;">
+                    <button type="button" id="accept-downsell" 
+                        style="background: linear-gradient(to right, #008060, #00a080); 
+                            color: white; border: none; padding: 18px; 
+                            border-radius: 8px; cursor: pointer; 
+                            font-weight: bold; font-size: 18px;
+                            transition: all 0.3s;">
+                        ✅ YES! APPLY DISCOUNT & CONTINUE
+                    </button>
+                    
+                    <button type="button" id="decline-downsell" 
+                        style="background: transparent; color: #888; 
+                            border: 1px solid #ddd; padding: 12px; 
+                            border-radius: 6px; cursor: pointer; 
+                            font-size: 14px;">
+                        No thanks, I'll pay full price
+                    </button>
+                </div>
+            </div>
+        `;
+
+        contentDiv.innerHTML = downsellHTML;
+
+        // إعداد معالجات الأحداث
+        document.getElementById('accept-downsell').onclick = () => {
+            console.log('👍 Accept downsell clicked');
+            this.applyDownsellDiscount(offer);
+        };
+
+        document.getElementById('decline-downsell').onclick = () => {
+            console.log('👎 Decline downsell clicked');
+            this.closePopupModal(true); // force close
+        };
+
+        document.getElementById('close-downsell-early').onclick = () => {
+            console.log('✖️ Early close downsell clicked');
+            this.closePopupModal(true); // force close
+        };
+
+        this.applySubmitButtonStyles();
+
+    }
+
+    applyDownsellDiscount(offer) {
+        // 1. حساب السعر الجديد (بالوحدات وليس السنتات)
+        const originalPriceUnit = this.detector.getCurrentPrice() / 100;
+        let newPriceUnit = originalPriceUnit;
+
+        if (offer.productSettings.discountType === 'PERCENTAGE') {
+            newPriceUnit = originalPriceUnit - (originalPriceUnit * (parseFloat(offer.productSettings.discountValue) / 100));
+        } else {
+            newPriceUnit = originalPriceUnit - parseFloat(offer.productSettings.discountValue);
+        }
+
+        // 2. تخزين الخصم
+        this.activeDiscount = {
+            id: offer.id,
+            newPrice: Math.max(0, newPriceUnit),
+            originalPrice: originalPriceUnit
+        };
+
+        // 3. استعادة واجهة الفورم
+        const contentDiv = document.querySelector('.formino-modal-content');
+        if (contentDiv && this.originalFormHTML) {
+            // إرجاع النموذج الأصلي
+            contentDiv.innerHTML = this.originalFormHTML;
+
+            // تنفيذ الـ Reset فوراً وبقوة
+            this.resetForm();
+            // إعادة ربط الـ Listeners لكي يعمل زر "Complete Order"
+            this.setupFormHandlers();
+            // تحديث السعر في الزر (Dynamic Total) وفي سكشن التوتالات
+            this.updateFormTotals();
+            this.applyFormStyles();
+            this.applySubmitButtonStyles();
+        }
+    }
+
+    resetForm() {
+        const form = document.getElementById('formino-main-form');
+        if (!form) return;
+
+        // 1. مسح قيم المدخلات (الاسم، الهاتف، العنوان، المدينة)
+        const inputs = form.querySelectorAll('.formino-input');
+        inputs.forEach(input => {
+            input.value = ''; // تفريغ القيمة
+            input.classList.remove('error'); // إزالة اللون الأحمر من الحقل نفسه
+        });
+
+        // 2. إزالة كلاس الخطأ من الحاويات الخارجية (الـ Divs)
+        // هذا مهم جداً لأن الـ HTML لديك يضع الـ error على الـ group-input
+        const errorGroups = form.querySelectorAll('.formino-group-input.error, .formino-field.error');
+        errorGroups.forEach(group => {
+            group.classList.remove('error');
+        });
+
+        // 3. مسح رسائل الخطأ النصية التي قد تكون أضيفت تحت الحقول
         const errorMessages = form.querySelectorAll('.formino-error-message');
-        errorMessages.forEach(error => error.remove());
+        errorMessages.forEach(msg => msg.remove());
 
-        const errorFields = form.querySelectorAll('.formino-field.error');
-        errorFields.forEach(field => field.classList.remove('error'));
-
-        // 5. إعادة تعيين الكمية إلى 1
+        // 4. إعادة تعيين الكمية (إذا كانت موجودة)
         this.currentQuantity = 1;
 
-        // 6. تحديث التوتالات
+        // 5. تحديث التوتالات (ليعود السعر إلى 250.00 MAD كما في الـ HTML)
         this.updateFormTotals();
 
-        // 7. إعادة تعيين زر الإرسال
+        // 6. إعادة تعيين زر الإرسال (إزالة Loading)
         const submitButton = form.querySelector('.formino-submit-button');
         if (submitButton) {
             submitButton.disabled = false;
             submitButton.classList.remove('loading');
+            submitButton.style.color = ''; // إرجاع لون النص الأصلي
+        }
+    }
+
+    injectSuccessBar(message) {
+        const header = document.querySelector('.formino-header');
+        if (header) {
+            // إزالة أي بار قديم
+            const oldBar = document.querySelector('.formino-discount-bar');
+            if (oldBar) oldBar.remove();
+
+            const bar = document.createElement('div');
+            bar.className = 'formino-discount-bar';
+            bar.style.cssText = "background:#dcfce7; color:#166534; padding:10px; text-align:center; font-weight:bold; border-radius:4px; margin:10px 0; border:1px solid #bbf7d0;";
+            bar.innerText = message;
+            header.after(bar);
+        }
+    }
+
+    // استبدل دالة updateFormTotals الحالية أو عدلها:
+    updateFormTotals() {
+        // السعر الأساسي بوحدة العملة (500)
+        let subtotal = this.detector.getCurrentPrice() / 100;
+
+        // إذا كان هناك خصم مطبق، استخدم السعر الجديد
+        if (this.activeDiscount) {
+            subtotal = this.activeDiscount.newPrice;
         }
 
+        const shipping = this.currentShipping ? this.currentShipping.price : 0;
+        const total = subtotal + shipping;
+
+        // تحديث النصوص
+        const elements = {
+            '.formino-subtotal': this.formatMoney(subtotal),
+            '.formino-shipping-cost': shipping === 0 ? 'Free' : this.formatMoney(shipping),
+            '.formino-total-amount': this.formatMoney(total),
+            '.formino-dynamic-total': this.formatMoney(total),
+            '.formino-dynamic-subtotal': this.formatMoney(subtotal)
+        };
+
+        Object.entries(elements).forEach(([selector, value]) => {
+            const el = document.querySelector(selector);
+            if (el) el.textContent = value;
+        });
+
+        // إضافة تأثير السعر المشطوب إذا وجد خصم
+        if (this.activeDiscount) {
+            const totalEl = document.querySelector('.formino-total-amount');
+            if (totalEl) {
+                const originalTotal = this.activeDiscount.originalPrice + shipping;
+                totalEl.innerHTML = `
+                    <span style="text-decoration: line-through; color: #999; font-size: 0.8em; margin-right: 8px;">
+                        ${this.formatMoney(originalTotal)}
+                    </span>
+                    ${this.formatMoney(total)}
+                `;
+            }
+        }
     }
 
 }
