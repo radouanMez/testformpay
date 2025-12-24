@@ -350,7 +350,7 @@ class ProductFormBuilder {
         this.activeDiscount = null;
         this.originalFormHTML = null;
 
-        this.apiBaseUrl = "https://damages-nominations-henderson-nut.trycloudflare.com";
+        this.apiBaseUrl = "https://glow-julie-seed-yellow.trycloudflare.com";
 
         this.init();
     }
@@ -2114,53 +2114,112 @@ class ProductFormBuilder {
         const styles = offer.designSettings;
         let discountDisplay = "";
 
+        const discountText = styles.primaryBtn.text;
+        const discountType = offer.productSettings.discountType;
+        const discountValue = offer.productSettings.discountValue;
+        let replacementValue = "";
+        if (discountType === "PERCENTAGE") {
+            replacementValue = discountValue + "%";
+        } else {
+            replacementValue = this.formatMoney(discountValue);
+        }
+
+        const finalButtonText = discountText.replace(/{discount}/g, replacementValue);
+
         if (offer.productSettings.discountType === 'PERCENTAGE') {
             discountDisplay = `${offer.productSettings.discountValue}% OFF`;
         } else {
-            discountDisplay = `-${offer.productSettings.discountValue} ${this.config.form.currency || 'MAD'}`;
+            discountDisplay = `-${offer.productSettings.discountValue} ${Shopify.currency.active}`;
         }
 
         const downsellHTML = `
-            <div class="formino-downsell-container" style="text-align: center; padding: 30px; max-width: 500px; margin: 0 auto;">
-                <button type="button" class="formino-close-button" 
-                    style="position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 24px; cursor: pointer; color: #666;"
-                    id="close-downsell-early">
-                    &times;
-                </button>
-                
-                <h2 style="color: ${styles.titleColor?.color || '#d32f2f'}; font-size: ${styles.titleFontSize}px; margin-bottom: 10px;">
+            <div 
+                class="formino-downsell-container" 
+                style="
+                    background: #FFF; 
+                    text-align: center; 
+                    padding: 25px; 
+                    max-width: 430px; 
+                    margin: 0 auto;
+                    border-radius: 8px;
+                "
+            >               
+                <h2     
+                    style="
+                        color: ${styles.titleColor?.color}; 
+                        font-size: ${styles.titleFontSize}px; 
+                        margin-bottom: 5px;
+                    "
+                >
                     ${styles.title || 'Wait! Special Offer'}
                 </h2>
                 
-                <p style="color: ${styles.subtitleColor?.color || '#555'}; font-size: 16px; margin-bottom: 25px;">
-                    ${styles.subtitle || "Complete your order now and get a discount!"}
+                <p 
+                    style="
+                    color: ${styles.subtitleColor?.color || '#555'}; 
+                    font-size: 16px; 
+                    margin-bottom: 25px;
+                    "
+                >
+                    ${styles.subtitle}
                 </p>
                 
-                <div style="background: #f0fdf4; padding: 25px; border-radius: 10px; margin-bottom: 30px; border: 2px dashed #008060;">
-                    <h3 style="margin: 0 0 10px 0; color: #008060; font-size: 22px;">
-                        GET IT FOR <span style="font-weight:bold; color: #d32f2f;">${discountDisplay}</span>
-                    </h3>
-                    <p style="color: #666; margin: 0; font-size: 14px;">
-                        Limited time offer - valid now only!
-                    </p>
+                <div 
+                    style="
+                        display: flex;
+                        justify-content: center;
+                        width: 100%;
+                        margin: 0px 0px 15px;
+                    "
+                >
+                    <div 
+                        style="
+                            background: ${this.hsbToRgba(styles.plaque.bg)}; 
+                            color:  ${this.hsbToRgba(styles.plaque.color)}; 
+                            width: 135px !important;
+                            height: 135px !important;
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                            font-size: 18px;
+                            font-weight: bold;
+                            clip-path: polygon(50% 0%, 58.64% 9.34%, 70.34% 4.32%, 74.43% 16.37%, 87.16% 16.54%, 86% 29.21%, 97.55% 34.55%, 91.34% 45.65%, 99.73% 55.23%, 89.54% 62.85%, 93.30% 75%, 80.89% 77.82%, 79.39% 90.45%, 66.91% 87.98%, 60.40% 98.91%, 50% 91.57%, 39.60% 98.91%, 33.09% 87.98%, 20.61% 90.45%, 19.11% 77.82%, 6.70% 75%, 10.46% 62.85%, 0.27% 55.23%, 8.66% 45.65%, 2.45% 34.55%, 14% 29.21%, 12.84% 16.54%, 25.57% 16.37%, 29.66% 4.32%, 41.36% 9.34%);"
+                        >
+                        ${styles.plaque.text}
+                    </div>
                 </div>
 
                 <div style="display: flex; gap: 15px; flex-direction: column;">
                     <button type="button" id="accept-downsell" 
-                        style="background: linear-gradient(to right, #008060, #00a080); 
-                            color: white; border: none; padding: 18px; 
-                            border-radius: 8px; cursor: pointer; 
-                            font-weight: bold; font-size: 18px;
-                            transition: all 0.3s;">
-                        ✅ YES! APPLY DISCOUNT & CONTINUE
+                        style="
+                            background: ${this.hsbToRgba(styles.primaryBtn.backgroundColor)}; 
+                            color: ${this.hsbToRgba(styles.primaryBtn.textColor)}; 
+                            border: none; 
+                            padding: 18px; 
+                            border-radius: ${styles.primaryBtn.borderRadius}px;
+                            cursor: pointer; 
+                            font-weight: bold; 
+                            font-size: ${styles.primaryBtn.fontSize}px;
+                            border: ${styles.primaryBtn.borderWidth}px solid ${this.hsbToRgba(styles.primaryBtn.borderColor)};
+                            transition: all 0.3s;"
+                        >
+                        ${finalButtonText}
                     </button>
                     
                     <button type="button" id="decline-downsell" 
-                        style="background: transparent; color: #888; 
-                            border: 1px solid #ddd; padding: 12px; 
-                            border-radius: 6px; cursor: pointer; 
-                            font-size: 14px;">
-                        No thanks, I'll pay full price
+                        style="
+                            background: ${this.hsbToRgba(styles.secondaryBtn.backgroundColor)}; 
+                            color: ${this.hsbToRgba(styles.secondaryBtn.textColor)}; 
+                            border: none; 
+                            padding: 18px; 
+                            border-radius: ${styles.secondaryBtn.borderRadius}px;
+                            cursor: pointer; 
+                            font-weight: bold; 
+                            font-size: ${styles.secondaryBtn.fontSize}px;
+                            border: ${styles.secondaryBtn.borderWidth}px solid ${this.hsbToRgba(styles.secondaryBtn.borderColor)};
+                            transition: all 0.3s;"
+                        >
+                        ${styles.secondaryBtn.text}
                     </button>
                 </div>
             </div>
@@ -2179,10 +2238,13 @@ class ProductFormBuilder {
             this.closePopupModal(true); // force close
         };
 
-        document.getElementById('close-downsell-early').onclick = () => {
-            console.log('✖️ Early close downsell clicked');
-            this.closePopupModal(true); // force close
-        };
+        const closeBtn = document.getElementById('close-downsell-early');
+        if (closeBtn) {
+            closeBtn.onclick = () => {
+                console.log('✖️ Early close downsell clicked');
+                this.closePopupModal(true);
+            };
+        }
 
         this.applySubmitButtonStyles();
 

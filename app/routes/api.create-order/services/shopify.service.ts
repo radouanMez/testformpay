@@ -117,18 +117,21 @@ async function createFullOrder(shop: string, accessToken: string, variantId: str
     try {
         // 🔥 البحث عن العميل الحالي بواسطة البريد الإلكتروني أو الهاتف
         let existingCustomer = null;
-        
+
         if (customerData.email && customerData.email.trim() !== '') {
             existingCustomer = await findCustomerByEmail(shop, accessToken, customerData.email);
         }
-        
+
         if (!existingCustomer && customerData.phone && customerData.phone.trim() !== '') {
             existingCustomer = await findCustomerByPhone(shop, accessToken, customerData.phone);
         }
 
         // 🔥 إنشاء note
         const customerNote = generateCustomerNote(customerData, clientIP, orderOptions);
-        
+
+        console.log("*******************************************************************************")
+        console.log(shipping)
+
         const orderData: any = {
             order: {
                 line_items: [{
@@ -175,11 +178,17 @@ async function createFullOrder(shop: string, accessToken: string, variantId: str
                 email: customerData.email || "", // يمكن أن يكون فارغاً
                 phone: customerData.phone || "", // يمكن أن يكون فارغاً
                 financial_status: orderOptions.createCODOrders ? "pending" : "pending",
-                send_receipt: false, // تعطيل الإرسال لتجنب الأخطاء
+                send_receipt: false, 
                 send_fulfillment_receipt: false,
                 note: customerNote,
-                tags: "formino-app" + (orderOptions.createCODOrders ? ",cod" : ""),
-                shipping_lines: [], // 🔥 فارغ دائماً كما تريد
+                tags: "formpay-app" + (orderOptions.createCODOrders ? ",cod" : ""),
+                shipping_lines: shipping ? [
+                    {
+                        title: shipping.name || "Standard Shipping",
+                        price: String(shipping.price),
+                        code: shipping.id || "standard"
+                    }
+                ] : [],
             }
         };
 
@@ -202,13 +211,13 @@ async function createFullOrder(shop: string, accessToken: string, variantId: str
 
         if (!response.ok) {
             console.error("❌ Shopify API Error Details:", responseData);
-            
+
             // 🔥 محاولة بديلة: إنشاء الطلب بدون بيانات العميل
             if (responseData.errors && hasCustomerErrors(responseData.errors)) {
                 console.log("🔄 Trying without customer data...");
                 return await createOrderWithoutCustomer(shop, accessToken, variantId, quantity, product, customerNote, orderOptions);
             }
-            
+
             throw new Error(`Shopify Order API error: ${JSON.stringify(responseData.errors || responseData.message)}`);
         }
 
@@ -264,7 +273,7 @@ async function findCustomerByPhone(shop: string, accessToken: string, phone: str
 
 function hasCustomerErrors(errors: any): boolean {
     const customerErrorKeys = ['customer', 'email', 'phone', 'first_name', 'last_name'];
-    return Object.keys(errors).some(key => 
+    return Object.keys(errors).some(key =>
         customerErrorKeys.some(customerKey => key.toLowerCase().includes(customerKey))
     );
 }
@@ -283,12 +292,12 @@ async function createOrderWithoutCustomer(shop: string, accessToken: string, var
                 first_name: "Customer",
                 last_name: "Formino",
                 address1: "Address not provided",
-                city: "City not provided", 
+                city: "City not provided",
                 country: "MA",
             },
             billing_address: {
                 first_name: "Customer",
-                last_name: "Formino", 
+                last_name: "Formino",
                 address1: "Address not provided",
                 city: "City not provided",
                 country: "MA",
@@ -428,7 +437,7 @@ function generateCustomerNoteShort(customerData: CustomerData, clientIP: string,
 }
 
 function generateCustomerNoteTable(customerData: CustomerData, clientIP: string, orderOptions: OrderOptions): string {
-    
+
     const lines = [
         "FORMINO APP ORDER DETAILS",
         "========================"
@@ -499,7 +508,7 @@ function generateSmartCustomerNote(customerData: CustomerData, clientIP: string,
     if (filledFields <= 3) {
         return generateCustomerNoteShort(customerData, clientIP, orderOptions);
     }
-    
+
     else {
         return generateCustomerNote(customerData, clientIP, orderOptions);
     }

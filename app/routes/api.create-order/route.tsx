@@ -7,6 +7,8 @@ import { sendToGoogleSheets } from "./services/google-sheets.service";
 import { corsHeaders, generateRedirectURL } from "./utils/response.utils";
 
 export const action: ActionFunction = async ({ request }) => {
+
+    
     if (request.method === "OPTIONS") {
         return new Response(null, { status: 200, headers: corsHeaders });
     }
