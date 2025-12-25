@@ -1,4 +1,4 @@
-console.log("CODFORMPAY V.1.0.8");
+console.log("CODFORMPAY V.1.0.9");
 
 class ProductPageDetector {
     constructor() {
@@ -343,14 +343,14 @@ class ProductFormBuilder {
         this.config = null;
         this.currentQuantity = 1;
         this.currentShipping = null;
-        this.isFormOpen = false;
+        this.isFormOpen = false; 
         this.configButton = null;
 
         this.downsellShown = false;
         this.activeDiscount = null;
         this.originalFormHTML = null;
 
-        this.apiBaseUrl = "https://glow-julie-seed-yellow.trycloudflare.com";
+        this.apiBaseUrl = "https://kijiji-liable-yukon-worldcat.trycloudflare.com";
 
         this.init();
     }
@@ -544,7 +544,7 @@ class ProductFormBuilder {
             background-color: ${(buyButton.backgroundColor)};
             border: ${buyButton.borderWidth}px solid ${(buyButton.borderColor)};
             ${buyButton.shadow ? 'box-shadow: 0 2px 10px rgba(0,0,0,0.2)' : ''};
-            padding: 12px 24px;
+            padding: 16px 24px;
             margin-top: 6px;
             cursor: pointer;
             font-weight: bold;
@@ -659,7 +659,7 @@ class ProductFormBuilder {
         <div
           style="
             position: absolute;
-            right: 15px;
+            right: 0px;
             top: 10px;
             font-size: 15px;
             width: 25px;
@@ -717,27 +717,33 @@ class ProductFormBuilder {
         let label = '';
         if (this.config['form'].hideFieldLabels == false) {
             label = field.displayLabel ? field.displayLabel : field.label;
-            label = field.required ? label + ' *' : label;
+            label = field.required ? label + '<span style="margin-left: 3px; color: #c70505;">*</span>' : label;
         }
 
         return `
-      <div class="formino-group-input">
-      <label for="formino-field-${field.id}">${label}</label>
-      <div class="formino-field formino-input-field" data-field-id="${field.id}">
-          ${iconHTML}
-        <input 
-          type="text" 
-          id="formino-field-${field.id}"
-          name="${field.label.toLowerCase().replace(' ', '_')}"
-          placeholder="${field.placeholder}"
-          ${field.required ? 'required' : ''}
-          minlength="${field.minLength}"
-          maxlength="${field.maxLength}"
-          class="formino-input"
-        >
-      </div>
-      <div class="formino-error-message">${field.errorText}</div></div>
-    `;
+            <div class="formino-group-input">
+                <label for="formino-field-${field.id}">${label}</label>
+                <div class="formino-field-group">
+                    <div 
+                        class="formino-field formino-input-field" 
+                        data-field-id="${field.id}"
+                    >
+                        ${iconHTML}
+                        <input 
+                        type="text" 
+                        id="formino-field-${field.id}"
+                        name="${field.label.toLowerCase().replace(' ', '_')}"
+                        placeholder="${field.placeholder}"
+                        ${field.required ? 'required' : ''}
+                        minlength="${field.minLength}"
+                        maxlength="${field.maxLength}"
+                        class="formino-input"
+                        >
+                    </div>
+                    <div class="formino-error-message">${field.errorText}</div>
+                </div>
+            </div>
+        `;
     }
 
     renderSectionField(field) {
@@ -1017,7 +1023,7 @@ class ProductFormBuilder {
         formContainer.style.cssText = `
       position: relative;
       background-color: ${formStyle.backgroundColor} !important;
-      max-width: 500px !important;
+      max-width: 465px !important;
       margin: 20px auto !important;
       width: 100% !important;
       padding: 20px !important;
@@ -1885,11 +1891,18 @@ class ProductFormBuilder {
                 font-size: 24px;
                 font-weight: 600;
             }
+
+            .formino-total-amount,
+            .formino-shipping-cost,
+            .formino-subtotal {
+                font-weight: 700 !important;
+            }
             
             .formino-popup-close {
                 position: absolute;
                 content: "";
                 background: none;
+                    right: 0px !important;
                 border: none;
                 font-size: 28px;
                 cursor: pointer;
@@ -2097,7 +2110,7 @@ class ProductFormBuilder {
     }
 
     showDownsellPopup(offer) {
-        console.log('🔄 Preparing downsell popup for:', offer.name);
+        console.log('🔄 Preparing downsell popup for:', offer);
 
         const contentDiv = document.querySelector('.formino-modal-content');
         if (!contentDiv) {
@@ -2227,7 +2240,6 @@ class ProductFormBuilder {
 
         contentDiv.innerHTML = downsellHTML;
 
-        // إعداد معالجات الأحداث
         document.getElementById('accept-downsell').onclick = () => {
             console.log('👍 Accept downsell clicked');
             this.applyDownsellDiscount(offer);
@@ -2235,7 +2247,8 @@ class ProductFormBuilder {
 
         document.getElementById('decline-downsell').onclick = () => {
             console.log('👎 Decline downsell clicked');
-            this.closePopupModal(true); // force close
+            this.closePopupModal(true); 
+            location.reload();
         };
 
         const closeBtn = document.getElementById('close-downsell-early');
