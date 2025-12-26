@@ -345,12 +345,10 @@ class ProductFormBuilder {
         this.currentShipping = null;
         this.isFormOpen = false; 
         this.configButton = null;
-
         this.downsellShown = false;
         this.activeDiscount = null;
         this.originalFormHTML = null;
-
-        this.apiBaseUrl = "https://kijiji-liable-yukon-worldcat.trycloudflare.com";
+        this.apiBaseUrl = "https://awareness-fiction-machinery-sunrise.trycloudflare.com";
 
         this.init();
     }
@@ -1902,7 +1900,7 @@ class ProductFormBuilder {
                 position: absolute;
                 content: "";
                 background: none;
-                    right: 0px !important;
+                right: 0px !important;
                 border: none;
                 font-size: 28px;
                 cursor: pointer;
@@ -1915,7 +1913,7 @@ class ProductFormBuilder {
                 justify-content: center;
                 border-radius: 50%;
                 transition: all 0.2s;
-                top: 8px;
+                top: 4px;
             }
             
             .formino-popup-close:hover {
