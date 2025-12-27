@@ -349,7 +349,7 @@ class ProductFormBuilder {
         this.activeDiscount = null;
         this.activeQuantityOffer = null; // ⭐ جديد: لتخزين العرض الكمي المختار
         this.originalFormHTML = null;
-        this.apiBaseUrl = "https://most-dsc-dod-numerous.trycloudflare.com";
+        this.apiBaseUrl = "https://message-dept-stronger-covering.trycloudflare.com";
         this.isSubmitting = false; // ⭐ جديد: لمنع الإرسال المزدوج
 
         this.init();
@@ -836,7 +836,7 @@ class ProductFormBuilder {
         const subtotal = this.detector.getCurrentPrice() / 100;
         const shipping = this.currentShipping ? this.currentShipping.price : 0;
         const total = subtotal + shipping;
-
+        console.log(settings)
         return `
               <div class="formino-section formino-totals-section" data-field-id="${field.id}" 
                   style="background-color: ${settings.backgroundColor || '#f8f9fa'}">
@@ -2457,9 +2457,7 @@ class ProductFormBuilder {
 
             console.log('🎯 Offer product IDs:', offer.productSettings.productIds);
 
-            // البحث عن مطابقة للمنتج الحالي
             const isMatch = offer.productSettings.productIds.some(productGid => {
-                // استخراج ID من GID
                 const offerProductId = this.extractIdFromGid(productGid);
                 const currentId = currentProductId.toString();
 
@@ -2474,7 +2472,7 @@ class ProductFormBuilder {
 
             if (isMatch) {
                 console.log('✅ Found match for product in offer:', offer.name);
-                this.activeQuantityOffer = offer; // حفظ العرض النشط
+                this.activeQuantityOffer = offer;
                 return offer;
             } else {
                 console.log('❌ No match found in this offer');
@@ -2485,18 +2483,9 @@ class ProductFormBuilder {
         return null;
     }
 
-    // عرض عروض الكمية في الفورم
     renderQuantityOffers(offer) {
-        console.log('🔄 Rendering quantity offer:', offer.name);
-        console.log('🎨 Design settings:', offer.designSettings);
-        console.log('📊 Tiers:', offer.tiers);
-
-        // البحث عن مكان لوضع العروض (قسم الـ upsell)
         const upsellSection = document.querySelector('.formino-upsell-section');
         if (!upsellSection) {
-            console.error('❌ Cannot find upsell section to render quantity offers');
-
-            // محاولة إنشاء قسم الـ upsell إذا لم يكن موجوداً
             this.createUpsellSection();
             const newUpsellSection = document.querySelector('.formino-upsell-section');
             if (!newUpsellSection) {
@@ -2506,29 +2495,19 @@ class ProductFormBuilder {
             this.renderQuantityOffersInContainer(offer, newUpsellSection);
             return;
         }
-
         this.renderQuantityOffersInContainer(offer, upsellSection);
     }
 
     renderQuantityOffersInContainer(offer, container) {
-        // تنظيف الحاوية أولاً
         container.innerHTML = '';
-
         const design = offer.designSettings || {};
-
-        // إنشاء حاوية العروض
         const offersContainer = document.createElement('div');
         offersContainer.className = 'formino-quantity-offers-container';
         offersContainer.id = `formino-quantity-offers-${offer.id}`;
-
-        // تطبيق التصميم الأساسي
         offersContainer.style.cssText = `
             border-radius: 8px;
-            overflow: hidden;
             padding: 0;
         `;
-
-        // إضافة عنوان القسم
         if (offer.name && offer.name.trim()) {
             const titleEl = document.createElement('div');
             titleEl.className = 'formino-quantity-offer-title';
@@ -2539,65 +2518,58 @@ class ProductFormBuilder {
             titleEl.textContent = offer.name || 'Quantity Offer';
             offersContainer.appendChild(titleEl);
         }
-
-        // عرض كل مستوى (tier) من العروض
         offer.tiers.forEach((tier, index) => {
-            console.log(`📦 Rendering tier ${index + 1}:`, tier);
             const tierEl = this.createTierElement(tier, design, index === 0);
             offersContainer.appendChild(tierEl);
         });
-
-        // إضافة الحاوية إلى القسم
         container.appendChild(offersContainer);
-
-        // تطبيق النماذج والـ handlers
         this.applyQuantityOffersStyles();
         this.setupQuantityOfferHandlers(offer.id);
-
-        console.log('✅ Quantity offers rendered successfully');
     }
 
-
-    // إنشاء عنصر لكل مستوى (tier)
+    /**
+     * Create Element tier quantity offer
+     */
     createTierElement(tier, design, isFirst) {
         const tierEl = document.createElement('div');
-        tierEl.className = `formino-tier-item ${tier.isPreselected ? 'preselected' : ''}`;
+        tierEl.className = `formino-tier-item ${tier.isPreselected ? 'selected' : ''}`;
         tierEl.dataset.tierId = tier.id || tier.quantity;
         tierEl.dataset.quantity = tier.quantity;
         tierEl.dataset.discountType = tier.discountType;
         tierEl.dataset.discountValue = tier.discountValue;
 
-        // التنسيق حسب إذا كان العنصر الأول
-        const backgroundColor = isFirst && design.highlightFirstTier
-            ? this.rgbaToString(design.selectedBgColor || { hue: 220, saturation: 100, brightness: 98 })
-            : 'transparent';
+        const applyStyles = (isHover = false) => {
+            const isSelected = tierEl.classList.contains('selected');
+            const borderColor = this.rgbaToString(design.borderColor);
+            const bgColor = this.rgbaToString(design.bgColor);
 
-        tierEl.style.cssText = `
-            border: 1px solid silver;
-            padding: 5px 10px;
-            border-radius: 6px;
-            position: relative;
-            cursor: pointer;
-            margin-bottom: 10px;
-            background-color: #fff;
-        `;
+            tierEl.style.padding = '10px 12px';
+            tierEl.style.borderRadius = '8px';
+            tierEl.style.position = 'relative';
+            tierEl.style.cursor = 'pointer';
+            tierEl.style.marginBottom = '10px';
+            tierEl.style.display = 'flex';
+            tierEl.style.alignItems = 'center';
 
-        tierEl.onmouseenter = () => {
-            if (!tierEl.classList.contains('selected')) {
-                tierEl.style.backgroundColor = this.rgbaToString(design.hoverBgColor || { hue: 0, saturation: 0, brightness: 98 });
+            if (isSelected) {
+                tierEl.style.backgroundColor = bgColor;
+                tierEl.style.border = `3px solid ${borderColor}`;
+            } else if (isHover) {
+                tierEl.style.backgroundColor = bgColor;
+                tierEl.style.border = `3px solid silver`;
+            } else {
+                tierEl.style.backgroundColor = '#ffffff';
+                tierEl.style.border = '3px solid silver';
             }
         };
 
-        tierEl.onmouseleave = () => {
-            if (!tierEl.classList.contains('selected')) {
-                tierEl.style.backgroundColor = tierEl.classList.contains('selected')
-                    ? this.rgbaToString(design.selectedBgColor || { hue: 220, saturation: 100, brightness: 98 })
-                    : backgroundColor;
-            }
-        };
+        applyStyles();
 
-        // حساب السعر بعد الخصم
-        const originalPrice = this.detector.getCurrentPrice() / 100; // تحويل من سنتات
+        tierEl.onmouseenter = () => applyStyles(true);
+        tierEl.onmouseleave = () => applyStyles(false);
+        tierEl.onclick = () => this.selectTier(tier, tierEl);
+
+        const originalPrice = this.detector.getCurrentPrice() / 100;
         const discountValue = parseFloat(tier.discountValue);
         let finalPrice = originalPrice * tier.quantity;
         let discountText = '';
@@ -2610,61 +2582,93 @@ class ProductFormBuilder {
             discountText = `-${this.formatMoney(discountValue)}`;
         }
 
-        // بناء HTML للـ tier
-        tierEl.innerHTML = `
-            <div style="display: flex; align-items: center; width: 100%;">
-                ${!design.hideProductImage ? `
-                    <div style="width: 59px; height: 59px; margin-right: 12px; flex-shrink: 0;">
-                        <img src="${tier.imageUrl || this.detector.currentProduct?.featured_image || ''}" 
-                            style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;"
-                            onerror="this.style.display='none'">
-                    </div>
-                ` : ''}
+        console.log("**********-------*********")
+        console.log(design)
 
-                <div style="flex: 1; min-width: 0;">
-                    <div style="color: #000; font-weight: 600; margin-bottom: 4px;">
-                        ${tier.title || `${tier.quantity} × ${this.detector.currentProduct?.title || 'Product'}`}
-                    </div>
-                    
-                    ${tier.plaqueText ? `
-                        <div style="display: inline-block; background-color: ${this.rgbaToString(tier.plaqueBgColor || { hue: 120, saturation: 100, brightness: 40 })}; 
-                                    color: ${this.rgbaToString(tier.plaqueTextColor || { hue: 0, saturation: 0, brightness: 100 })}; 
-                                    padding: 2px 8px; font-size: 11px; font-weight: bold; 
-                                    border-radius: 12px; margin-top: 4px;">
-                            ${tier.plaqueText}
-                        </div>
-                    ` : ''}
+        tierEl.innerHTML = `
+            ${!design.hideProductImage ? `
+                <div style="width: 60px; height: 60px; margin-right: 12px; flex-shrink: 0; border: 1px solid #eee; border-radius: 4px; overflow: hidden;">
+                    <img src="${tier.imageUrl || this.detector.currentProduct?.featured_image || ''}" 
+                        style="width: 100%; height: 100%; object-fit: cover;"
+                        onerror="this.parentElement.style.display='none'">
+                </div>
+            ` : ''}
+
+            <div style="flex: 1; min-width: 0;">
+                <div style="color: #333; font-weight: 700; font-size: 13px; margin-bottom: 2px;">
+                    ${tier.title || `${tier.quantity} × ${this.detector.currentProduct?.title || 'Product'}`}
                 </div>
                 
-                <div style="text-align: right; margin-left: 10px; flex-shrink: 0;">
-                    ${!design.hideComparisonPrice && !tier.hideComparisonPrice ? `
-                        <div style="color: #919191; text-decoration: line-through; font-size: 13px; margin-bottom: 2px;">
-                            ${this.formatMoney(originalPrice * tier.quantity)}
-                        </div>
-                    ` : ''}
-                    
-                    <div style="font-size: 16px; font-weight: 700; color: ${this.rgbaToString(tier.priceColor || design.priceColor || { hue: 120, saturation: 100, brightness: 40 })};">
-                        ${this.formatMoney(finalPrice)}
+                ${tier.plaqueText ? `
+                    <span style="display: inline-block; background-color: ${this.rgbaToString(tier.plaqueBgColor || { hue: 120, saturation: 100, brightness: 40 })}; 
+                                color: ${this.rgbaToString(tier.plaqueTextColor || { hue: 0, saturation: 0, brightness: 100 })}; 
+                                padding: 2px 10px; font-size: 10px; font-weight: 800; text-transform: uppercase;
+                                border-radius: 20px; margin-top: 4px;">
+                        ${tier.plaqueText}
+                    </span>
+                ` : ''}
+            </div>
+            
+            <div style="text-align: right; margin-left: 10px; flex-shrink: 0;">
+                ${!design.hideComparisonPrice && !tier.hideComparisonPrice ? `
+                    <div style="color: #999; text-decoration: line-through; font-size: 12px;">
+                        ${this.formatMoney(originalPrice * tier.quantity)}
                     </div>
-                    
-                    
+                ` : ''}
+                
+                <div style="font-size: 14px; font-weight: 800; color: ${this.rgbaToString(tier.priceColor || design.priceColor || { hue: 0, saturation: 0, brightness: 0 })};">
+                    ${this.formatMoney(finalPrice)}
+                </div>
+                
+                ${discountText ? `
+                    <div style="font-size: 11px; color: ${this.rgbaToString(design.saveTextColor || { hue: 0, saturation: 80, brightness: 50 })}; font-weight: 600;">
+                        ${discountText}
+                    </div>
+                ` : ''}
+            </div>
+
+            <div class="tier-checkbox" style="position: absolute; top: -10px; right: 0px; display: ${tier.isPreselected ? 'block' : 'none'};">
+                <div style="background: ${this.rgbaToString(design.borderColor)}; color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 12px; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    ✓
                 </div>
             </div>
         `;
 
-        // <div style="font-size: 12px; color: ${this.rgbaToString(design.saveTextColor || { hue: 120, saturation: 100, brightness: 40 })}; margin-top: 2px;">
-        // ${discountText}
-        // </div>
-
-        // إذا كان هذا الـ tier مختار مسبقاً، نفعله تلقائياً
         if (tier.isPreselected) {
-            this.selectTier(tier, tierEl);
+            setTimeout(() => this.selectTier(tier, tierEl), 10);
         }
 
         return tierEl;
     }
 
-    // تحويل كائن RGBA إلى سلسلة نصية
+    /**
+     * Select Offer in quantity offer
+     */
+    selectTier(tier, element) {
+        const design = this.activeQuantityOffer?.designSettings || {};
+
+        document.querySelectorAll('.formino-tier-item').forEach(el => {
+            el.classList.remove('selected');
+            const cb = el.querySelector('.tier-checkbox');
+            if (cb) cb.style.display = 'none';
+            el.style.backgroundColor = '#ffffff';
+            el.style.border = '3px solid silver';
+        });
+
+        element.classList.add('selected');
+        element.style.backgroundColor = this.rgbaToString(design.bgColor);
+        element.style.border = `3px solid ${this.rgbaToString(design.borderColor)}`;
+
+        const checkbox = element.querySelector('.tier-checkbox');
+        if (checkbox) checkbox.style.display = 'block';
+
+        this.currentQuantity = parseInt(tier.quantity) || 1;
+        this.activeQuantityTier = tier;
+        if (typeof this.updateFormTotals === 'function') {
+            this.updateFormTotals();
+        }
+    }
+
     rgbaToString(color) {
         if (!color || typeof color !== 'object') {
             return 'transparent';
@@ -2675,58 +2679,14 @@ class ProductFormBuilder {
         const b = color.brightness || 0;
         const a = color.alpha !== undefined ? color.alpha : 1;
 
-        // تحويل HSB إلى RGB (محولة من دالة hsbToRgba السابقة)
         const rgb = this.hsbToRgba({ hue: h, saturation: s, brightness: b, alpha: a });
 
         return rgb;
     }
 
-    // اختيار tier معين
-    selectTier(tier, element) {
-        // إزالة التحديد من جميع العناصر
-        document.querySelectorAll('.formino-tier-item').forEach(el => {
-            el.classList.remove('selected');
-            el.style.backgroundColor = '';
-
-            // إخفاء علامة الاختيار
-            const checkbox = el.querySelector('.tier-checkbox > div');
-            if (checkbox) {
-                checkbox.style.display = 'none';
-            }
-        });
-
-        // تطبيق التحديد على العنصر المختار
-        element.classList.add('selected');
-
-        // لون الخلفية للتحديد
-        const design = this.activeQuantityOffer?.designSettings || {};
-        element.style.backgroundColor = this.rgbaToString(
-            design.selectedBgColor || { hue: 220, saturation: 100, brightness: 98 }
-        );
-
-        // إظهار علامة الاختيار
-        const checkbox = element.querySelector('.tier-checkbox > div');
-        if (checkbox) {
-            checkbox.style.display = 'block';
-        }
-
-        // تحديث الكمية الحالية
-        this.currentQuantity = parseInt(tier.quantity) || 1;
-
-        // تخزين الـ tier النشط
-        this.activeQuantityTier = tier;
-
-        // تحديث التوتالات
-        this.updateFormTotals();
-
-        console.log('✅ Selected tier:', tier.quantity, 'units');
-    }
-
     updateFormTotals() {
-        // السعر الأساسي بوحدة العملة
         let subtotal = this.detector.getCurrentPrice() / 100;
 
-        // إذا كان هناك خصم من عرض كمية
         if (this.activeQuantityTier) {
             const originalTotal = subtotal * this.activeQuantityTier.quantity;
             const discountValue = parseFloat(this.activeQuantityTier.discountValue);
@@ -2739,11 +2699,9 @@ class ProductFormBuilder {
                 subtotal = originalTotal;
             }
 
-            // تطبيق السعر لكل وحدة
             subtotal = Math.max(0, subtotal);
         }
 
-        // إذا كان هناك خصم من عرض downsell
         if (this.activeDiscount) {
             subtotal = this.activeDiscount.newPrice;
         }
@@ -2751,7 +2709,6 @@ class ProductFormBuilder {
         const shipping = this.currentShipping ? this.currentShipping.price : 0;
         const total = subtotal + shipping;
 
-        // تحديث النصوص
         const elements = {
             '.formino-subtotal': this.formatMoney(subtotal),
             '.formino-shipping-cost': shipping === 0 ? 'Free' : this.formatMoney(shipping),
@@ -2765,7 +2722,6 @@ class ProductFormBuilder {
             if (el) el.textContent = value;
         });
 
-        // عرض التوفير إذا كان هناك خصم كمية
         if (this.activeQuantityTier) {
             const totalEl = document.querySelector('.formino-total-amount');
             if (totalEl) {
@@ -2775,9 +2731,9 @@ class ProductFormBuilder {
                     : `-${this.formatMoney(parseFloat(this.activeQuantityTier.discountValue))}`;
 
                 totalEl.innerHTML = `
-                <div style="font-size: 0.9em; color: #666; margin-bottom: 4px;">
-                    You save: <span style="color: #2ecc71; font-weight: bold;">${discountText}</span>
-                </div>
+                    <div style="font-size: 0.9em; color: #666; margin-bottom: 4px;">
+                        You save: <span style="color: #2ecc71; font-weight: bold;">${discountText}</span>
+                    </div>
                 ${this.formatMoney(total)}
             `;
             }
@@ -2787,7 +2743,6 @@ class ProductFormBuilder {
     applyQuantityOffersStyles() {
         const styleId = 'formino-quantity-offers-styles';
 
-        // إزالة الأنماط القديمة إذا وجدت
         const oldStyle = document.getElementById(styleId);
         if (oldStyle) oldStyle.remove();
 
@@ -2795,82 +2750,67 @@ class ProductFormBuilder {
         style.id = styleId;
 
         style.textContent = `
-        .formino-quantity-offers-container {
-            animation: fadeIn 0.3s ease-in;
-        }
+            .formino-quantity-offers-container {
+                animation: fadeIn 0.3s ease-in;
+            }
+            
+            .formino-tier-item.selected {
+                position: relative;
+            }
         
-        .formino-tier-item.selected {
-            position: relative;
-        }
-    
-        .formino-tier-item .tier-checkbox {
-            transition: all 0.2s ease;
-        }
-        
-    `;
+            .formino-tier-item .tier-checkbox {
+                transition: all 0.2s ease;
+            }
+            
+        `;
 
         document.head.appendChild(style);
     }
 
-    // إعداد معالجات النقر لعروض الكمية
     setupQuantityOfferHandlers(offerId) {
         const tierItems = document.querySelectorAll('.formino-tier-item');
 
         tierItems.forEach(item => {
             item.addEventListener('click', (e) => {
-                // منع النقر المزدوج
+
                 if (item.classList.contains('selected')) {
                     return;
                 }
 
-                // استخراج بيانات الـ tier
                 const tierData = {
                     quantity: parseInt(item.dataset.quantity),
                     discountType: item.dataset.discountType,
                     discountValue: parseFloat(item.dataset.discountValue)
                 };
 
-                // اختيار الـ tier
                 this.selectTier(tierData, item);
             });
         });
     }
 
-    // إنشاء قسم الـ upsell إذا لم يكن موجوداً
     createUpsellSection() {
-        // البحث عن الفورم
         const form = document.getElementById('formino-main-form');
         if (!form) {
             console.error('❌ Form not found');
             return;
         }
 
-        // البحث عن زر الإرسال
         const submitButton = form.querySelector('.formino-submit-button');
         if (!submitButton) {
             console.error('❌ Submit button not found');
             return;
         }
 
-        // إنشاء قسم الـ upsell
         const upsellSection = document.createElement('div');
         upsellSection.className = 'formino-section formino-upsell-section';
         upsellSection.innerHTML = `
-        <h4 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">
-            Special Offers
-        </h4>
-    `;
+            <h4 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">
+                Special Offers
+            </h4>
+        `;
 
-        // إضافة قسم الـ upsell قبل زر الإرسال
         submitButton.parentElement.insertBefore(upsellSection, submitButton);
-
-        console.log('✅ Created upsell section');
     }
-
-
-
-
-
 
 }
 
