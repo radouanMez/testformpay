@@ -86,6 +86,21 @@ export function TotalsEditorModal({
 
                     <InlineGrid columns={2} gap="400">
                         <TextField
+                            label="Discount Title"
+                            value={totalsSettings.discountTitle}
+                            onChange={(value) => setTotalsSettings((prev: any) => ({ ...prev, discountTitle: value }))}
+                            autoComplete="off"
+                        />
+                        <TextField
+                            label="Discount Value"
+                            value={totalsSettings.discountValue}
+                            onChange={(value) => setTotalsSettings((prev: any) => ({ ...prev, discountValue: value }))}
+                            autoComplete="off"
+                        />
+                    </InlineGrid>
+
+                    <InlineGrid columns={2} gap="400">
+                        <TextField
                             label="Total Title"
                             value={totalsSettings.totalTitle}
                             onChange={(value) => setTotalsSettings((prev: any) => ({ ...prev, totalTitle: value }))}
@@ -168,6 +183,10 @@ export function TotalsEditorModal({
                                     <Text as="span" variant="bodySm" fontWeight="bold">{totalsSettings.shippingValue}</Text>
                                 </InlineStack>
                                 <InlineStack align="space-between">
+                                    <Text as="span" variant="bodySm">{totalsSettings.discountTitle}</Text>
+                                    <Text as="span" variant="bodySm" fontWeight="bold">{totalsSettings.discountValue}</Text>
+                                </InlineStack>
+                                <InlineStack align="space-between">
                                     <Text as="span" variant="bodyMd" fontWeight="bold">{totalsSettings.totalTitle}</Text>
                                     <Text as="span" variant="bodyMd" fontWeight="bold">{totalsSettings.totalValue}</Text>
                                 </InlineStack>
@@ -183,4 +202,4 @@ export function TotalsEditorModal({
             </Modal.Section>
         </Modal>
     );
-}
+} 

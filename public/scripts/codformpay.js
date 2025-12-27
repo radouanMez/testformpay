@@ -19,7 +19,6 @@ class ProductPageDetector {
 
     detectPageType() {
         const path = window.location.pathname;
-        // الكشف عن صفحة المنتج فقط
         this.isProductPage = path.includes('/products/');
         return this.isProductPage;
     }
@@ -27,21 +26,17 @@ class ProductPageDetector {
     async extractProductData() {
         if (!this.isProductPage) return null;
 
-        // 1. جلب الـ handle من الـ URL
         const productHandle = this.getProductHandleFromURL();
         if (!productHandle) return null;
 
         try {
-            // 2. جلب بيانات المنتج من Shopify API
             const response = await fetch(`/products/${productHandle}.js`);
             if (response.ok) {
                 const productData = await response.json();
                 this.currentProduct = productData;
 
-                // 3. استخراج الـ variant الافتراضي (الأول)
                 this.currentVariantId = productData.variants[0]?.id;
 
-                // 4. البحث عن الـ variant المحدد حالياً في الصفحة
                 this.detectCurrentVariant();
 
                 this.notifyObservers({
@@ -53,7 +48,6 @@ class ProductPageDetector {
                 return productData;
             }
         } catch (error) {
-            console.error('Error fetching product:', error);
             this.fallbackExtractProductData();
         }
     }
@@ -66,19 +60,16 @@ class ProductPageDetector {
 
     detectCurrentVariant() {
         try {
-            // يبحث عن العنصر الذي يحتوي على معرف الـ variant الحالي
             const variantInput = document.querySelector('[name="id"], [data-product-variant-id]');
             if (variantInput && variantInput.value) {
                 return variantInput.value;
             }
 
-            // fallback من data أو الـ config
             if (this.currentProduct?.variants?.length) {
                 const selected = this.currentProduct.variants.find(v => v.available);
                 return selected ? selected.id : null;
             }
 
-            console.warn("⚠️ No variant detected.");
             return null;
         } catch (err) {
             console.error("❌ Error detecting variant:", err);
@@ -119,7 +110,6 @@ class ProductPageDetector {
     }
 
     observeVariantChanges() {
-        // مراقبة تغييرات الـ variants
         const variantSelectors = [
             'form[action*="/cart/add"] [name*="option"]',
             'form[action*="/cart/add"] [name="id"]'
@@ -137,7 +127,6 @@ class ProductPageDetector {
     }
 
     observeQuantityChanges() {
-        // مراقبة تغييرات الكمية
         const quantityInput = document.querySelector('form[action*="/cart/add"] [name="quantity"]');
         if (quantityInput) {
             quantityInput.addEventListener('change', (e) => {
@@ -198,7 +187,6 @@ class ProductPageDetector {
     }
 
     fallbackExtractProductData() {
-        // طريقة احتياطية إذا فشل جلب البيانات من API
         const form = document.querySelector('form[action*="/cart/add"]');
         if (!form) return null;
 
@@ -217,7 +205,6 @@ class ProductPageDetector {
     }
 
     extractProductIdFromPage() {
-        // استخراج product ID من الـ JSON في الصفحة
         const jsonElement = document.querySelector('[type="application/json"][data-product]');
         if (jsonElement) {
             try {
@@ -347,65 +334,49 @@ class ProductFormBuilder {
         this.configButton = null;
         this.downsellShown = false;
         this.activeDiscount = null;
-        this.activeQuantityOffer = null; // ⭐ جديد: لتخزين العرض الكمي المختار
+        this.activeQuantityOffer = null;
         this.originalFormHTML = null;
-        this.apiBaseUrl = "https://message-dept-stronger-covering.trycloudflare.com";
-        this.isSubmitting = false; // ⭐ جديد: لمنع الإرسال المزدوج
-
+        this.apiBaseUrl = "https://effects-portal-pairs-orientation.trycloudflare.com";
+        this.isSubmitting = false;
         this.init();
     }
 
     async init() {
-        console.log('Page init')
         if (!this.detector.isProductPage) {
             return;
         }
-
-        console.log('Product Page 1')
 
         await this.detector.extractProductData();
         await this.fetchFormConfig();
 
         this.applyPopupModalStyles();
-
-        // بناء الفورم حسب النوع
         if (this.config.form.formType === 'EMBEDDED') {
-            console.log('Product Page EMBEDDED')
             this.createEmbeddedForm();
         } else {
             this.createPopupForm();
         }
 
-        // إعداد الـ handlers بعد إنشاء الفورم مباشرة
         this.setupFormHandlers();
         this.setupValidation();
 
         await this.initializeCart();
         this.setupMonitoring();
 
-        // ⭐ جديد: عرض عروض الكمية إذا كانت متاحة
         this.handleQuantityOffers();
     }
 
     async fetchFormConfig() {
         const shop = window.Shopify?.shop || this.extractShopFromDOM();
-        console.log('🛍️ Fetching config for shop:', shop);
 
         try {
             const response = await fetch(`${this.apiBaseUrl}/api/public-form-config?shop=${shop}`);
             const data = await response.json();
-
-            console.log('📥 Config response:', data);
 
             if (data.success) {
                 this.config = data.config;
                 this.formConfig = data.form;
                 this.upsells = data.config.offers?.upsells || [];
                 this.downsells = data.config.offers?.downsells || [];
-
-                console.log('✅ Config loaded successfully');
-                console.log('📊 Quantity offers:', this.config.offers?.quantityOffers?.length || 0);
-                console.log('📋 First quantity offer:', this.config.offers?.quantityOffers?.[0]);
 
                 if (this.config.shipping && this.config.shipping.length > 0) {
                     this.currentShipping = this.config.shipping[0];
@@ -419,12 +390,9 @@ class ProductFormBuilder {
     }
 
     createEmbeddedForm() {
-
-        // 1️⃣ البحث عن الحاوية الأساسية الجاهزة
         let formContainer = document.getElementById('formino-cod-form');
 
         if (formContainer) {
-            // console.log("✅ Found existing container #formino-cod-form");
         } else {
             const buttonAreas = [
                 '.product-form-buttons',
@@ -456,7 +424,6 @@ class ProductFormBuilder {
                 if (targetButtonArea) break;
             }
 
-            // 3️⃣ تحديد مكان الوضع
             if (targetButtonArea) {
                 formContainer = document.createElement('div');
                 formContainer.id = 'formino-cod-form';
@@ -491,16 +458,12 @@ class ProductFormBuilder {
             return true;
 
         } catch (error) {
-            console.error("❌ Formino: Error creating embedded form:", error);
             return false;
         }
     }
 
     createPopupForm() {
-        // إنشاء زر لفتح البوب أب
         this.createPopupButton();
-
-        // إنشاء البوب أب (سيخفي في البداية)
         this.createPopupModal();
     }
 
@@ -518,20 +481,17 @@ class ProductFormBuilder {
               ${buyButton.subtitle ? `<span class="formino-button-subtitle">${buyButton.subtitle}</span>` : ''}
             </button>
           </div>
-      `;
+        `;
 
-        // المحاولة الأولى: إضافة قبل formino-cod-form
         const codForm = document.getElementById('formino-cod-form');
         if (codForm) {
             codForm.insertAdjacentHTML('beforebegin', buttonHTML);
         }
-        // المحاولة الثانية: إضافة بعد زر Add to Cart
         else {
             const addToCartButton = document.querySelector('[name="add"], .add-to-cart, .product-form__submit');
             if (addToCartButton) {
                 addToCartButton.insertAdjacentHTML('afterend', buttonHTML);
             }
-            // المحاولة الثالثة: إضافة في نهاية body
             else {
                 document.body.insertAdjacentHTML('beforeend', buttonHTML);
             }
@@ -567,7 +527,6 @@ class ProductFormBuilder {
             align-items: center;
         `;
 
-        // إذا كان الزر sticky
         if (buyButton.stickyPosition && buyButton.mobileSticky) {
             button.style.position = 'fixed';
             button.style[buyButton.stickyPosition] = '20px';
@@ -601,14 +560,12 @@ class ProductFormBuilder {
     }
 
     setupPopupButtonHandlers() {
-        // استخدام event delegation للزر
         document.addEventListener('click', (e) => {
             if (e.target.id === 'formino-popup-trigger' || e.target.closest('#formino-popup-trigger')) {
                 this.openPopupModal();
             }
         });
 
-        // إغلاق الـ modal عند النقر خارج المحتوى
         document.addEventListener('click', (e) => {
             const overlay = document.getElementById('formino-modal-overlay');
             if (overlay && e.target === overlay) {
@@ -619,24 +576,20 @@ class ProductFormBuilder {
     }
 
     openPopupModal() {
-        // إنشاء الـ modal إذا لم يكن موجوداً
         if (!document.getElementById('formino-modal-overlay')) {
             this.createPopupModal();
         }
 
-        // عرض الـ modal
         const modalOverlay = document.getElementById('formino-modal-overlay');
         if (modalOverlay) {
             modalOverlay.style.display = 'flex';
             this.isFormOpen = true;
 
-            // تحديث التوتالات عند فتح الـ modal
             this.updateFormTotals();
         }
     }
 
     createPopupModal() {
-        // أولاً، إزالة أي modal موجود
         const existingModal = document.getElementById('formino-modal-overlay');
         if (existingModal) {
             existingModal.remove();
@@ -656,7 +609,6 @@ class ProductFormBuilder {
         this.applyFormStyles();
         this.updateFormTotals();
 
-        // 🔥 إضافة handlers الإغلاق بعد إنشاء الـ modal
         this.setupPopupCloseHandlers();
     }
 
@@ -836,24 +788,27 @@ class ProductFormBuilder {
         const subtotal = this.detector.getCurrentPrice() / 100;
         const shipping = this.currentShipping ? this.currentShipping.price : 0;
         const total = subtotal + shipping;
-        console.log(settings)
         return `
-              <div class="formino-section formino-totals-section" data-field-id="${field.id}" 
-                  style="background-color: ${settings.backgroundColor || '#f8f9fa'}">
-                  <div class="formino-total-line">
-                      <span>${settings.subtotalTitle}</span>
-                      <span class="formino-subtotal">${this.formatMoney(subtotal)}</span>
-                  </div>
-                  <div class="formino-total-line">
-                      <span>${settings.shippingTitle}</span>
-                      <span class="formino-shipping-cost">${shipping === 0 ? settings.freeText : this.formatMoney(shipping)}</span>
-                  </div>
-                  <div class="formino-total-line formino-total">
-                      <span>${settings.totalTitle}</span>
-                      <span class="formino-total-amount">${this.formatMoney(total)}</span>
-                  </div>
-              </div>
-          `;
+            <div class="formino-section formino-totals-section" data-field-id="${field.id}" 
+                style="background-color: ${settings.backgroundColor || '#f8f9fa'}">
+                <div class="formino-total-line">
+                    <span>${settings.subtotalTitle}</span>
+                    <span class="formino-subtotal">${this.formatMoney(subtotal)}</span>
+                </div>
+                <div class="formino-total-line">
+                    <span>${settings.shippingTitle}</span>
+                    <span class="formino-shipping-cost">${shipping === 0 ? settings.freeText : this.formatMoney(shipping)}</span>
+                </div>
+                <div class="formino-total-line" style="display: none;">
+                    <span>${settings.discountTitle}</span>
+                    <span class="formino-discount-cost"></span>
+                </div>
+                <div class="formino-total-line formino-total">
+                    <span>${settings.totalTitle}</span>
+                    <span class="formino-total-amount">${this.formatMoney(total)}</span>
+                </div>
+            </div>
+        `;
     }
 
     renderShippingSection(field) {
@@ -896,12 +851,14 @@ class ProductFormBuilder {
     }
 
     renderUpsellSection(field) {
+        console.log(field)
+        console.log("*******************")
         if (!field.visible) return '';
         return `
-      <div class="formino-section formino-upsell-section" data-field-id="${field.id}">
-        <!-- سيتم إضافة الـ upsells هنا لاحقاً -->
-      </div>
-    `;
+            <div class="formino-section formino-upsell-section" data-field-id="${field.id}">
+                <!-- سيتم إضافة الـ upsells هنا لاحقاً -->
+            </div>
+        `;
     }
 
     renderGenericSection(field) {
@@ -1079,23 +1036,18 @@ class ProductFormBuilder {
     }
 
     closePopupModal(forceClose = false) {
-        console.log('🔒 Closing popup modal, downsellShown:', this.downsellShown, 'forceClose:', forceClose);
-
-        // إذا كان forceClose = true، أغلق مباشرة
         if (!forceClose && this.config.form.formType !== 'EMBEDDED' && !this.downsellShown && this.downsells && this.downsells.length > 0) {
             const downsellOffer = this.getMatchingDownsell();
             if (downsellOffer) {
-                console.log('🎁 Showing downsell offer:', downsellOffer.name);
                 this.showDownsellPopup(downsellOffer);
                 this.downsellShown = true;
-                return false; // لم يتم الإغلاق بعد
+                return false;
             }
         }
 
         // الإغلاق الفعلي
         const modalOverlay = document.getElementById('formino-modal-overlay');
         if (modalOverlay) {
-            console.log('👋 Removing modal overlay');
             modalOverlay.style.animation = 'forminoPopupSlideOut 0.3s ease-in';
             setTimeout(() => {
                 if (modalOverlay.parentNode) {
@@ -1105,29 +1057,25 @@ class ProductFormBuilder {
                 this.downsellShown = false;
                 this.activeDiscount = null;
                 this.originalFormHTML = null;
-                console.log('✅ Modal fully closed');
             }, 300);
         }
 
-        return true; // تم الإغلاق
+        return true;
     }
 
     setupFormHandlers() {
         const form = document.getElementById('formino-main-form');
         if (!form) return;
 
-        // 1. معالجة الإرسال (Submit)
-        // نستخدم "onsubmit" مباشرة لضمان وجود مستمع واحد فقط في كل مرة يتم فيها بناء الفورم
         form.onsubmit = async (e) => {
             e.preventDefault();
 
-            // حماية إضافية لمنع الإرسال المزدوج
             if (this.isSubmitting) return;
 
             const btn = form.querySelector('.formino-submit-button');
             if (btn) {
                 btn.classList.add('loading');
-                btn.disabled = true; // تعطيل الزر فوراً
+                btn.disabled = true;
             }
 
             try {
@@ -1139,7 +1087,6 @@ class ProductFormBuilder {
                     message: '⚠️ Failed to send order. Please try again.'
                 });
             } finally {
-                // ملاحظة: handleFormSubmit قد يحتوي على منطق إعادة تفعيل الزر أيضاً
                 if (btn) {
                     btn.classList.remove('loading');
                     btn.disabled = false;
@@ -1147,36 +1094,27 @@ class ProductFormBuilder {
             }
         };
 
-        // 2. معالجة الضغط على الزر (Click Delegation)
-        // إذا كان الزر خارج الفورم تقنياً أو يحتاج تحفيز يدوي
         const submitBtn = form.querySelector('.formino-submit-button');
         if (submitBtn) {
             submitBtn.onclick = (e) => {
                 if (!form.checkValidity()) {
-                    // اترك المتصفح يظهر أخطاء التحقق الأصلية
                 }
             };
         }
 
-        // 3. معالجة خيارات الشحن (Shipping Changes)
         const shippingOptions = form.querySelectorAll('input[name="shipping_method"]');
         shippingOptions.forEach(radio => {
-            // نستخدمonclick بدلاً من onchange أحياناً يكون أكثر استقراراً في الراديو بوتون
             radio.onclick = (e) => {
                 const val = e.target.value;
 
-                // التأكد من وجود إعدادات الشحن وتجنب التكرار إذا كان هو الخيار المختار فعلياً
                 if (this.config?.shipping) {
                     const selectedRate = this.config.shipping.find(rate => rate.id === val);
 
-                    // تحقق بسيط: لا تقم بالتحديث إذا كان هذا الشحن هو المختار مسبقاً (لتجنب اللوب)
                     if (selectedRate && (!this.currentShipping || this.currentShipping.id !== selectedRate.id)) {
                         this.currentShipping = selectedRate;
 
-                        // تحديث الأرقام فقط دون لمس الـ inputs الخاصة بالشحن داخل الدالة
                         this.updateFormTotals();
 
-                        // التنسيق البصري - نغير الكلاسات بدلاً من الـ Style المباشر لتجنب مشاكل المتصفح
                         form.querySelectorAll('.formino-shipping-option').forEach(option => {
                             option.style.backgroundColor = 'white';
                             option.style.borderColor = '#ddd';
@@ -1192,7 +1130,6 @@ class ProductFormBuilder {
             };
         });
 
-        // 4. معالجة تحديث الكمية (إذا كان لديك حقل كمية)
         const qtyInput = form.querySelector('input[name="quantity"]');
         if (qtyInput) {
             qtyInput.onchange = (e) => {
@@ -1337,7 +1274,6 @@ class ProductFormBuilder {
         });
 
         if (!isValid) {
-            console.warn("⚠️ Validation failed — please fill all required fields.");
             this.createCustomPopup({
                 type: 'warning',
                 message: 'Please fill in all required fields before submitting your order.'
@@ -1380,11 +1316,6 @@ class ProductFormBuilder {
             };
 
             const result = await this.submitOrder(payload);
-            console.log(result)
-
-            // if (!result) {
-            //     throw new Error("No response from server");
-            // }
 
             if (result.error === "order_blocked") {
                 this.showBlockedUserMessage(result.message);
@@ -1411,12 +1342,10 @@ class ProductFormBuilder {
     async submitOrder(payload = {}) {
         try {
             if (this.isSubmitting) {
-                console.warn("⚠️ إرسال قيد التنفيذ بالفعل...");
                 return { success: false, error: "already_submitting" };
             }
 
             this.isSubmitting = true;
-            console.log("Submitting Order...");
 
             const formData = payload.fields || this.collectFormData?.() || {};
             const formDataToSend = new FormData();
@@ -1424,7 +1353,6 @@ class ProductFormBuilder {
             const shop = window.Shopify?.shop || this.extractShopFromDOM() || window.location.hostname;
             formDataToSend.append('shop', shop);
 
-            // إضافة بيانات العميل
             formDataToSend.append('first_name', formData.first_name || '');
             formDataToSend.append('last_name', formData.last_name || '');
             formDataToSend.append('address', formData.address || '');
@@ -1435,7 +1363,6 @@ class ProductFormBuilder {
             formDataToSend.append('zip_code', formData.zip_code || '');
             formDataToSend.append('email', formData.email || '');
 
-            // معالجة الشحن
             const shipping = payload.shipping || this.currentShipping || formData.shipping || null;
             if (shipping) {
                 formDataToSend.append('shipping_method', shipping.id || '');
@@ -1444,11 +1371,9 @@ class ProductFormBuilder {
                 formDataToSend.append('shipping_method', formData.shipping_method || '');
             }
 
-            // --- حساب السعر النهائي مع مراعاة جميع العروض ---
             let finalPriceUnit = 0;
             let originalPriceUnit = this.detector.getCurrentPrice() / 100;
 
-            // 1. إذا كان هناك عرض كمية نشط
             if (this.activeQuantityTier) {
                 const quantity = this.activeQuantityTier.quantity || 1;
                 const discountType = this.activeQuantityTier.discountType;
@@ -1464,10 +1389,8 @@ class ProductFormBuilder {
                     finalPriceUnit = totalBeforeDiscount;
                 }
 
-                // تحديث الكمية في الطلب
                 formDataToSend.append('quantity', quantity.toString());
 
-                // إضافة معلومات العرض الكمي
                 formDataToSend.append('quantity_offer', JSON.stringify({
                     tierId: this.activeQuantityTier.id,
                     quantity: quantity,
@@ -1477,32 +1400,25 @@ class ProductFormBuilder {
                     finalPrice: finalPriceUnit
                 }));
             }
-            // 2. إذا كان هناك خصم من Downsell
             else if (this.activeDiscount) {
                 finalPriceUnit = this.activeDiscount.newPrice;
                 formDataToSend.append('discount_applied', JSON.stringify(this.activeDiscount));
                 formDataToSend.append('quantity', (formData.quantity?.toString() || '1'));
             }
-            // 3. السعر العادي بدون عروض
             else {
                 finalPriceUnit = originalPriceUnit * (parseInt(formData.quantity) || 1);
                 formDataToSend.append('quantity', (formData.quantity?.toString() || '1'));
             }
 
-            // التأكد من أن السعر ليس سالباً
             finalPriceUnit = Math.max(0, finalPriceUnit);
 
-            // إرسال بيانات المنتج
             const product = payload.product || this.detector.currentProduct || {};
-            product.price = finalPriceUnit; // تحديث السعر النهائي
+            product.price = finalPriceUnit;
             formDataToSend.append('product', JSON.stringify(product));
 
             formDataToSend.append('variantId', payload.variantId || formData.variantId || '');
-
-            // إرسال السعر المعدل
             formDataToSend.append('custom_price', finalPriceUnit);
 
-            // حساب التوتالات النهائية
             const shippingPrice = shipping ? shipping.price : 0;
             const totals = {
                 subtotal: finalPriceUnit,
@@ -1514,7 +1430,6 @@ class ProductFormBuilder {
 
             formDataToSend.append('config', JSON.stringify(this.config || {}));
 
-            // الإرسال للسيرفر
             const response = await fetch(
                 `${this.apiBaseUrl}/api/create-order`,
                 {
@@ -1654,9 +1569,7 @@ class ProductFormBuilder {
     }
 
     showBlockedUserMessage(customMessage = null) {
-        console.log(customMessage)
         const message = customMessage || 'Your order has been blocked due to security reasons. Please contact customer support if you believe this is an error.';
-        console.log(message)
         this.createCustomPopup({
             type: 'error',
             message: message
@@ -1713,26 +1626,6 @@ class ProductFormBuilder {
             this.updateFormTotals();
         }
     }
-
-    // updateFormTotals() {
-    //     const subtotal = this.detector.getCurrentPrice() / 100;
-    //     const shipping = this.currentShipping ? this.currentShipping.price : 0;
-    //     const total = subtotal + shipping;
-
-    //     // تحديث جميع العناصر
-    //     const elements = {
-    //         '.formino-subtotal': this.formatMoney(subtotal),
-    //         '.formino-shipping-cost': shipping === 0 ? 'Free' : this.formatMoney(shipping),
-    //         '.formino-total-amount': this.formatMoney(total),
-    //         '.formino-dynamic-total': this.formatMoney(total),
-    //         '.formino-dynamic-subtotal': this.formatMoney(subtotal)
-    //     };
-
-    //     Object.entries(elements).forEach(([selector, value]) => {
-    //         const element = document.querySelector(selector);
-    //         if (element) element.textContent = value;
-    //     });
-    // }
 
     formatMoney(amount) {
         return amount.toLocaleString('en-US', {
@@ -2022,17 +1915,17 @@ class ProductFormBuilder {
             const animationStyle = document.createElement('style');
             animationStyle.id = 'formino-popup-animations';
             animationStyle.textContent = `
-      @keyframes forminoPopupSlideOut {
-        from {
-          opacity: 1;
-          transform: translateY(0) scale(1);
-        }
-        to {
-          opacity: 0;
-          transform: translateY(-50px) scale(0.9);
-        }
-      }
-    `;
+                @keyframes forminoPopupSlideOut {
+                    from {
+                    opacity: 1;
+                    transform: translateY(0) scale(1);
+                    }
+                    to {
+                    opacity: 0;
+                    transform: translateY(-50px) scale(0.9);
+                    }
+                }
+            `;
             document.head.appendChild(animationStyle);
         }
 
@@ -2060,7 +1953,6 @@ class ProductFormBuilder {
         const form = document.getElementById('formino-main-form');
         if (!form) return;
 
-        // 1. مسح القيم النصية فقط (الاسم، الهاتف، إلخ)
         const inputs = form.querySelectorAll('.formino-input');
         inputs.forEach(input => {
             input.value = '';
@@ -2068,25 +1960,18 @@ class ProductFormBuilder {
             if (parent) parent.classList.remove('error');
         });
 
-        // 2. مسح رسائل الخطأ
         form.querySelectorAll('.formino-error-message').forEach(m => m.remove());
 
-        // 3. التعامل الآمن مع زر الإرسال
         const submitButton = form.querySelector('.formino-submit-button');
         if (submitButton) {
-            // إزالة كلاس التحميل الذي يجعل النص شفافاً عادةً
             submitButton.classList.remove('loading');
             submitButton.disabled = false;
 
-            // بدلاً من مسح كل الـ style، نقوم فقط بإعادة إظهار النص
-            // إذا كان كود الإرسال يغير color إلى transparent، نعيده هنا للأبيض
             submitButton.style.color = "rgba(255,255,255,1)";
 
-            // التأكد من بقاء الخلفية سوداء كما في الـ HTML الأصلي الخاص بك
             submitButton.style.backgroundColor = "rgba(0,0,0,1)";
         }
 
-        // 4. تحديث التوتالات لإعادة السعر للوضع الطبيعي
         this.updateFormTotals();
     }
 
@@ -2107,7 +1992,6 @@ class ProductFormBuilder {
     extractIdFromGid(gid) {
         if (!gid || typeof gid !== 'string') return null;
 
-        // التعامل مع تنسيق gid://shopify/Product/6661137432784
         if (gid.startsWith('gid://')) {
             const parts = gid.split('/');
             return parts[parts.length - 1];
@@ -2158,7 +2042,6 @@ class ProductFormBuilder {
             return;
         }
 
-        // حفظ الفورم الأصلي فقط إذا لم يكن محفوظاً بالفعل
         if (!this.originalFormHTML) {
             this.originalFormHTML = contentDiv.innerHTML;
             console.log('💾 Saved original form HTML');
@@ -2281,12 +2164,10 @@ class ProductFormBuilder {
         contentDiv.innerHTML = downsellHTML;
 
         document.getElementById('accept-downsell').onclick = () => {
-            console.log('👍 Accept downsell clicked');
             this.applyDownsellDiscount(offer);
         };
 
         document.getElementById('decline-downsell').onclick = () => {
-            console.log('👎 Decline downsell clicked');
             this.closePopupModal(true);
             location.reload();
         };
@@ -2294,7 +2175,6 @@ class ProductFormBuilder {
         const closeBtn = document.getElementById('close-downsell-early');
         if (closeBtn) {
             closeBtn.onclick = () => {
-                console.log('✖️ Early close downsell clicked');
                 this.closePopupModal(true);
             };
         }
@@ -2304,7 +2184,6 @@ class ProductFormBuilder {
     }
 
     applyDownsellDiscount(offer) {
-        // 1. حساب السعر الجديد (بالوحدات وليس السنتات)
         const originalPriceUnit = this.detector.getCurrentPrice() / 100;
         let newPriceUnit = originalPriceUnit;
 
@@ -2314,24 +2193,17 @@ class ProductFormBuilder {
             newPriceUnit = originalPriceUnit - parseFloat(offer.productSettings.discountValue);
         }
 
-        // 2. تخزين الخصم
         this.activeDiscount = {
             id: offer.id,
             newPrice: Math.max(0, newPriceUnit),
             originalPrice: originalPriceUnit
         };
 
-        // 3. استعادة واجهة الفورم
         const contentDiv = document.querySelector('.formino-modal-content');
         if (contentDiv && this.originalFormHTML) {
-            // إرجاع النموذج الأصلي
             contentDiv.innerHTML = this.originalFormHTML;
-
-            // تنفيذ الـ Reset فوراً وبقوة
             this.resetForm();
-            // إعادة ربط الـ Listeners لكي يعمل زر "Complete Order"
             this.setupFormHandlers();
-            // تحديث السعر في الزر (Dynamic Total) وفي سكشن التوتالات
             this.updateFormTotals();
             this.applyFormStyles();
             this.applySubmitButtonStyles();
@@ -2342,43 +2214,35 @@ class ProductFormBuilder {
         const form = document.getElementById('formino-main-form');
         if (!form) return;
 
-        // 1. مسح قيم المدخلات (الاسم، الهاتف، العنوان، المدينة)
         const inputs = form.querySelectorAll('.formino-input');
         inputs.forEach(input => {
-            input.value = ''; // تفريغ القيمة
-            input.classList.remove('error'); // إزالة اللون الأحمر من الحقل نفسه
+            input.value = '';
+            input.classList.remove('error');
         });
 
-        // 2. إزالة كلاس الخطأ من الحاويات الخارجية (الـ Divs)
-        // هذا مهم جداً لأن الـ HTML لديك يضع الـ error على الـ group-input
         const errorGroups = form.querySelectorAll('.formino-group-input.error, .formino-field.error');
         errorGroups.forEach(group => {
             group.classList.remove('error');
         });
 
-        // 3. مسح رسائل الخطأ النصية التي قد تكون أضيفت تحت الحقول
         const errorMessages = form.querySelectorAll('.formino-error-message');
         errorMessages.forEach(msg => msg.remove());
 
-        // 4. إعادة تعيين الكمية (إذا كانت موجودة)
         this.currentQuantity = 1;
 
-        // 5. تحديث التوتالات (ليعود السعر إلى 250.00 MAD كما في الـ HTML)
         this.updateFormTotals();
 
-        // 6. إعادة تعيين زر الإرسال (إزالة Loading)
         const submitButton = form.querySelector('.formino-submit-button');
         if (submitButton) {
             submitButton.disabled = false;
             submitButton.classList.remove('loading');
-            submitButton.style.color = ''; // إرجاع لون النص الأصلي
+            submitButton.style.color = '';
         }
     }
 
     injectSuccessBar(message) {
         const header = document.querySelector('.formino-header');
         if (header) {
-            // إزالة أي بار قديم
             const oldBar = document.querySelector('.formino-discount-bar');
             if (oldBar) oldBar.remove();
 
@@ -2390,34 +2254,19 @@ class ProductFormBuilder {
         }
     }
 
-
-    // دالة للتعامل مع عروض الكمية
     handleQuantityOffers() {
-        // التحقق من وجود عروض كمية
         if (!this.config.offers || !this.config.offers.quantityOffers) {
-            console.log('⚠️ No quantity offers found in config');
             return;
         }
 
-        // الحصول على معرف المنتج الحالي
         const currentProductId = this.detector.currentProduct?.id?.toString();
         if (!currentProductId) {
-            console.warn('⚠️ Cannot get current product ID');
             return;
         }
 
-        console.log('🎯 Current product ID:', currentProductId);
-        console.log('📦 Product title:', this.detector.currentProduct?.title);
-        console.log('💰 Product price:', this.detector.getCurrentPrice() / 100);
-
-        // البحث عن عرض مناسب للمنتج الحالي
         const matchingOffer = this.findMatchingQuantityOffer(currentProductId);
 
         if (matchingOffer) {
-            console.log('✅ Found matching quantity offer:', matchingOffer.name);
-            console.log('📊 Offer tiers:', matchingOffer.tiers);
-
-            // تأخير عرض العروض حتى يتم بناء الفورم بالكامل
             setTimeout(() => {
                 this.renderQuantityOffers(matchingOffer);
             }, 500);
@@ -2426,52 +2275,30 @@ class ProductFormBuilder {
         }
     }
 
-    // البحث عن عرض كمية مناسب للمنتج الحالي
     findMatchingQuantityOffer(currentProductId) {
         if (!this.config.offers || !this.config.offers.quantityOffers) {
-            console.log('❌ No quantity offers in config');
             return null;
         }
 
-        console.log('🔍 Searching quantity offers for product ID:', currentProductId);
-        console.log('📊 Available offers:', this.config.offers.quantityOffers);
-
         const offers = this.config.offers.quantityOffers;
 
-        // البحث عن عرض نشط يحتوي على المنتج الحالي
         for (const offer of offers) {
-            console.log('📋 Checking offer:', offer.name);
-            console.log('📊 Offer status:', offer.status);
-
-            // التحقق من أن العرض نشط
             if (offer.status !== "ACTIVE") {
-                console.log('⏸️ Offer not active, skipping');
                 continue;
             }
 
-            // التحقق من وجود productIds في العرض
             if (!offer.productSettings || !offer.productSettings.productIds) {
-                console.warn('⚠️ Offer missing productIds:', offer.id);
                 continue;
             }
-
-            console.log('🎯 Offer product IDs:', offer.productSettings.productIds);
 
             const isMatch = offer.productSettings.productIds.some(productGid => {
                 const offerProductId = this.extractIdFromGid(productGid);
                 const currentId = currentProductId.toString();
 
-                console.log('🔄 Comparing:', {
-                    offerProductId: offerProductId,
-                    currentId: currentId,
-                    match: offerProductId === currentId
-                });
-
                 return offerProductId === currentId;
             });
 
             if (isMatch) {
-                console.log('✅ Found match for product in offer:', offer.name);
                 this.activeQuantityOffer = offer;
                 return offer;
             } else {
@@ -2479,23 +2306,15 @@ class ProductFormBuilder {
             }
         }
 
-        console.log('❌ No matching quantity offer found');
         return null;
     }
 
     renderQuantityOffers(offer) {
         const upsellSection = document.querySelector('.formino-upsell-section');
-        if (!upsellSection) {
-            this.createUpsellSection();
-            const newUpsellSection = document.querySelector('.formino-upsell-section');
-            if (!newUpsellSection) {
-                console.error('❌ Failed to create upsell section');
-                return;
-            }
-            this.renderQuantityOffersInContainer(offer, newUpsellSection);
+        if (upsellSection) {
+            this.renderQuantityOffersInContainer(offer, upsellSection);
             return;
         }
-        this.renderQuantityOffersInContainer(offer, upsellSection);
     }
 
     renderQuantityOffersInContainer(offer, container) {
@@ -2582,12 +2401,9 @@ class ProductFormBuilder {
             discountText = `-${this.formatMoney(discountValue)}`;
         }
 
-        console.log("**********-------*********")
-        console.log(design)
-
         tierEl.innerHTML = `
             ${!design.hideProductImage ? `
-                <div style="width: 60px; height: 60px; margin-right: 12px; flex-shrink: 0; border: 1px solid #eee; border-radius: 4px; overflow: hidden;">
+                <div style="width: 60px; height: 60px; margin-right: 12px; flex-shrink: 0; border: 1px solid #eee; border-radius: 8px; overflow: hidden;">
                     <img src="${tier.imageUrl || this.detector.currentProduct?.featured_image || ''}" 
                         style="width: 100%; height: 100%; object-fit: cover;"
                         onerror="this.parentElement.style.display='none'">
@@ -2685,10 +2501,13 @@ class ProductFormBuilder {
     }
 
     updateFormTotals() {
-        let subtotal = this.detector.getCurrentPrice() / 100;
+        const unitPrice = this.detector.getCurrentPrice() / 100;
+        let subtotal = unitPrice;
+        let discountAmount = 0;
 
         if (this.activeQuantityTier) {
-            const originalTotal = subtotal * this.activeQuantityTier.quantity;
+            const quantity = this.activeQuantityTier.quantity;
+            const originalTotal = unitPrice * quantity;
             const discountValue = parseFloat(this.activeQuantityTier.discountValue);
 
             if (this.activeQuantityTier.discountType === "PERCENTAGE") {
@@ -2700,10 +2519,13 @@ class ProductFormBuilder {
             }
 
             subtotal = Math.max(0, subtotal);
+            discountAmount = originalTotal - subtotal;
         }
 
         if (this.activeDiscount) {
+            const priceBeforeActiveDiscount = subtotal;
             subtotal = this.activeDiscount.newPrice;
+            discountAmount += (priceBeforeActiveDiscount - subtotal);
         }
 
         const shipping = this.currentShipping ? this.currentShipping.price : 0;
@@ -2722,18 +2544,23 @@ class ProductFormBuilder {
             if (el) el.textContent = value;
         });
 
-        if (this.activeQuantityTier) {
-            const totalEl = document.querySelector('.formino-total-amount');
-            if (totalEl) {
-                const originalTotal = (this.detector.getCurrentPrice() / 100) * this.activeQuantityTier.quantity + shipping;
-                const discountText = this.activeQuantityTier.discountType === "PERCENTAGE"
-                    ? `${this.activeQuantityTier.discountValue}% OFF`
-                    : `-${this.formatMoney(parseFloat(this.activeQuantityTier.discountValue))}`;
+        const discountLine = document.querySelector('.formino-discount-cost')?.parentElement;
+        const discountValueEl = document.querySelector('.formino-discount-cost');
 
-                totalEl.innerHTML = `
-                    <div style="font-size: 0.9em; color: #666; margin-bottom: 4px;">
-                        You save: <span style="color: #2ecc71; font-weight: bold;">${discountText}</span>
-                    </div>
+        if (discountLine && discountValueEl) {
+            if (discountAmount > 0) {
+                discountLine.style.display = 'flex';
+                discountValueEl.textContent = `-${this.formatMoney(discountAmount)}`;
+                discountValueEl.style.color = '#2ecc71';
+            } else {
+                discountLine.style.display = 'none';
+            }
+        }
+
+        if (this.activeQuantityTier && discountAmount > 0) {
+            const totalAmountEl = document.querySelector('.formino-total-amount');
+            if (totalAmountEl) {
+                totalAmountEl.innerHTML = `
                 ${this.formatMoney(total)}
             `;
             }
@@ -2788,35 +2615,30 @@ class ProductFormBuilder {
         });
     }
 
-    createUpsellSection() {
-        const form = document.getElementById('formino-main-form');
-        if (!form) {
-            console.error('❌ Form not found');
-            return;
-        }
+    // createUpsellSection() {
+    //     const form = document.getElementById('formino-main-form');
+    //     if (!form) {
+    //         return;
+    //     }
 
-        const submitButton = form.querySelector('.formino-submit-button');
-        if (!submitButton) {
-            console.error('❌ Submit button not found');
-            return;
-        }
+    //     const submitButton = form.querySelector('.formino-submit-button');
+    //     if (!submitButton) {
+    //         return;
+    //     }
 
-        const upsellSection = document.createElement('div');
-        upsellSection.className = 'formino-section formino-upsell-section';
-        upsellSection.innerHTML = `
-            <h4 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">
-                Special Offers
-            </h4>
-        `;
+    //     const upsellSection = document.createElement('div');
+    //     upsellSection.className = 'formino-section formino-upsell-section';
+    //     upsellSection.innerHTML = `
+    //         <h4 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">
+    //             Special Offers
+    //         </h4>
+    //     `;
 
-        submitButton.parentElement.insertBefore(upsellSection, submitButton);
-    }
+    //     submitButton.parentElement.insertBefore(upsellSection, submitButton);
+    // }
 
 }
 
-
-
-// بدء التشغيل
 document.addEventListener('DOMContentLoaded', function () {
     new ProductFormBuilder();
 });

@@ -20,12 +20,10 @@ export interface FormConfig {
   successMessage: string;
   errorMessage: string;
 
-  // ✅ إضافة الخصائص الجديدة
   hideCloseButton?: boolean;
   hideFieldLabels?: boolean;
   rtlSupport?: boolean;
 
-  // ✅ إضافة Buy Button
   buyButton?: {
     text: string;
     subtitle?: string;
@@ -46,7 +44,6 @@ export interface FormConfig {
 }
 
 export interface StyleSettings {
-  // الإعدادات التصميمية
   primaryColor?: string;
   textColor?: string;
   backgroundColor?: string;
@@ -65,13 +62,11 @@ export interface StyleSettings {
 }
 
 export interface TextSettings {
-  // إعدادات النصوص
   title?: string;
   buttonText?: string;
   successMessage?: string;
   errorMessage?: string;
 
-  // إعدادات Buy Button الإضافية
   buyButtonSubtitle?: string;
   buyButtonIcon?: string;
   buyButtonAnimation?: "none" | "pulse" | "bounce" | "shake";
@@ -97,10 +92,8 @@ export interface FormField {
   displayLabel?: string;
   placeholder?: string;
 
-  // 📦 جميع الإعدادات الأخرى في fieldSettings
   fieldSettings?: FieldSettings;
 
-  // 🎯 الإعدادات المباشرة المفقودة
   sectionSettings?: SectionSettings;
   totalSettings?: TotalSettings;
   shippingSettings?: ShippingSettings;
@@ -111,7 +104,6 @@ export interface FormField {
   maxLength?: number;
   errorText?: string;
   subscribeSettings?: SubscribeSettings;
-
 }
 
 export interface FieldSettings {
@@ -127,12 +119,10 @@ export interface FieldSettings {
 }
 
 export interface AdvancedSettings {
-  // الإعدادات المتقدمة
   formStyle?: string;
   successMessage?: string;
   errorMessage?: string;
 }
-
 
 export interface SectionSettings {
   customText?: string;
@@ -161,6 +151,8 @@ export interface TotalSettings {
   subtotalValue: string;
   shippingTitle: string;
   shippingValue: string;
+  discountTitle: string;
+  discountValue: string;
   totalTitle: string;
   totalValue: string;
   showTaxesMessage: boolean;
@@ -183,7 +175,6 @@ export interface DiscountSettings {
   limitError: string;
 }
 
-// 📋 الـ Interfaces الخاصة بالمكونات
 export interface FieldsManagerProps {
   formFields: FormField[];
   setFormFields: React.Dispatch<React.SetStateAction<FormField[]>>;
@@ -220,7 +211,6 @@ export interface ActionButtonsProps {
   onCancel: () => void;
 }
 
-// أو يمكنك إضافته كـ type بدلاً من interface
 export type PreviewData = {
   firstName: string;
   lastName: string;
