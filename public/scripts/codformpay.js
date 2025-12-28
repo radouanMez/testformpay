@@ -336,7 +336,7 @@ class ProductFormBuilder {
         this.activeDiscount = null;
         this.activeQuantityOffer = null;
         this.originalFormHTML = null;
-        this.apiBaseUrl = "https://sunday-restaurants-binding-circle.trycloudflare.com";
+        this.apiBaseUrl = "https://commissions-findings-merit-widely.trycloudflare.com";
         this.isSubmitting = false;
         this.init();
     }
@@ -851,11 +851,9 @@ class ProductFormBuilder {
     }
 
     renderUpsellSection(field) {
-        console.log(field)
-        console.log("*******************")
         if (!field.visible) return '';
         return `
-            <div class="formino-section formino-upsell-section" data-field-id="${field.id}">
+            <div class="formino-section formino-upsell-section" style="display: none;" data-field-id="${field.id}">
                 <!-- سيتم إضافة الـ upsells هنا لاحقاً -->
             </div>
         `;
@@ -918,7 +916,7 @@ class ProductFormBuilder {
             case 'cart':
                 return (
                     `
-          <span style="display: flex; align-items: center;">
+          <span style="display: flex; align-items: center; margin-right: 5px;">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="24" height="24" fill="currentColor">
               <path d="M6.25 11.25a.75.75 0 0 0 0 1.5h2.75a.75.75 0 0 0 0-1.5h-2.75Z" />
               <path fillRule="evenodd" d="M2.5 7.25a2.75 2.75 0 0 1 2.75-2.75h9.5a2.75 2.75 0 0 1 2.75 2.75v5.5a2.75 2.75 0 0 1-2.75 2.75h-9.5a2.75 2.75 0 0 1-2.75-2.75v-5.5Zm12.25-1.25c.69 0 1.25.56 1.25 1.25h-12c0-.69.56-1.25 1.25-1.25h9.5Zm1.25 3.25h-12v3.5c0 .69.56 1.25 1.25 1.25h9.5c.69 0 1.25-.56 1.25-1.25v-3.5Z" />
@@ -929,7 +927,7 @@ class ProductFormBuilder {
             case 'star':
                 return (
                     `
-          <span style="display: flex; align-items: center;">
+          <span style="display: flex; align-items: center; margin-right: 5px;">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="24" height="24" fill="currentColor">
               <path d="M11.128 4.123c-.453-.95-1.803-.95-2.256 0l-1.39 2.912-3.199.421c-1.042.138-1.46 1.422-.697 2.146l2.34 2.222-.587 3.172c-.192 1.034.901 1.828 1.825 1.327l2.836-1.54 2.836 1.54c.924.501 2.017-.293 1.825-1.327l-.587-3.172 2.34-2.222c.762-.724.345-2.008-.697-2.146l-3.2-.421-1.389-2.912Z" />
             </svg>
@@ -939,7 +937,7 @@ class ProductFormBuilder {
             case 'truck':
                 return (
                     `
-          <span style="display: flex; align-items: center;">
+          <span style="display: flex; align-items: center; margin-right: 5px;">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="24" height="24" fill="currentColor">
               <path fillRule="evenodd" d="M4 5.25a.75.75 0 0 1 .75-.75h6.991a2.75 2.75 0 0 1 2.645 1.995l.427 1.494a.25.25 0 0 0 .18.173l1.681.421a1.75 1.75 0 0 1 1.326 1.698v1.219a1.75 1.75 0 0 1-1.032 1.597 2.5 2.5 0 1 1-4.955.153h-3.025a2.5 2.5 0 1 1-4.78-.75h-.458a.75.75 0 0 1 0-1.5h2.5c.03 0 .06.002.088.005a2.493 2.493 0 0 1 1.947.745h4.43a2.493 2.493 0 0 1 1.785-.75c.698 0 1.33.286 1.783.748a.25.25 0 0 0 .217-.248v-1.22a.25.25 0 0 0-.19-.242l-1.682-.42a1.75 1.75 0 0 1-1.258-1.217l-.427-1.494a1.25 1.25 0 0 0-1.202-.907h-6.991a.75.75 0 0 1-.75-.75Zm2.5 9.25a1 1 0 1 0 0-2 1 1 0 0 0 0 2Zm8 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" />
               <path d="M3.25 8a.75.75 0 0 0 0 1.5h5a.75.75 0 0 0 0-1.5h-5Z" />
@@ -950,7 +948,7 @@ class ProductFormBuilder {
             case 'bag':
                 return (
                     `
-          <span style="display: flex; align-items: center;">
+          <span style="display: flex; align-items: center; margin-right: 5px;">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="24" height="24" fill="currentColor">
               <path fillRule="evenodd" d="M2.5 3.75a.75.75 0 0 1 .75-.75h1.612a1.75 1.75 0 0 1 1.732 1.5h9.656a.75.75 0 0 1 .748.808l-.358 4.653a2.75 2.75 0 0 1-2.742 2.539h-6.351l.093.78a.25.25 0 0 0 .248.22h6.362a.75.75 0 0 1 0 1.5h-6.362a1.75 1.75 0 0 1-1.738-1.543l-1.04-8.737a.25.25 0 0 0-.248-.22h-1.612a.75.75 0 0 1-.75-.75Zm4.868 7.25h6.53a1.25 1.25 0 0 0 1.246-1.154l.296-3.846h-8.667l.595 5Z" />
               <path d="M10 17a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z" />
@@ -962,7 +960,7 @@ class ProductFormBuilder {
             case 'heart':
                 return (
                     `
-          <span style="display: flex; align-items: center;">
+          <span style="display: flex; align-items: center; margin-right: 5px;">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="24" height="24" fill="currentColor">
               <path fill-rule="evenodd" d="M8.469 5.785c-.966-1.047-2.505-1.047-3.47 0-.998 1.081-.998 2.857 0 3.939l5.001 5.42 5.002-5.42c.997-1.082.997-2.858 0-3.939-.966-1.047-2.505-1.047-3.47 0l-.98 1.062a.75.75 0 0 1-1.103 0l-.98-1.062Zm-4.573-1.017c1.56-1.69 4.115-1.69 5.675 0l.429.464.429-.464c1.56-1.69 4.115-1.69 5.675 0 1.528 1.656 1.528 4.317 0 5.973l-5.185 5.62a1.25 1.25 0 0 1-1.838 0l-5.185-5.62c-1.528-1.656-1.528-4.317 0-5.973Z" />
             </svg>
@@ -2313,6 +2311,7 @@ class ProductFormBuilder {
         const upsellSection = document.querySelector('.formino-upsell-section');
         if (upsellSection) {
             this.renderQuantityOffersInContainer(offer, upsellSection);
+            upsellSection.style.display = "block";
             return;
         }
     }
