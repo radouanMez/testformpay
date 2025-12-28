@@ -8,11 +8,14 @@ import {
     InlineGrid,
     ColorPicker,
     Box,
-    InlineStack
+    InlineStack,
+    Grid
 } from "@shopify/polaris";
 import { hsbToRgb } from "@shopify/polaris";
 import { FormField } from "../../../types/formTypes";
 import { hexToHsb, rgbToHsb } from "../utils/colorUtils";
+import { SmallColorPicker, colorToRgba, parseRgbaToColor } from "../../../helpers/SmallColorPicker";
+
 
 interface TotalsEditorModalProps {
     editingTotals: FormField | null;
@@ -52,152 +55,195 @@ export function TotalsEditorModal({
         >
             <Modal.Section>
                 <BlockStack gap="400">
-                    <Text variant="headingMd" as="h3">TOTALS SUMMARY SETTINGS</Text>
+                    <Grid>
+                        <Grid.Cell columnSpan={{ xs: 6, lg: 7 }}>
 
-                    <InlineGrid columns={2} gap="400">
-                        <TextField
-                            label="Subtotal Title"
-                            value={totalsSettings.subtotalTitle}
-                            onChange={(value) => setTotalsSettings((prev: any) => ({ ...prev, subtotalTitle: value }))}
-                            autoComplete="off"
-                        />
-                        <TextField
-                            label="Subtotal Value"
-                            value={totalsSettings.subtotalValue}
-                            onChange={(value) => setTotalsSettings((prev: any) => ({ ...prev, subtotalValue: value }))}
-                            autoComplete="off"
-                        />
-                    </InlineGrid>
+                            {/* <Text variant="headingMd" as="h3">TOTALS SUMMARY SETTINGS</Text> */}
 
-                    <InlineGrid columns={2} gap="400">
-                        <TextField
-                            label="Shipping Title"
-                            value={totalsSettings.shippingTitle}
-                            onChange={(value) => setTotalsSettings((prev: any) => ({ ...prev, shippingTitle: value }))}
-                            autoComplete="off"
-                        />
-                        <TextField
-                            label="Shipping Value"
-                            value={totalsSettings.shippingValue}
-                            onChange={(value) => setTotalsSettings((prev: any) => ({ ...prev, shippingValue: value }))}
-                            autoComplete="off"
-                        />
-                    </InlineGrid>
+                            <InlineGrid columns={2} gap="400">
+                                <div style={{ flex: 1, marginTop: '5px' }}>
+                                    <Text as="h3" variant="bodyMd" fontWeight="bold">Subtotal Title</Text>
+                                    <TextField
+                                        label="Subtotal Title"
+                                        labelHidden
+                                        value={totalsSettings.subtotalTitle}
+                                        onChange={(value) => setTotalsSettings((prev: any) => ({ ...prev, subtotalTitle: value }))}
+                                        autoComplete="off"
+                                    />
+                                </div>
+                                <div style={{ flex: 1, marginTop: '5px' }}>
+                                    <Text as="h3" variant="bodyMd" fontWeight="bold">Subtotal Value</Text>
+                                    <TextField
+                                        label="Subtotal Value"
+                                        labelHidden
+                                        value={totalsSettings.subtotalValue}
+                                        onChange={(value) => setTotalsSettings((prev: any) => ({ ...prev, subtotalValue: value }))}
+                                        autoComplete="off"
+                                    />
+                                </div>
+                            </InlineGrid>
 
-                    <InlineGrid columns={2} gap="400">
-                        <TextField
-                            label="Discount Title"
-                            value={totalsSettings.discountTitle}
-                            onChange={(value) => setTotalsSettings((prev: any) => ({ ...prev, discountTitle: value }))}
-                            autoComplete="off"
-                        />
-                        <TextField
-                            label="Discount Value"
-                            value={totalsSettings.discountValue}
-                            onChange={(value) => setTotalsSettings((prev: any) => ({ ...prev, discountValue: value }))}
-                            autoComplete="off"
-                        />
-                    </InlineGrid>
+                            <InlineGrid columns={2} gap="400">
+                                <div style={{ flex: 1, marginTop: '5px' }}>
+                                    <Text as="h3" variant="bodyMd" fontWeight="bold">Shipping Title</Text>
+                                    <TextField
+                                        label="Shipping Title"
+                                        labelHidden
+                                        value={totalsSettings.shippingTitle}
+                                        onChange={(value) => setTotalsSettings((prev: any) => ({ ...prev, shippingTitle: value }))}
+                                        autoComplete="off"
+                                    />
+                                </div>
+                                 <div style={{ flex: 1, marginTop: '5px' }}>
+                                    <Text as="h3" variant="bodyMd" fontWeight="bold">Shipping Value</Text>
+                                    <TextField
+                                        label="Shipping Value"
+                                        labelHidden
+                                        value={totalsSettings.shippingValue}
+                                        onChange={(value) => setTotalsSettings((prev: any) => ({ ...prev, shippingValue: value }))}
+                                        autoComplete="off"
+                                    />
+                                </div>
+                            </InlineGrid>
 
-                    <InlineGrid columns={2} gap="400">
-                        <TextField
-                            label="Total Title"
-                            value={totalsSettings.totalTitle}
-                            onChange={(value) => setTotalsSettings((prev: any) => ({ ...prev, totalTitle: value }))}
-                            autoComplete="off"
-                        />
-                        <TextField
-                            label="Total Value"
-                            value={totalsSettings.totalValue}
-                            onChange={(value) => setTotalsSettings((prev: any) => ({ ...prev, totalValue: value }))}
-                            autoComplete="off"
-                        />
-                    </InlineGrid>
+                            <InlineGrid columns={2} gap="400">
+                                 <div style={{ flex: 1, marginTop: '5px' }}>
+                                    <Text as="h3" variant="bodyMd" fontWeight="bold">Discount Title</Text>
+                                    <TextField  
+                                        labelHidden
+                                        label="Discount Title"
+                                        value={totalsSettings.discountTitle}
+                                        onChange={(value) => setTotalsSettings((prev: any) => ({ ...prev, discountTitle: value }))}
+                                        autoComplete="off"
+                                    />
+                                </div>
+                                 <div style={{ flex: 1, marginTop: '5px' }}>
+                                    <Text as="h3" variant="bodyMd" fontWeight="bold">Discount Value</Text>
+                                    <TextField
+                                        labelHidden
+                                        label="Discount Value"
+                                        value={totalsSettings.discountValue}
+                                        onChange={(value) => setTotalsSettings((prev: any) => ({ ...prev, discountValue: value }))}
+                                        autoComplete="off"
+                                    />
+                                </div>
+                            </InlineGrid>
 
-                    <Checkbox
-                        label="Show taxes message"
-                        checked={totalsSettings.showTaxesMessage}
-                        onChange={(value) => setTotalsSettings((prev: any) => ({ ...prev, showTaxesMessage: value }))}
-                        helpText="Display a message about taxes and shipping calculated at checkout"
-                    />
+                            <InlineGrid columns={2} gap="400">
+                                 <div style={{ flex: 1, marginTop: '5px' }}>
+                                    <Text as="h3" variant="bodyMd" fontWeight="bold">Total Title</Text>
+                                    <TextField
+                                        labelHidden
+                                        label="Total Title"
+                                        value={totalsSettings.totalTitle}
+                                        onChange={(value) => setTotalsSettings((prev: any) => ({ ...prev, totalTitle: value }))}
+                                        autoComplete="off"
+                                    />
+                                </div>
+                                 <div style={{ flex: 1, marginTop: '5px' }}>
+                                    <Text as="h3" variant="bodyMd" fontWeight="bold">Total Value</Text>
+                                    <TextField
+                                        label="Total Value"
+                                        labelHidden
+                                        value={totalsSettings.totalValue}
+                                        onChange={(value) => setTotalsSettings((prev: any) => ({ ...prev, totalValue: value }))}
+                                        autoComplete="off"
+                                    />
+                                </div>
+                            </InlineGrid>
 
-                    <Box paddingBlockStart="400">
-                        <Text as="h3" variant="bodyMd" fontWeight="bold">Background Color</Text>
+                            <Box paddingBlockStart="400">
+                                <BlockStack gap="100">
+                                    <Text as="h3" variant="bodyMd" fontWeight="bold">Background Color</Text>
+                                    <InlineStack align="start" blockAlign="center" gap="200">
+                                        <SmallColorPicker
+                                            label="Background Color"
+                                            color={totalsColorState}
+                                            onChange={(color) => {
+                                                setTotalsColorState(color);
+                                                const rgb = hsbToRgb(color);
+                                                const newColor = `rgba(${rgb.red}, ${rgb.green}, ${rgb.blue}, 1)`;
+                                                setTotalsSettings((prev: any) => ({ ...prev, backgroundColor: newColor }));
+                                            }}
+                                        />
 
-                        <ColorPicker
-                            onChange={(color) => {
-                                setTotalsColorState(color);
-                                const rgb = hsbToRgb(color);
-                                const newColor = `rgba(${rgb.red}, ${rgb.green}, ${rgb.blue}, 1)`;
-                                setTotalsSettings((prev: any) => ({ ...prev, backgroundColor: newColor }));
-                            }}
-                            color={totalsColorState}
-                        />
+                                         <div style={{ flex: 1, marginTop: '5px' }}>
+                                            <TextField
+                                                label="Background color value"
+                                                labelHidden
+                                                value={totalsSettings.backgroundColor}
+                                                onChange={(value) => {
+                                                    setTotalsSettings((prev: any) => ({ ...prev, backgroundColor: value }));
+                                                    if (value.startsWith('#')) {
+                                                        setTotalsColorState(hexToHsb(value));
+                                                    } else if (value.startsWith('rgb')) {
+                                                        setTotalsColorState(rgbToHsb(value));
+                                                    }
+                                                }}
+                                                autoComplete="off"
+                                                prefix={
+                                                    <div style={{
+                                                        width: '20px',
+                                                        height: '20px',
+                                                        borderRadius: '2px',
+                                                        backgroundColor: totalsSettings.backgroundColor,
+                                                        border: '1px solid #dfe3e8'
+                                                    }} />
+                                                }
+                                            />
+                                        </div>
+                                    </InlineStack>
+                                </BlockStack>
+                            </Box>
 
-                        <Box padding="200" background="bg-surface-secondary" borderRadius="100" paddingBlockStart="300">
-                            <div
-                                style={{
-                                    width: "100%",
-                                    height: "40px",
+                            <Checkbox
+                                label="Show taxes message"
+                                checked={totalsSettings.showTaxesMessage}
+                                onChange={(value) => setTotalsSettings((prev: any) => ({ ...prev, showTaxesMessage: value }))}
+                                helpText="Display a message about taxes and shipping calculated at checkout"
+                            />
+
+                        </Grid.Cell>
+                        {/* Preview */}
+                        <Grid.Cell columnSpan={{ xs: 6, lg: 5 }}>
+                            <Box padding="400" background="bg-surface-secondary" borderRadius="200">
+                                <Text variant="bodySm" tone="subdued" as="p">
+                                    <strong>Preview:</strong>
+                                </Text>
+                                <div style={{
                                     backgroundColor: totalsSettings.backgroundColor,
-                                    borderRadius: "4px",
-                                    border: "1px solid #E1E3E5",
-                                    marginBottom: "8px"
-                                }}
-                            />
-                            <TextField
-                                label="Background color value"
-                                value={totalsSettings.backgroundColor}
-                                onChange={(value) => {
-                                    setTotalsSettings((prev: any) => ({ ...prev, backgroundColor: value }));
-                                    if (value.startsWith('#')) {
-                                        setTotalsColorState(hexToHsb(value));
-                                    } else if (value.startsWith('rgb')) {
-                                        setTotalsColorState(rgbToHsb(value));
-                                    }
-                                }}
-                                autoComplete="off"
-                            />
-                        </Box>
-                    </Box>
-
-                    {/* Preview */}
-                    <Box padding="400" background="bg-surface-secondary" borderRadius="200">
-                        <Text variant="bodySm" tone="subdued" as="p">
-                            <strong>Preview:</strong>
-                        </Text>
-                        <div style={{
-                            backgroundColor: totalsSettings.backgroundColor,
-                            padding: '16px',
-                            borderRadius: '8px',
-                            border: '1px dashed #E1E3E5',
-                            marginTop: '8px'
-                        }}>
-                            <BlockStack gap="200">
-                                <InlineStack align="space-between">
-                                    <Text as="span" variant="bodySm">{totalsSettings.subtotalTitle}</Text>
-                                    <Text as="span" variant="bodySm" fontWeight="bold">{totalsSettings.subtotalValue}</Text>
-                                </InlineStack>
-                                <InlineStack align="space-between">
-                                    <Text as="span" variant="bodySm">{totalsSettings.shippingTitle}</Text>
-                                    <Text as="span" variant="bodySm" fontWeight="bold">{totalsSettings.shippingValue}</Text>
-                                </InlineStack>
-                                <InlineStack align="space-between">
-                                    <Text as="span" variant="bodySm">{totalsSettings.discountTitle}</Text>
-                                    <Text as="span" variant="bodySm" fontWeight="bold">{totalsSettings.discountValue}</Text>
-                                </InlineStack>
-                                <InlineStack align="space-between">
-                                    <Text as="span" variant="bodyMd" fontWeight="bold">{totalsSettings.totalTitle}</Text>
-                                    <Text as="span" variant="bodyMd" fontWeight="bold">{totalsSettings.totalValue}</Text>
-                                </InlineStack>
-                                {totalsSettings.showTaxesMessage && (
-                                    <Text as="p" variant="bodySm" tone="subdued" alignment="center">
-                                        Taxes and shipping calculated at checkout
-                                    </Text>
-                                )}
-                            </BlockStack>
-                        </div>
-                    </Box>
+                                    padding: '16px',
+                                    borderRadius: '8px',
+                                    border: '1px dashed #E1E3E5',
+                                    marginTop: '8px'
+                                }}>
+                                    <BlockStack gap="200">
+                                        <InlineStack align="space-between">
+                                            <Text as="span" variant="bodySm">{totalsSettings.subtotalTitle}</Text>
+                                            <Text as="span" variant="bodySm" fontWeight="bold">{totalsSettings.subtotalValue}</Text>
+                                        </InlineStack>
+                                        <InlineStack align="space-between">
+                                            <Text as="span" variant="bodySm">{totalsSettings.shippingTitle}</Text>
+                                            <Text as="span" variant="bodySm" fontWeight="bold">{totalsSettings.shippingValue}</Text>
+                                        </InlineStack>
+                                        <InlineStack align="space-between">
+                                            <Text as="span" variant="bodySm">{totalsSettings.discountTitle}</Text>
+                                            <Text as="span" variant="bodySm" fontWeight="bold">{totalsSettings.discountValue}</Text>
+                                        </InlineStack>
+                                        <InlineStack align="space-between">
+                                            <Text as="span" variant="bodyMd" fontWeight="bold">{totalsSettings.totalTitle}</Text>
+                                            <Text as="span" variant="bodyMd" fontWeight="bold">{totalsSettings.totalValue}</Text>
+                                        </InlineStack>
+                                        {totalsSettings.showTaxesMessage && (
+                                            <Text as="p" variant="bodySm" tone="subdued" alignment="center">
+                                                Taxes and shipping calculated at checkout
+                                            </Text>
+                                        )}
+                                    </BlockStack>
+                                </div>
+                            </Box>
+                        </Grid.Cell>
+                    </Grid>
                 </BlockStack>
             </Modal.Section>
         </Modal>
