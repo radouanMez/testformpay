@@ -30,6 +30,48 @@ export const colorToRgba = (color: ColorPickerColor): string => {
     return `rgba(${Math.round((r + m) * 255)}, ${Math.round((g + m) * 255)}, ${Math.round((b + m) * 255)}, ${alpha})`;
 };
 
+export const parseRgbaToColor = (rgbaString: string): ColorPickerColor => {
+    const match = rgbaString.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/i);
+
+    if (!match) {
+        console.warn("Failed to parse color:", rgbaString);
+        return { hue: 0, saturation: 0, brightness: 0, alpha: 1 };
+    }
+
+    const r = parseInt(match[1]) / 255;
+    const g = parseInt(match[2]) / 255;
+    const b = parseInt(match[3]) / 255;
+    const alpha = match[4] ? parseFloat(match[4]) : 1;
+
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const delta = max - min;
+
+    let hue = 0;
+    if (delta !== 0) {
+        if (max === r) {
+            hue = ((g - b) / delta) % 6;
+        } else if (max === g) {
+            hue = (b - r) / delta + 2;
+        } else {
+            hue = (r - g) / delta + 4;
+        }
+
+        hue = Math.round(hue * 60);
+        if (hue < 0) hue += 360;
+    }
+
+    const saturation = max === 0 ? 0 : delta / max;
+    const brightness = max;
+
+    return {
+        hue,
+        saturation,
+        brightness,
+        alpha
+    };
+};
+
 export const SmallColorPicker = ({ color, onChange, label }: SmallColorPickerProps) => {
     const [popoverActive, setPopoverActive] = useState(false);
     const [tempColor, setTempColor] = useState(color);

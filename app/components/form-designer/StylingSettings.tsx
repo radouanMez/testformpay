@@ -1,5 +1,6 @@
 import { Card, Box, BlockStack, Text, TextField, ColorPicker, hsbToRgb, Checkbox, Button, InlineStack, Select } from "@shopify/polaris";
 import React, { useState } from "react";
+import { SmallColorPicker, colorToRgba, parseRgbaToColor } from "../../helpers/SmallColorPicker";
 
 interface StyleSettings {
   primaryColor: string;
@@ -29,7 +30,6 @@ export function StylingSettings({ style, setStyle }: StylingSettingsProps) {
   const [backgroundColorState, setBackgroundColorState] = useState({ hue: 0, saturation: 0, brightness: 1 });
   const [borderColorState, setBorderColorState] = useState({ hue: 0, saturation: 0, brightness: 0 });
 
-  // ✅ استخدام قيم افتراضية آمنة
   const safeStyle = {
     textSize: style.textSize || 14,
     borderRadius: style.borderRadius || 8,
@@ -85,119 +85,167 @@ export function StylingSettings({ style, setStyle }: StylingSettingsProps) {
             </Button>
           </InlineStack>
 
-          {/* Form Style */}
-          <Select
-            label="Form style"
-            options={[
-              { label: 'Modern', value: 'modern' },
-              { label: 'Classic', value: 'classic' },
-              { label: 'Minimal', value: 'minimal' },
-              { label: 'Rounded', value: 'rounded' },
-            ]}
-            value={safeStyle.formStyle}
-            onChange={(value) => handleChange("formStyle", value)}
-          />
+          <BlockStack gap="400">
+            <InlineStack align="start" blockAlign="start" gap="400">
+              <div style={{ flex: 1 }}>
+                {/* Form Style */}
+                <Text as="h3" variant="bodyMd" fontWeight="bold">Form style</Text>
+                <Select
+                  labelHidden
+                  label="Form style"
+                  options={[
+                    { label: 'Modern', value: 'modern' },
+                    { label: 'Classic', value: 'classic' },
+                    { label: 'Minimal', value: 'minimal' },
+                    { label: 'Rounded', value: 'rounded' },
+                  ]}
+                  value={safeStyle.formStyle}
+                  onChange={(value) => handleChange("formStyle", value)}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <Text as="h3" variant="bodyMd" fontWeight="bold">Font size</Text>
+                <TextField
+                  label="Font size"
+                  labelHidden
+                  type="number"
+                  suffix="px"
+                  value={safeStyle.textSize.toString()}
+                  onChange={(value) => handleChange("textSize", parseInt(value) || 14)}
+                  autoComplete="off"
+                  helpText="Base size for text"
+                />
+              </div>
+            </InlineStack>
+          </BlockStack>
 
-          {/* Text Color */}
-          <Box>
-            <Text as="h3" variant="bodyMd" fontWeight="bold">Text color</Text>
-            <ColorPicker
-              onChange={(color) => {
-                setTextColorState(color);
-                const rgb = hsbToRgb(color);
-                handleChange("textColor", `rgba(${rgb.red}, ${rgb.green}, ${rgb.blue}, 1)`);
-              }}
-              color={textColorState}
-            />
-            <Box padding="200" background="bg-surface-secondary" borderRadius="100" paddingBlockStart="300">
-              <TextField
-                label="Text color value"
-                value={safeStyle.textColor}
-                onChange={(value) => {
-                  handleChange("textColor", value);
-                }}
-                autoComplete="off"
-              />
-            </Box>
-          </Box>
+          <BlockStack gap="400">
+            <InlineStack align="start" blockAlign="start" gap="400">
+              <div style={{ flex: 1 }}>
+                <Text as="h3" variant="bodyMd" fontWeight="bold">Border radius</Text>
+                <TextField
+                  label="Border radius"
+                  labelHidden
+                  type="number"
+                  suffix="px"
+                  value={safeStyle.borderRadius.toString()}
+                  onChange={(value) => handleChange("borderRadius", parseInt(value) || 0)}
+                  autoComplete="off"
+                  helpText="Radius in pixels"
+                />
+              </div>
+              {/* Border Width */}
+              <div style={{ flex: 1 }}>
+                <Text as="h3" variant="bodyMd" fontWeight="bold">Border width</Text>
+                <TextField
+                  labelHidden
+                  label="Border width"
+                  type="number"
+                  suffix="px"
+                  value={safeStyle.borderWidth.toString()}
+                  onChange={(value) => handleChange("borderWidth", parseInt(value) || 0)}
+                  autoComplete="off"
+                  helpText="Width in pixels"
+                />
+              </div>
+            </InlineStack>
+          </BlockStack>
 
-          {/* Font Size */}
-          <TextField
-            label="Font size"
-            type="number"
-            // ✅ إصلاح: استخدام القيم الآمنة
-            value={safeStyle.textSize.toString()}
-            onChange={(value) => handleChange("textSize", parseInt(value) || 14)}
-            autoComplete="off"
-            helpText="Base font size for all text in the form"
-          />
+          <BlockStack gap="400">
+            <InlineStack align="start" blockAlign="start" gap="400">
+              {/* Text Color */}
+              <div style={{ flex: 1 }}>
+                <Text as="h3" variant="bodyMd" fontWeight="bold">Text color</Text>
+                <SmallColorPicker
+                  label="Text Color"
+                  color={textColorState}
+                  onChange={(color) => {
+                    setTextColorState(color);
+                    const rgbaString = colorToRgba(color);
+                    handleChange("textColor", rgbaString);
+                  }}
+                />
+                <div style={{ flexGrow: 1, maxWidth: '200px' }}>
+                  <TextField
+                    label="Text color value"
+                    labelHidden
+                    value={safeStyle.textColor}
+                    onChange={(value) => {
+                      handleChange("textColor", value);
+                      const parsed = parseRgbaToColor(value);
+                      if (parsed) setTextColorState(parsed);
+                    }}
+                    autoComplete="off"
+                  />
+                </div>
+              </div>
 
-          {/* Background Color */}
-          <Box>
-            <Text as="h3" variant="bodyMd" fontWeight="bold">Background color</Text>
-            <ColorPicker
-              onChange={(color) => {
-                setBackgroundColorState(color);
-                const rgb = hsbToRgb(color);
-                handleChange("backgroundColor", `rgba(${rgb.red}, ${rgb.green}, ${rgb.blue}, 1)`);
-              }}
-              color={backgroundColorState}
-            />
-            <Box padding="200" background="bg-surface-secondary" borderRadius="100" paddingBlockStart="300">
-              <TextField
-                label=""
-                value={safeStyle.backgroundColor}
-                onChange={(value) => handleChange("backgroundColor", value)}
-                autoComplete="off"
-              />
-            </Box>
-            <Text as="p" variant="bodySm" tone="subdued">
-              Important: changing the background color of your form could negatively affect your conversion rate.
-            </Text>
-          </Box>
+              {/* القسم الثاني: Background Color */}
+              <div style={{ flex: 1 }}>
+                <Text as="h3" variant="bodyMd" fontWeight="bold">Background color</Text>
+                <SmallColorPicker
+                  label="Background Color"
+                  color={backgroundColorState}
+                  onChange={(color) => {
+                    setBackgroundColorState(color);
+                    const rgbaString = colorToRgba(color);
+                    handleChange("backgroundColor", rgbaString);
+                  }}
+                />
+                <div style={{ flexGrow: 1, maxWidth: '200px' }}>
+                  <TextField
+                    label="Background color value"
+                    labelHidden
+                    value={safeStyle.backgroundColor}
+                    onChange={(value) => {
+                      handleChange("backgroundColor", value);
+                      const parsed = parseRgbaToColor(value);
+                      if (parsed) setBackgroundColorState(parsed);
+                    }}
+                    autoComplete="off"
+                  />
+                </div>
+                {/* <Box paddingBlockStart="100">
+                    <Text as="p" variant="bodySm" tone="subdued">
+                      <span style={{ color: '#D72C0D', fontWeight: 'bold' }}>Important:</span> changing the background color could negatively affect conversion.
+                    </Text>
+                  </Box> */}
+              </div>
 
-          {/* Border Radius */}
-          <TextField
-            label="Border radius"
-            type="number"
-            // ✅ إصلاح: استخدام القيم الآمنة
-            value={safeStyle.borderRadius.toString()}
-            onChange={(value) => handleChange("borderRadius", parseInt(value) || 8)}
-            autoComplete="off"
-            helpText="Border radius in pixels"
-          />
-
-          {/* Border Width */}
-          <TextField
-            label="Border width"
-            type="number"
-            // ✅ إصلاح: استخدام القيم الآمنة
-            value={safeStyle.borderWidth.toString()}
-            onChange={(value) => handleChange("borderWidth", parseInt(value) || 1)}
-            autoComplete="off"
-            helpText="Border width in pixels"
-          />
+            </InlineStack>
+          </BlockStack>
 
           {/* Border Color */}
-          <Box>
-            <Text as="h3" variant="bodyMd" fontWeight="bold">Border color</Text>
-            <ColorPicker
-              onChange={(color) => {
-                setBorderColorState(color);
-                const rgb = hsbToRgb(color);
-                handleChange("borderColor", `rgba(${rgb.red}, ${rgb.green}, ${rgb.blue}, 1)`);
-              }}
-              color={borderColorState}
-            />
-            <Box padding="200" background="bg-surface-secondary" borderRadius="100" paddingBlockStart="300">
-              <TextField
-                label=""
-                value={safeStyle.borderColor}
-                onChange={(value) => handleChange("borderColor", value)}
-                autoComplete="off"
-              />
-            </Box>
-          </Box>
+          <BlockStack gap="400">
+            <InlineStack align="start" blockAlign="start" gap="400">
+              <div style={{ flex: 1 }}>
+                <Text as="h3" variant="bodyMd" fontWeight="bold">Border color</Text>
+                <SmallColorPicker
+                  label="Border Color"
+                  color={borderColorState}
+                  onChange={(color) => {
+                    setBorderColorState(color);
+                    const rgbaString = colorToRgba(color);
+                    handleChange("borderColor", rgbaString);
+                  }}
+                />
+
+                <div style={{ flexGrow: 1, maxWidth: '200px' }}>
+                  <TextField
+                    label=""
+                    labelHidden
+                    value={safeStyle.borderColor}
+                    onChange={(value) => {
+                      handleChange("borderColor", value);
+                      const parsed = parseRgbaToColor(value);
+                      if (parsed) setBorderColorState(parsed);
+                    }}
+                    autoComplete="off"
+                  />
+                </div>
+              </div>
+            </InlineStack>
+          </BlockStack>
 
           {/* Checkbox Settings */}
           <BlockStack gap="200">

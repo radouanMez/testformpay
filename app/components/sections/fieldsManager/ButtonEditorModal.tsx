@@ -9,11 +9,14 @@ import {
     ColorPicker,
     Checkbox,
     Box,
-    InlineStack
+    InlineStack,
+    Grid
 } from "@shopify/polaris";
 import { hsbToRgb } from "@shopify/polaris";
 import { FormField } from "../../../types/formTypes";
 import { hexToHsb, rgbToHsb } from "../utils/colorUtils";
+import { SmallColorPicker, colorToRgba, parseRgbaToColor } from "../../../helpers/SmallColorPicker";
+
 
 interface ButtonEditorModalProps {
     editingButton: FormField | null;
@@ -64,212 +67,284 @@ export function ButtonEditorModal({
             size="large"
         >
             <Modal.Section>
-                <BlockStack gap="400">
-                    <Text variant="headingMd" as="h3">SUBMIT BUTTON SETTINGS</Text>
+                <Grid>
+                    <Grid.Cell columnSpan={{ xs: 6, lg: 7 }}>
 
-                    <TextField
-                        label="Button text"
-                        value={buttonSettings.buttonText}
-                        onChange={(value) => updateSetting('buttonText', value)}
-                        autoComplete="off"
-                        helpText="Use {order_total} to dynamically insert the order total and {order_subtotal} to insert the order subtotal."
-                    />
-
-                    <TextField
-                        label="Button subtitle"
-                        value={buttonSettings.buttonSubtitle}
-                        onChange={(value) => updateSetting('buttonSubtitle', value)}
-                        autoComplete="off"
-                        helpText="Optional subtitle below the button"
-                    />
-
-                    <Select
-                        label="Button animation"
-                        options={[
-                            { label: 'None', value: 'none' },
-                            { label: 'Pulse', value: 'pulse' },
-                            { label: 'Bounce', value: 'bounce' },
-                            { label: 'Shake', value: 'shake' },
-                        ]}
-                        value={buttonSettings.buttonAnimation}
-                        onChange={(value) => updateSetting('buttonAnimation', value)}
-                    />
-
-                    <Select
-                        label="Button icon"
-                        options={[
-                            { label: 'None', value: '' },
-                            { label: 'Shopping Cart', value: 'cart' },
-                            { label: 'Bag', value: 'bag' },
-                            { label: 'Lock', value: 'Heart' },
-                            { label: 'Star', value: 'star' },
-                            { label: 'truck', value: 'Truck' },
-                        ]}
-                        value={buttonSettings.buttonIcon}
-                        onChange={(value) => updateSetting('buttonIcon', value)}
-                    />
-
-                    <InlineGrid columns={2} gap="400">
-                        <Box>
-                            <Text as="h3" variant="bodyMd" fontWeight="bold">Background Color</Text>
-                            <ColorPicker
-                                onChange={(color) => {
-                                    setBgColorState(color);
-                                    const rgb = hsbToRgb(color);
-                                    const newColor = `rgba(${rgb.red}, ${rgb.green}, ${rgb.blue}, 1)`;
-                                    updateSetting('backgroundColor', newColor);
-                                }}
-                                color={bgColorState}
-                            />
-                            <Box padding="200" background="bg-surface-secondary" borderRadius="100" paddingBlockStart="300">
-                                <TextField
-                                    label="Background color"
-                                    value={buttonSettings.backgroundColor}
-                                    onChange={(value) => {
-                                        updateSetting('backgroundColor', value);
-                                        if (value.startsWith('#')) {
-                                            setBgColorState(hexToHsb(value));
-                                        } else if (value.startsWith('rgb')) {
-                                            setBgColorState(rgbToHsb(value));
-                                        }
-                                    }}
-                                    autoComplete="off"
-                                />
-                            </Box>
+                        <Box padding="200">
+                            <BlockStack gap="400">
+                                <InlineStack align="start" blockAlign="start" gap="400">
+                                    <div>
+                                        <Text as="h3" variant="bodyMd" fontWeight="bold">Button text</Text>
+                                        <TextField
+                                            label="Button text"
+                                            labelHidden
+                                            value={buttonSettings.buttonText}
+                                            onChange={(value) => updateSetting('buttonText', value)}
+                                            autoComplete="off"
+                                            helpText="Use {order_total} to dynamically insert the order total and {order_subtotal} to insert the order subtotal."
+                                        />
+                                    </div>
+                                    <div style={{ width: "100%" }}>
+                                        <Text as="h3" variant="bodyMd" fontWeight="bold">Button subtitle</Text>
+                                        <TextField
+                                            labelHidden
+                                            label="Button subtitle"
+                                            value={buttonSettings.buttonSubtitle}
+                                            onChange={(value) => updateSetting('buttonSubtitle', value)}
+                                            autoComplete="off"
+                                            helpText="Optional subtitle below the button"
+                                        />
+                                    </div>
+                                </InlineStack>
+                            </BlockStack>
                         </Box>
 
-                        <Box>
-                            <Text as="h3" variant="bodyMd" fontWeight="bold">Text Color</Text>
-                            <ColorPicker
-                                onChange={(color) => {
-                                    setTextColorState(color);
-                                    const rgb = hsbToRgb(color);
-                                    const newColor = `rgba(${rgb.red}, ${rgb.green}, ${rgb.blue}, 1)`;
-                                    updateSetting('textColor', newColor);
-                                }}
-                                color={textColorState}
-                            />
-                            <Box padding="200" background="bg-surface-secondary" borderRadius="100" paddingBlockStart="300">
-                                <TextField
-                                    label="Text color"
-                                    value={buttonSettings.textColor}
-                                    onChange={(value) => {
-                                        updateSetting('textColor', value);
-                                        if (value.startsWith('#')) {
-                                            setTextColorState(hexToHsb(value));
-                                        } else if (value.startsWith('rgb')) {
-                                            setTextColorState(rgbToHsb(value));
-                                        }
-                                    }}
-                                    autoComplete="off"
-                                />
-                            </Box>
+                        <Box padding="200">
+                            <BlockStack gap="400">
+                                <InlineStack align="start" blockAlign="start" gap="400">
+                                    <div style={{ flex: 1 }}>
+                                        <Text as="h3" variant="bodyMd" fontWeight="bold">Button animation</Text>
+                                        <Select
+                                            labelHidden
+                                            label="Button animation"
+                                            options={[
+                                                { label: 'None', value: 'none' },
+                                                { label: 'Pulse', value: 'pulse' },
+                                                { label: 'Bounce', value: 'bounce' },
+                                                { label: 'Shake', value: 'shake' },
+                                            ]}
+                                            value={buttonSettings.buttonAnimation}
+                                            onChange={(value) => updateSetting('buttonAnimation', value)}
+                                        />
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <Text as="h3" variant="bodyMd" fontWeight="bold">Button icon</Text>
+                                        <Select
+                                            labelHidden
+                                            label="Button icon"
+                                            options={[
+                                                { label: 'None', value: '' },
+                                                { label: 'Shopping Cart', value: 'cart' },
+                                                { label: 'Bag', value: 'bag' },
+                                                { label: 'Lock', value: 'Heart' },
+                                                { label: 'Star', value: 'star' },
+                                                { label: 'truck', value: 'Truck' },
+                                            ]}
+                                            value={buttonSettings.buttonIcon}
+                                            onChange={(value) => updateSetting('buttonIcon', value)}
+                                        />
+                                    </div>
+                                </InlineStack>
+                            </BlockStack>
                         </Box>
-                    </InlineGrid>
 
-                    <InlineGrid columns={3} gap="400">
-                        <TextField
-                            label="Font size"
-                            type="number"
-                            value={buttonSettings.fontSize.toString()}
-                            onChange={(value) => updateSetting('fontSize', parseInt(value) || 16)}
-                            autoComplete="off"
-                            helpText="px"
-                        />
+                        <Box padding="200">
+                            <BlockStack gap="400">
+                                <InlineStack align="start" blockAlign="start" gap="400">
+                                    <div style={{ flex: 1 }}>
+                                        <Text as="h3" variant="bodyMd" fontWeight="bold">Font size</Text>
+                                        <TextField
+                                            labelHidden
+                                            label="Font size"
+                                            type="number"
+                                            value={buttonSettings.fontSize.toString()}
+                                            onChange={(value) => updateSetting('fontSize', parseInt(value) || 16)}
+                                            autoComplete="off"
+                                            helpText="px"
+                                        />
 
-                        <TextField
-                            label="Border radius"
-                            type="number"
-                            value={buttonSettings.borderRadius.toString()}
-                            onChange={(value) => updateSetting('borderRadius', parseInt(value) || 8)}
-                            autoComplete="off"
-                            helpText="px"
-                        />
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <Text as="h3" variant="bodyMd" fontWeight="bold">Border radius</Text>
+                                        <TextField
+                                            labelHidden
+                                            label="Border radius"
+                                            type="number"
+                                            value={buttonSettings.borderRadius.toString()}
+                                            onChange={(value) => updateSetting('borderRadius', parseInt(value) || 8)}
+                                            autoComplete="off"
+                                            helpText="px"
+                                        />
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <Text as="h3" variant="bodyMd" fontWeight="bold">Border width</Text>
+                                        <TextField
+                                            labelHidden
+                                            label="Border width"
+                                            type="number"
+                                            value={buttonSettings.borderWidth.toString()}
+                                            onChange={(value) => updateSetting('borderWidth', parseInt(value) || 1)}
+                                            autoComplete="off"
+                                            helpText="px"
+                                        />
+                                    </div>
+                                </InlineStack>
+                            </BlockStack>
+                        </Box>
 
-                        <TextField
-                            label="Border width"
-                            type="number"
-                            value={buttonSettings.borderWidth.toString()}
-                            onChange={(value) => updateSetting('borderWidth', parseInt(value) || 1)}
-                            autoComplete="off"
-                            helpText="px"
-                        />
-                    </InlineGrid>
+                        <Box padding="200">
+                            <InlineStack align="start" blockAlign="start" gap="400">
+                                {/* Background Color */}
+                                <div style={{ flex: 1 }}>
+                                    <Text as="h3" variant="bodyMd" fontWeight="bold">Background Color</Text>
+                                    <SmallColorPicker
+                                        label="Background Color"
+                                        color={bgColorState}
+                                        onChange={(color) => {
+                                            setBgColorState(color);
+                                            const rgb = hsbToRgb(color);
+                                            const newColor = `rgba(${rgb.red}, ${rgb.green}, ${rgb.blue}, 1)`;
+                                            updateSetting('backgroundColor', newColor);
+                                        }}
+                                    />
+                                    <div style={{ flex: 1 }}>
+                                        <TextField
+                                            label="Background color"
+                                            labelHidden
+                                            value={buttonSettings.backgroundColor}
+                                            onChange={(value) => {
+                                                updateSetting('backgroundColor', value);
+                                                if (value.startsWith('#')) {
+                                                    setBgColorState(hexToHsb(value));
+                                                } else if (value.startsWith('rgb')) {
+                                                    setBgColorState(rgbToHsb(value));
+                                                }
+                                            }}
+                                            autoComplete="off"
+                                        />
+                                    </div>
+                                </div>
 
-                    <Box>
-                        <Text as="h3" variant="bodyMd" fontWeight="bold">Border Color</Text>
-                        <ColorPicker
-                            onChange={(color) => {
-                                setBorderColorState(color);
-                                const rgb = hsbToRgb(color);
-                                const newColor = `rgba(${rgb.red}, ${rgb.green}, ${rgb.blue}, 1)`;
-                                updateSetting('borderColor', newColor);
-                            }}
-                            color={borderColorState}
-                        />
-                        <Box padding="200" background="bg-surface-secondary" borderRadius="100" paddingBlockStart="300">
-                            <TextField
-                                label="Border color"
-                                value={buttonSettings.borderColor}
-                                onChange={(value) => {
-                                    updateSetting('borderColor', value);
-                                    if (value.startsWith('#')) {
-                                        setBorderColorState(hexToHsb(value));
-                                    } else if (value.startsWith('rgb')) {
-                                        setBorderColorState(rgbToHsb(value));
-                                    }
-                                }}
-                                autoComplete="off"
+                                {/* Text Color */}
+                                <div style={{ flex: 1 }}>
+                                    <Text as="h3" variant="bodyMd" fontWeight="bold">Text Color</Text>
+                                    <SmallColorPicker
+                                        label="Text Color"
+                                        color={textColorState}
+                                        onChange={(color) => {
+                                            setTextColorState(color);
+                                            const rgb = hsbToRgb(color);
+                                            const newColor = `rgba(${rgb.red}, ${rgb.green}, ${rgb.blue}, 1)`;
+                                            updateSetting('textColor', newColor);
+                                        }}
+                                    />
+                                    <div style={{ flex: 1 }}>
+                                        <TextField
+                                            label="Text color"
+                                            labelHidden
+                                            value={buttonSettings.textColor}
+                                            onChange={(value) => {
+                                                updateSetting('textColor', value);
+                                                if (value.startsWith('#')) {
+                                                    setTextColorState(hexToHsb(value));
+                                                } else if (value.startsWith('rgb')) {
+                                                    setTextColorState(rgbToHsb(value));
+                                                }
+                                            }}
+                                            autoComplete="off"
+                                        />
+                                    </div>
+                                </div>
+
+                            </InlineStack>
+                        </Box>
+
+                        <Box padding="200">
+                            <BlockStack gap="400">
+                                <InlineStack align="start" blockAlign="start" gap="400">
+                                    <div style={{ flex: 1 }}>
+                                        <Text as="h3" variant="bodyMd" fontWeight="bold">Border Color</Text>
+                                        <SmallColorPicker
+                                            label="Border Color"
+                                            color={borderColorState}
+                                            onChange={(color) => {
+                                                setBorderColorState(color);
+                                                const rgb = hsbToRgb(color);
+                                                const newColor = `rgba(${rgb.red}, ${rgb.green}, ${rgb.blue}, 1)`;
+                                                updateSetting('borderColor', newColor);
+                                            }}
+                                        />
+                                        <TextField
+                                            label="Border color"
+                                            labelHidden
+                                            value={buttonSettings.borderColor}
+                                            onChange={(value) => {
+                                                updateSetting('borderColor', value);
+                                                if (value.startsWith('#')) {
+                                                    setBorderColorState(hexToHsb(value));
+                                                } else if (value.startsWith('rgb')) {
+                                                    setBorderColorState(rgbToHsb(value));
+                                                }
+                                            }}
+                                            autoComplete="off"
+                                        />
+                                    </div>
+                                    <div style={{ flex: 1 }}></div>
+                                </InlineStack>
+                            </BlockStack>
+                        </Box>
+
+                        <Box padding="200">
+                            <Checkbox
+                                label="Enable shadow"
+                                checked={buttonSettings.shadow}
+                                onChange={(value) => updateSetting('shadow', value)}
                             />
                         </Box>
-                    </Box>
 
-                    <Checkbox
-                        label="Enable shadow"
-                        checked={buttonSettings.shadow}
-                        onChange={(value) => updateSetting('shadow', value)}
-                    />
-
+                    </Grid.Cell>
                     {/* Preview */}
-                    <Box padding="400" background="bg-surface-secondary" borderRadius="200">
-                        <Text variant="bodySm" tone="subdued" as="p">
-                            <strong>Button Preview:</strong>
-                        </Text>
-                        <div style={{ marginTop: '16px', textAlign: 'center' }}>
-                            <button
-                                style={{
-                                    backgroundColor: buttonSettings.backgroundColor,
-                                    color: buttonSettings.textColor,
-                                    fontSize: `${buttonSettings.fontSize}px`,
-                                    borderRadius: `${buttonSettings.borderRadius}px`,
-                                    border: `${buttonSettings.borderWidth}px solid ${buttonSettings.borderColor}`,
-                                    boxShadow: buttonSettings.shadow ? '0 4px 12px rgba(0, 0, 0, 0.1)' : 'none',
-                                    padding: '12px 24px',
-                                    fontWeight: 'bold',
-                                    cursor: 'pointer',
-                                    width: '100%',
-                                    marginBottom: '8px',
-                                    animation: buttonSettings.buttonAnimation !== 'none' ?
-                                        `${buttonSettings.buttonAnimation} 2s infinite` : 'none'
-                                }}
-                            >
-                                {
-                                    buttonSettings.buttonIcon && buttonSettings.buttonIcon !== 'none' &&
-                                    <span style={{ display: 'flex', alignItems: 'center', marginRight: "10px" }}>
-                                        {getIconSvg(buttonSettings.buttonIcon)}
-                                    </span>
-                                }
-                                {buttonSettings.buttonText.replace(/\{order_total\}/g, '15.00 db').replace(/\{order_subtotal\}/g, '12.00 db')}
-                                {buttonSettings.buttonSubtitle && (
-                                    <Text as="p" variant="bodySm" tone="subdued">
-                                        {buttonSettings.buttonSubtitle}
-                                    </Text>
-                                )}
-                            </button>
+                    <Grid.Cell columnSpan={{ xs: 6, lg: 5 }}>
+                        <Box padding="400" background="bg-surface-secondary" borderRadius="200">
+                            <Text variant="bodySm" tone="subdued" as="p">
+                                <strong>Button Preview:</strong>
+                            </Text>
+                            <div style={{ marginTop: '16px', textAlign: 'center' }}>
+                                <button
+                                    style={{
+                                        backgroundColor: buttonSettings.backgroundColor,
+                                        color: buttonSettings.textColor,
+                                        fontSize: `${buttonSettings.fontSize}px`,
+                                        borderRadius: `${buttonSettings.borderRadius}px`,
+                                        border: `${buttonSettings.borderWidth}px solid ${buttonSettings.borderColor}`,
+                                        boxShadow: buttonSettings.shadow ? '0 4px 12px rgba(0, 0, 0, 0.1)' : 'none',
+                                        padding: '12px 24px',
+                                        fontWeight: 'bold',
+                                        cursor: 'pointer',
+                                        width: '100%',
+                                        display: 'flex',
+                                        flexWrap: 'wrap',
+                                        textAlign: 'center',
+                                        justifyContent: 'center',
+                                        marginBottom: '8px',
+                                        animation: buttonSettings.buttonAnimation !== 'none' ?
+                                            `${buttonSettings.buttonAnimation} 2s infinite` : 'none'
+                                    }}
+                                >
+                                    {
+                                        buttonSettings.buttonIcon && buttonSettings.buttonIcon !== 'none' &&
+                                        <span style={{ display: 'flex', alignItems: 'center', marginRight: "10px" }}>
+                                            {getIconSvg(buttonSettings.buttonIcon)}
+                                        </span>
+                                    }
+                                    {buttonSettings.buttonText.replace(/\{order_total\}/g, '15.00 $').replace(/\{order_subtotal\}/g, '12.00 $')}
+                                    {buttonSettings.buttonSubtitle && (
+                                        <span
+                                            style={{
+                                                width: '100%',
+                                                opacity: '0.8',
+                                                fontSize: '11px',
+                                            }}
+                                        >
+                                            {buttonSettings.buttonSubtitle}
+                                        </span>
+                                    )}
+                                </button>
 
-                        </div>
-                    </Box>
-                </BlockStack>
+                            </div>
+                        </Box>
+                    </Grid.Cell>
+                </Grid>
             </Modal.Section>
         </Modal>
     );

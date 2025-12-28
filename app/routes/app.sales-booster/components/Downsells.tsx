@@ -9,17 +9,7 @@ import { useState, useCallback, useEffect, useMemo } from "react";
 import { SearchIcon, PlusIcon } from "@shopify/polaris-icons";
 import { SmallColorPicker, colorToRgba, ColorPickerColor } from "../../../helpers/SmallColorPicker";
 import { useNavigate } from "react-router";
-
-// -------------------- Types --------------------
-type Product = {
-  id: string;
-  title: string;
-  price?: number;
-  featuredImage?: {
-    url: string;
-    altText?: string;
-  };
-};
+import { PRODUCTS_QUERY, Product } from "../../../helpers/products";
 
 type ButtonSettings = {
   text: string;
@@ -141,22 +131,6 @@ export default function DownsellManager() {
     }
     return ""; // نص فارغ يعني لا يوجد خطأ
   }, [discountValue, discountType, selectedDownsellProduct]);
-
-  // --- GraphQL Query ---
-  const PRODUCTS_QUERY = `
-    query {
-      products(first: 50) {
-        edges {
-          node {
-            id
-            title
-            featuredImage { url }
-            variants(first:1){edges{node{price}}}
-          }
-        }
-      }
-    }
-  `;
 
   // --- Fetch Products ---
   const fetchProducts = useCallback(async () => {
