@@ -70,11 +70,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                     "type": "section",
                     "totalSettings": {
                         "subtotalTitle": "Subtotal",
-                        "subtotalValue": "19.99 dh",
+                        "subtotalValue": "19.99 $",
                         "shippingTitle": "Shipping",
                         "shippingValue": "Free",
+                        "discountTitle": "Discount",
+                        "discountValue": "",
                         "totalTitle": "Total",
-                        "totalValue": "19.99 dh",
+                        "totalValue": "19.99 $",
                         "showTaxesMessage": false,
                         "backgroundColor": "rgba(235,235,235,1)"
                     }
@@ -91,27 +93,27 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                         "fontSize": 16
                     }
                 },
-                {
-                    "id": 4,
-                    "label": "DISCOUNT CODES",
-                    "movable": true,
-                    "visible": false,
-                    "type": "section",
-                    "discountSettings": {
-                        "limitOnePerOrder": true,
-                        "discountsLineText": "Discounts",
-                        "fieldLabel": "Discount code",
-                        "applyButtonText": "Apply",
-                        "buttonBackgroundColor": "rgba(0,0,0,1)",
-                        "invalidCodeError": "Enter a valid discount code.",
-                        "limitError": "Only 1 discount per order is allowed."
-                    }
-                },
+                // {
+                //     "id": 4,
+                //     "label": "DISCOUNT CODES",
+                //     "movable": true,
+                //     "visible": false,
+                //     "type": "section",
+                //     "discountSettings": {
+                //         "limitOnePerOrder": true,
+                //         "discountsLineText": "Discounts",
+                //         "fieldLabel": "Discount code",
+                //         "applyButtonText": "Apply",
+                //         "buttonBackgroundColor": "rgba(0,0,0,1)",
+                //         "invalidCodeError": "Enter a valid discount code.",
+                //         "limitError": "Only 1 discount per order is allowed."
+                //     }
+                // },
                 {
                     "id": 3,
                     "label": "UPSELL AREAS",
                     "movable": true,
-                    "visible": false,
+                    "visible": true,
                     "type": "section"
                 },
                 {

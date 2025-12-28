@@ -336,7 +336,7 @@ class ProductFormBuilder {
         this.activeDiscount = null;
         this.activeQuantityOffer = null;
         this.originalFormHTML = null;
-        this.apiBaseUrl = "https://effects-portal-pairs-orientation.trycloudflare.com";
+        this.apiBaseUrl = "https://sunday-restaurants-binding-circle.trycloudflare.com";
         this.isSubmitting = false;
         this.init();
     }
@@ -2504,12 +2504,13 @@ class ProductFormBuilder {
         const unitPrice = this.detector.getCurrentPrice() / 100;
         let subtotal = unitPrice;
         let discountAmount = 0;
+        let subtotalUnit = subtotal;
 
         if (this.activeQuantityTier) {
             const quantity = this.activeQuantityTier.quantity;
             const originalTotal = unitPrice * quantity;
             const discountValue = parseFloat(this.activeQuantityTier.discountValue);
-
+            subtotalUnit = subtotalUnit * quantity;
             if (this.activeQuantityTier.discountType === "PERCENTAGE") {
                 subtotal = originalTotal * (1 - discountValue / 100);
             } else if (this.activeQuantityTier.discountType === "FIXED_AMOUNT") {
@@ -2532,7 +2533,7 @@ class ProductFormBuilder {
         const total = subtotal + shipping;
 
         const elements = {
-            '.formino-subtotal': this.formatMoney(subtotal),
+            '.formino-subtotal': this.formatMoney(subtotalUnit),
             '.formino-shipping-cost': shipping === 0 ? 'Free' : this.formatMoney(shipping),
             '.formino-total-amount': this.formatMoney(total),
             '.formino-dynamic-total': this.formatMoney(total),
@@ -2551,7 +2552,8 @@ class ProductFormBuilder {
             if (discountAmount > 0) {
                 discountLine.style.display = 'flex';
                 discountValueEl.textContent = `-${this.formatMoney(discountAmount)}`;
-                discountValueEl.style.color = '#2ecc71';
+                discountValueEl.style.color = 'rgb(229 6 39)';
+                discountValueEl.style.fontWeight = '600';
             } else {
                 discountLine.style.display = 'none';
             }
