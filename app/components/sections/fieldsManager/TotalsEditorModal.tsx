@@ -156,41 +156,43 @@ export function TotalsEditorModal({
                                 <BlockStack gap="100">
                                     <Text as="h3" variant="bodyMd" fontWeight="bold">Background Color</Text>
                                     <InlineStack align="start" blockAlign="center" gap="200">
-                                        <SmallColorPicker
-                                            label="Background Color"
-                                            color={totalsColorState}
-                                            onChange={(color) => {
-                                                setTotalsColorState(color);
-                                                const rgb = hsbToRgb(color);
-                                                const newColor = `rgba(${rgb.red}, ${rgb.green}, ${rgb.blue}, 1)`;
-                                                setTotalsSettings((prev: any) => ({ ...prev, backgroundColor: newColor }));
-                                            }}
-                                        />
-
-                                         <div style={{ flex: 1, marginTop: '5px' }}>
-                                            <TextField
-                                                label="Background color value"
-                                                labelHidden
-                                                value={totalsSettings.backgroundColor}
-                                                onChange={(value) => {
-                                                    setTotalsSettings((prev: any) => ({ ...prev, backgroundColor: value }));
-                                                    if (value.startsWith('#')) {
-                                                        setTotalsColorState(hexToHsb(value));
-                                                    } else if (value.startsWith('rgb')) {
-                                                        setTotalsColorState(rgbToHsb(value));
-                                                    }
+                                        <div style={{ flex: 1 }}>
+                                            <SmallColorPicker
+                                                label="Background Color"
+                                                color={totalsColorState}
+                                                onChange={(color) => {
+                                                    setTotalsColorState(color);
+                                                    const rgb = hsbToRgb(color);
+                                                    const newColor = `rgba(${rgb.red}, ${rgb.green}, ${rgb.blue}, 1)`;
+                                                    setTotalsSettings((prev: any) => ({ ...prev, backgroundColor: newColor }));
                                                 }}
-                                                autoComplete="off"
-                                                prefix={
-                                                    <div style={{
-                                                        width: '20px',
-                                                        height: '20px',
-                                                        borderRadius: '2px',
-                                                        backgroundColor: totalsSettings.backgroundColor,
-                                                        border: '1px solid #dfe3e8'
-                                                    }} />
-                                                }
                                             />
+
+                                            <div style={{ width: '50%', marginTop: '5px' }}>
+                                                <TextField
+                                                    label="Background color value"
+                                                    labelHidden
+                                                    value={totalsSettings.backgroundColor}
+                                                    onChange={(value) => {
+                                                        setTotalsSettings((prev: any) => ({ ...prev, backgroundColor: value }));
+                                                        if (value.startsWith('#')) {
+                                                            setTotalsColorState(hexToHsb(value));
+                                                        } else if (value.startsWith('rgb')) {
+                                                            setTotalsColorState(rgbToHsb(value));
+                                                        }
+                                                    }}
+                                                    autoComplete="off"
+                                                    prefix={
+                                                        <div style={{
+                                                            width: '20px',
+                                                            height: '20px',
+                                                            borderRadius: '2px',
+                                                            backgroundColor: totalsSettings.backgroundColor,
+                                                            border: '1px solid #dfe3e8'
+                                                        }} />
+                                                    }
+                                                />
+                                            </div>
                                         </div>
                                     </InlineStack>
                                 </BlockStack>

@@ -31,7 +31,7 @@ a {
 .footer-copywrite .padding-bottom-20 {
     padding-bottom: 10px !important;
 }
-    
+
 .Polaris-Tabs__Wrapper li {
     background-color: #ffffff;
     padding: 4px 5px 6px !important;
@@ -50,7 +50,7 @@ a {
     bottom: 8px;
     left: 0px;
     right: 0px;
-       border-bottom: 1px solid rgb(216, 216, 216);
+    border-bottom: 1px solid rgb(216, 216, 216);
 }
 
 #formino-cod-form input {
@@ -570,7 +570,7 @@ a {
     width: 100%;
 }
 
-.dashboardPage .displayFlexIcon { 
+.dashboardPage .displayFlexIcon {
     display: flex;
     flex-wrap: wrap;
     --pc-inline-stack-wrap: wrap;
@@ -580,7 +580,7 @@ a {
     padding: 3px 0px;
 }
 
-.dashboardPage .displayFlexIcon .Polaris-Icon { 
+.dashboardPage .displayFlexIcon .Polaris-Icon {
     height: 1.45rem;
     width: 1.45rem;
     max-height: 100%;
@@ -636,14 +636,14 @@ a {
     flex-wrap: wrap;
     width: 100%;
 }
- 
+
 .titleSubscribeFormino .descriptionSubscribeFormino {
     display: block !important;
     margin-left: 28px !important;
     width: 100%;
 }
 
-.titleSubscribeFormino .descriptionSubscribeFormino p{
+.titleSubscribeFormino .descriptionSubscribeFormino p {
     padding: 0px 0px 5px !important;
 }
 
@@ -656,6 +656,7 @@ a {
 .footer-copywrite a:hover {
     opacity: 0.8;
 }
+
 /* NEW STYLE */
 
 /* FULL SCREEN POLARIS MODAL */
@@ -665,7 +666,7 @@ a {
 }
 
 .Polaris-Frame__Main {
-    border-inline-end: none !important; 
+    border-inline-end: none !important;
     position: relative;
 }
 
@@ -682,35 +683,47 @@ a {
 }
 
 .switch {
-  position: relative;
-  display: inline-block;
-  width: 40px;
-  height: 22px;
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 22px;
 }
 
-.switch input { display: none; }
+.switch input {
+    display: none;
+}
 
 .slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background-color: #ccc;
-  transition: .4s;
-  border-radius: 34px;
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
 }
 
 .slider:before {
-  position: absolute;
-  content: "";
-  height: 16px; width: 16px;
-  left: 3px; bottom: 3px;
-  background-color: white;
-  transition: .4s;
-  border-radius: 50%;
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
 }
 
-input:checked + .slider { background-color: #008060; }
-input:checked + .slider:before { transform: translateX(18px); }
+input:checked+.slider {
+    background-color: #008060;
+}
+
+input:checked+.slider:before {
+    transform: translateX(18px);
+}
 
 .upsellItem .Polaris-Badge {
     margin-top: 10px !important;
@@ -728,6 +741,26 @@ input:checked + .slider:before { transform: translateX(18px); }
     justify-content: center;
     align-items: center;
     font-size: 18px;
-    font-weight: bold; 
+    font-weight: bold;
     clip-path: polygon(50% 0%, 58.64% 9.34%, 70.34% 4.32%, 74.43% 16.37%, 87.16% 16.54%, 86% 29.21%, 97.55% 34.55%, 91.34% 45.65%, 99.73% 55.23%, 89.54% 62.85%, 93.30% 75%, 80.89% 77.82%, 79.39% 90.45%, 66.91% 87.98%, 60.40% 98.91%, 50% 91.57%, 39.60% 98.91%, 33.09% 87.98%, 20.61% 90.45%, 19.11% 77.82%, 6.70% 75%, 10.46% 62.85%, 0.27% 55.23%, 8.66% 45.65%, 2.45% 34.55%, 14% 29.21%, 12.84% 16.54%, 25.57% 16.37%, 29.66% 4.32%, 41.36% 9.34%);
-} 
+}
+
+.inputPreview input {
+    height: 40px;
+    padding: 6px 15px !important;
+    color: #000 !important;
+    display: block !important;
+    width: 100% !important;
+    margin-bottom: 0 !important;
+    font-size: .85em !important;
+    font-family: inherit !important;
+    border-radius: 6px !important;
+}
+
+.inputPreview label {
+    display: block;
+    font-size: .85em;
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: normal;
+}
