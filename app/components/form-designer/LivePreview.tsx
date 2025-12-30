@@ -113,8 +113,8 @@ export function LivePreview({ formConfig }: LivePreviewProps) {
                   </span>
                 )}
                 {buttonSettings.buttonText
-                  .replace(/\{order_total\}/g, '15.00 db')
-                  .replace(/\{order_subtotal\}/g, '12.00 db')
+                  .replace(/\{order_total\}/g, '15.00 $')
+                  .replace(/\{order_subtotal\}/g, '12.00 $')
                 }
                 {buttonSettings.buttonSubtitle && (
                   <Text as="p" variant="bodySm" tone="subdued" alignment="center">
@@ -187,7 +187,7 @@ export function LivePreview({ formConfig }: LivePreviewProps) {
                         width: '100%'
                       }}
                     >
-                      COMPLETE ORDER - 15.00 db
+                      COMPLETE ORDER - 15.00 $
                     </button>
                   </div>
                 )}

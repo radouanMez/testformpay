@@ -1,4 +1,4 @@
-import type { ActionFunction } from "react-router";
+import { type ActionFunction, type LoaderFunction, } from "react-router";
 import { prisma } from "../../db.server";
 import { convertToBoolean, getClientIP, cleanValue } from "./utils/security.utils";
 import { checkBlockingSettings } from "./services/blocking.service";
@@ -6,9 +6,13 @@ import { createShopifyOrder } from "./services/shopify.service";
 import { sendToGoogleSheets } from "./services/google-sheets.service";
 import { corsHeaders, generateRedirectURL } from "./utils/response.utils";
 
+export const loader: LoaderFunction = async ({ request }) => {
+    return new Response(null, { status: 200, headers: corsHeaders });
+};
+
 export const action: ActionFunction = async ({ request }) => {
 
-    
+
     if (request.method === "OPTIONS") {
         return new Response(null, { status: 200, headers: corsHeaders });
     }

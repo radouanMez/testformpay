@@ -175,7 +175,7 @@ export function SectionEditorModal({
                   border: '1px dashed #E1E3E5'
                 }}>
                   {(sectionSettings.customText || '')
-                    .replace(/\{order_total\}/g, '15.00 db')
+                    .replace(/\{order_total\}/g, '15.00$')
                     .replace(/\{product_name\}/g, 'Product Name')}
                 </div>
               </Box>

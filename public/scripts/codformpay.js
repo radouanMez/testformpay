@@ -336,7 +336,7 @@ class ProductFormBuilder {
         this.activeDiscount = null;
         this.activeQuantityOffer = null;
         this.originalFormHTML = null;
-        this.apiBaseUrl = "https://commissions-findings-merit-widely.trycloudflare.com";
+        this.apiBaseUrl = "https://relatives-memories-previously-edgar.trycloudflare.com";
         this.isSubmitting = false;
         this.init();
     }
@@ -377,7 +377,8 @@ class ProductFormBuilder {
                 this.formConfig = data.form;
                 this.upsells = data.config.offers?.upsells || [];
                 this.downsells = data.config.offers?.downsells || [];
-
+                console.log("upsells")
+                console.log(this.upsells)
                 if (this.config.shipping && this.config.shipping.length > 0) {
                     this.currentShipping = this.config.shipping[0];
                 }
@@ -473,6 +474,10 @@ class ProductFormBuilder {
 
         const iconHtml = buyButton.icon && buyButton.icon !== 'none' ? this.getButtonIcon(buyButton.icon) : '';
 
+        const style = `
+            style="background: ${this.hsbToRgba(buyButton.backgroundColor)};"
+        `;
+
         const buttonHTML = `
           <div class="formino-block-popup-button">
             <button class="formino-popup-trigger" id="formino-popup-trigger">
@@ -510,9 +515,9 @@ class ProductFormBuilder {
         button.style.cssText = `
             font-size: ${buyButton.fontSize}px;
             border-radius: ${buyButton.borderRadius}px;
-            color: ${(buyButton.textColor)};
-            background-color: ${(buyButton.backgroundColor)};
-            border: ${buyButton.borderWidth}px solid ${(buyButton.borderColor)};
+            color: ${this.hsbToRgba(buyButton.textColor)};
+            background-color: ${this.hsbToRgba(buyButton.backgroundColor)};
+            border: ${buyButton.borderWidth}px solid ${this.hsbToRgba(buyButton.borderColor)};
             ${buyButton.shadow ? 'box-shadow: 0 2px 10px rgba(0,0,0,0.2)' : ''};
             padding: 16px 24px;
             margin-top: 6px;
@@ -1319,8 +1324,25 @@ class ProductFormBuilder {
                 this.showBlockedUserMessage(result.message);
                 return result;
             }
+            // 1. تحقق من وجود عروض Upsell تنطبق على المنتج الحالي
+            const currentProductId = `gid://shopify/Product/${this.detector.currentProduct.id}`;
 
-            this.showSuccessMessage(result);
+            // البحث في مصفوفة الـ upsells (التي أرسلت بياناتها سابقاً)
+            const activeUpsell = this.upsells?.find(upsell => {
+                return upsell.status === "ACTIVE" &&
+                    upsell.type === "POST_PURCHASE" &&
+                    upsell.displayRules.triggerProducts.includes(currentProductId);
+            });
+
+            if (activeUpsell) {
+                // إذا وجد عرض، أظهر النافذة المنبثقة بدلاً من رسالة النجاح التقليدية أو بعدها
+                console.log(activeUpsell)
+                this.showUpsellPopup(activeUpsell, result);
+            } else {
+                // إذا لم يوجد عرض، أظهر رسالة النجاح المعتادة
+                this.showSuccessMessage(result);
+            }
+
         } catch (error) {
             console.error("❌ Error during submission:", error);
             this.showErrorMessage(error);
@@ -2616,27 +2638,151 @@ class ProductFormBuilder {
         });
     }
 
-    // createUpsellSection() {
-    //     const form = document.getElementById('formino-main-form');
-    //     if (!form) {
-    //         return;
-    //     }
 
-    //     const submitButton = form.querySelector('.formino-submit-button');
-    //     if (!submitButton) {
-    //         return;
-    //     }
+//   async showUpsellPopup(upsell, orderResult) {
+//     const { productSettings, designSettings } = upsell;
+    
+//     // استخراج المعرفات الأساسية كاحتياط (Fallback)
+//     const defaultVariantId = this.extractIdFromGid(productSettings.upsellVariantId);
+//     const productId = this.extractIdFromGid(productSettings.upsellProductId);
 
-    //     const upsellSection = document.createElement('div');
-    //     upsellSection.className = 'formino-section formino-upsell-section';
-    //     upsellSection.innerHTML = `
-    //         <h4 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">
-    //             Special Offers
-    //         </h4>
-    //     `;
+//     // 1. جلب بيانات المنتج الكاملة لضمان وجود الـ Variants والصور
+//     let productData = null;
+//     try {
+//         const productHandle = productSettings.productHandle || productId;
+//         const response = await fetch(`/products/${productHandle}.js`);
+//         if (response.ok) {
+//             productData = await response.json();
+//         }
+//     } catch (e) { 
+//         console.error("❌ Formino: Could not fetch product variants", e); 
+//     }
 
-    //     submitButton.parentElement.insertBefore(upsellSection, submitButton);
-    // }
+//     const overlay = document.createElement('div');
+//     overlay.id = 'formino-upsell-modal';
+//     overlay.style = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; display: flex; align-items: center; justify-content: center; font-family: sans-serif; direction: ltr;`;
+
+//     // 2. بناء قائمة الخيارات (Select) مع ضمان اختيار أول عنصر تلقائياً
+//     let variantSelectorHtml = '';
+//     if (productData && productData.variants && productData.variants.length > 1) {
+//         variantSelectorHtml = `
+//             <div style="margin: 15px 0; text-align: left;">
+//                 <label style="display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; color: #333;">Select Option:</label>
+//                 <select id="upsell-variant-select" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; background: #fff; font-size: 14px;">
+//                     ${productData.variants.map((v, index) => 
+//                         `<option value="${v.id}" ${index === 0 ? 'selected' : ''}>
+//                             ${v.title} - ${this.formatMoney ? this.formatMoney(v.price) : (v.price/100)}
+//                         </option>`
+//                     ).join('')}
+//                 </select>
+//             </div>
+//         `;
+//     }
+
+//     overlay.innerHTML = `
+//         <div style="background: white; padding: 30px; border-radius: 15px; max-width: 450px; width: 90%; text-align: center; position: relative; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+//             <h2 style="color: ${designSettings.titleColor || '#000'}; margin-bottom: 15px; font-size: 22px;">
+//                 ${designSettings.title.replace('{product_name}', productData?.title || 'this item')}
+//             </h2>
+            
+//             <img src="${productData?.featured_image || ''}" style="width: 150px; height: auto; border-radius: 8px; margin-bottom: 15px; object-fit: cover;">
+            
+//             <p style="color: ${designSettings.subtitleColor || '#666'}; margin-bottom: 10px;">${designSettings.subtitle || ''}</p>
+            
+//             ${variantSelectorHtml}
+
+//             <div style="margin: 20px 0; border: 2px dashed #eee; padding: 15px; background: #fafafa; border-radius: 10px;">
+//                 <p style="font-weight: bold; font-size: 1.3em; color: ${designSettings.priceColor || '#28a745'}; margin: 0;">
+//                     Price: ${productSettings.calculatedPrice} 
+//                     <span style="font-size: 14px; color: #ff4d4d;">(Save ${productSettings.discount.value}%)</span>
+//                 </p>
+//             </div>
+
+//             <button id="confirm-upsell" style="background: #28a745; color: white; width: 100%; padding: 16px; border: none; border-radius: 8px; font-size: 18px; cursor: pointer; font-weight: bold; transition: background 0.3s;">
+//                 YES, ADD TO MY ORDER!
+//             </button>
+            
+//             <button id="close-upsell" style="background: none; border: none; color: #888; margin-top: 15px; cursor: pointer; text-decoration: underline; font-size: 14px;">
+//                 No thanks, skip this offer
+//             </button>
+//         </div>
+//     `;
+
+//     document.body.appendChild(overlay);
+
+//     // 3. معالجة الضغط على زر التأكيد
+//     document.getElementById('confirm-upsell').onclick = async () => {
+//         const confirmBtn = document.getElementById('confirm-upsell');
+        
+//         // جلب الـ Variant المختار من الـ Select أو القيمة الافتراضية أو أول Variant في المنتج
+//         const selectEl = document.getElementById('upsell-variant-select');
+//         let selectedVariantId = null;
+
+//         if (selectEl && selectEl.value) {
+//             selectedVariantId = selectEl.value;
+//         } else if (defaultVariantId) {
+//             selectedVariantId = defaultVariantId;
+//         } else if (productData && productData.variants.length > 0) {
+//             selectedVariantId = productData.variants[0].id;
+//         }
+
+//         // التحقق النهائي لمنع الـ null
+//         if (!selectedVariantId) {
+//             console.error("❌ Formino Error: Could not determine Variant ID");
+//             overlay.remove();
+//             this.showSuccessMessage(orderResult);
+//             return;
+//         }
+
+//         confirmBtn.innerText = "Adding in progress...";
+//         confirmBtn.disabled = true;
+
+//         try {
+//             const payload = {
+//                 shop: Shopify.shop || window.location.hostname,
+//                 orderId: orderResult.shopify?.orderId || orderResult.localOrder?.id,
+//                 variantId: String(selectedVariantId), // التأكد من أنه String
+//                 actionType: "upsell",
+//                 customerData: orderResult.customer || {},
+//                 upsellData: {
+//                     productId: productId,
+//                     variantId: selectedVariantId,
+//                     price: productSettings.calculatedPrice
+//                 }
+//             };
+
+//             console.log("📤 Sending Upsell Payload:", payload);
+
+//             const response = await fetch(`${this.apiBaseUrl}/api/add-upsell`, {
+//                 method: 'POST',
+//                 headers: { 'Content-Type': 'application/json' },
+//                 body: JSON.stringify(payload)
+//             });
+
+//             const result = await response.json();
+
+//             if (response.ok && result.success) {
+//                 console.log("✅ Upsell Added Successfully");
+//             } else {
+//                 console.error("❌ Server Error adding upsell:", result.error);
+//             }
+//         } catch (err) {
+//             console.error("❌ Network Error sending upsell:", err);
+//         } finally {
+//             overlay.remove();
+//             // الانتقال لصفحة النجاح في كل الأحوال
+//             this.showSuccessMessage(orderResult);
+//         }
+//     };
+
+//     document.getElementById('close-upsell').onclick = () => {
+//         overlay.remove();
+//         this.showSuccessMessage(orderResult);
+//     };
+// }
+
+
+
 
 }
 

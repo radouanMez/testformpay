@@ -288,7 +288,7 @@ export function ButtonSettingsPanel({ settings, setSettings }: ButtonSettingsPan
                 }}
               >
                 {settings.buttonIcon && <span style={{ marginRight: '8px' }}>{settings.buttonIcon}</span>}
-                {settings.buttonText.replace(/\{order_total\}/g, '15.00 db').replace(/\{order_subtotal\}/g, '12.00 db')}
+                {settings.buttonText.replace(/\{order_total\}/g, '15.00 $').replace(/\{order_subtotal\}/g, '12.00$')}
               </button>
               {settings.buttonSubtitle && (
                 <Text as="p" variant="bodySm" tone="subdued">
