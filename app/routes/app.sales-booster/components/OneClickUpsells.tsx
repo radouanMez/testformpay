@@ -210,6 +210,7 @@ export default function UpsellCreatePage() {
     const items = json.data.products.edges.map((e: any) => ({
       id: e.node.id,
       title: e.node.title,
+      handle: e.node.handle,
       price: parseFloat(e.node.variants.edges[0].node.price),
       featuredImage: e.node.featuredImage
     }));
@@ -666,6 +667,7 @@ export default function UpsellCreatePage() {
       },
       productSettings: {
         upsellProductId: selectedUpsellProduct.id,
+        upsellProductHandle: selectedUpsellProduct?.handle,
         discount: { type: discountType, value: discountValue },
         price: selectedUpsellProduct.price,
         calculatedPrice,
@@ -1513,7 +1515,7 @@ export default function UpsellCreatePage() {
                                       fontWeight: "bold",
                                       margin: 0
                                     }}>
-                                      {productTitle || selectedUpsellProduct.title}
+                                      {productTitle || selectedUpsellProduct.title} || {selectedUpsellProduct.handle}
                                     </p>
 
                                     {productDescription && (

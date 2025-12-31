@@ -336,7 +336,7 @@ class ProductFormBuilder {
         this.activeDiscount = null;
         this.activeQuantityOffer = null;
         this.originalFormHTML = null;
-        this.apiBaseUrl = "https://relatives-memories-previously-edgar.trycloudflare.com";
+        this.apiBaseUrl = "https://instrumentation-fails-cast-bureau.trycloudflare.com";
         this.isSubmitting = false;
         this.init();
     }
@@ -1329,9 +1329,32 @@ class ProductFormBuilder {
 
             // البحث في مصفوفة الـ upsells (التي أرسلت بياناتها سابقاً)
             const activeUpsell = this.upsells?.find(upsell => {
-                return upsell.status === "ACTIVE" &&
-                    upsell.type === "POST_PURCHASE" &&
-                    upsell.displayRules.triggerProducts.includes(currentProductId);
+                // التحقق من حالة العرض ونوعه
+                if (upsell.status !== "ACTIVE" || upsell.type !== "POST_PURCHASE") {
+                    return false;
+                }
+
+                const triggerMode = upsell.displayRules?.triggerMode || "SPECIFIC";
+                const triggerProducts = upsell.displayRules?.triggerProducts;
+
+                // إذا كان النمط هو ALL، يظهر العرض لجميع المنتجات
+                if (triggerMode === "ALL" || triggerProducts === "ALL") {
+                    console.log('✅ Upsell applies to ALL products');
+                    return true;
+                }
+
+                // إذا كان النمط SPECIFIC وكان triggerProducts مصفوفة
+                if (triggerMode === "SPECIFIC" && Array.isArray(triggerProducts)) {
+                    // التحقق إذا كان المنتج الحالي موجود في المصفوفة
+                    const isTriggered = triggerProducts.includes(currentProductId);
+                    if (isTriggered) {
+                        console.log('✅ Upsell triggered for specific product:', currentProductId);
+                    }
+                    return isTriggered;
+                }
+
+                // الحالات الأخرى
+                return false;
             });
 
             if (activeUpsell) {
@@ -2639,147 +2662,580 @@ class ProductFormBuilder {
     }
 
 
-//   async showUpsellPopup(upsell, orderResult) {
-//     const { productSettings, designSettings } = upsell;
-    
-//     // استخراج المعرفات الأساسية كاحتياط (Fallback)
-//     const defaultVariantId = this.extractIdFromGid(productSettings.upsellVariantId);
-//     const productId = this.extractIdFromGid(productSettings.upsellProductId);
 
-//     // 1. جلب بيانات المنتج الكاملة لضمان وجود الـ Variants والصور
-//     let productData = null;
-//     try {
-//         const productHandle = productSettings.productHandle || productId;
-//         const response = await fetch(`/products/${productHandle}.js`);
-//         if (response.ok) {
-//             productData = await response.json();
-//         }
-//     } catch (e) { 
-//         console.error("❌ Formino: Could not fetch product variants", e); 
-//     }
 
-//     const overlay = document.createElement('div');
-//     overlay.id = 'formino-upsell-modal';
-//     overlay.style = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; display: flex; align-items: center; justify-content: center; font-family: sans-serif; direction: ltr;`;
 
-//     // 2. بناء قائمة الخيارات (Select) مع ضمان اختيار أول عنصر تلقائياً
-//     let variantSelectorHtml = '';
-//     if (productData && productData.variants && productData.variants.length > 1) {
-//         variantSelectorHtml = `
-//             <div style="margin: 15px 0; text-align: left;">
-//                 <label style="display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; color: #333;">Select Option:</label>
-//                 <select id="upsell-variant-select" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; background: #fff; font-size: 14px;">
-//                     ${productData.variants.map((v, index) => 
-//                         `<option value="${v.id}" ${index === 0 ? 'selected' : ''}>
-//                             ${v.title} - ${this.formatMoney ? this.formatMoney(v.price) : (v.price/100)}
-//                         </option>`
-//                     ).join('')}
-//                 </select>
-//             </div>
-//         `;
-//     }
 
-//     overlay.innerHTML = `
-//         <div style="background: white; padding: 30px; border-radius: 15px; max-width: 450px; width: 90%; text-align: center; position: relative; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
-//             <h2 style="color: ${designSettings.titleColor || '#000'}; margin-bottom: 15px; font-size: 22px;">
-//                 ${designSettings.title.replace('{product_name}', productData?.title || 'this item')}
-//             </h2>
+
+
+
+
+
+
+
+
+    /**
+     * عرض نافذة منبثقة لعروض الـ Upsell بعد إرسال الطلب
+     * @param {Object} upsellOffer - بيانات عرض الـ Upsell
+     * @param {Object} orderResult - نتيجة الطلب المرسل
+     */
+    showUpsellPopup(upsellOffer, orderResult) {
+        try {
+            console.log('🔄 Preparing upsell popup for:', upsellOffer);
+
+            // استخراج handle المنتج مباشرة من البيانات
+            const productHandle = upsellOffer.productSettings.upsellProductHandle;
+
+            if (!productHandle) {
+                console.error('❌ No upsell product handle found');
+                this.showSuccessMessage(orderResult);
+                return;
+            }
+
+            console.log('✅ Product handle from upsell data:', productHandle);
+
+            // إظهار نافذة التحميل
+            this.createCustomPopup({
+                type: 'info',
+                message: 'Loading upsell offer...'
+            });
+
+            // جلب بيانات المنتج من Shopify باستخدام الـ handle
+            this.fetchProductByHandle(productHandle)
+                .then(productData => {
+                    this.removeExistingPopup();
+                    console.log(upsellOffer)
+                    this.renderUpsellPopup(upsellOffer, productData, orderResult);
+                })
+                .catch(error => {
+                    console.error('❌ Error fetching upsell product:', error);
+                    this.showSuccessMessage(orderResult);
+                });
+
+        } catch (error) {
+            console.error('❌ Error in showUpsellPopup:', error);
+            this.showSuccessMessage(orderResult);
+        }
+    }
+
+    /**
+     * جلب بيانات المنتج باستخدام handle
+     */
+    async fetchProductByHandle(productHandle) {
+        try {
+            console.log('🔍 Fetching product with handle:', productHandle);
+
+            const response = await fetch(`/products/${productHandle}.js`);
+
+            if (response.ok) {
+                const productData = await response.json();
+                console.log('✅ Product data fetched:', productData.title);
+                return productData;
+            } else {
+                console.error(`❌ Failed to fetch product: ${response.status}`);
+                throw new Error(`Product not found: ${productHandle}`);
+            }
+        } catch (error) {
+            console.error('❌ Error fetching product:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * عرض نافذة الـ Upsell مع بيانات المنتج
+     * @param {Object} upsellOffer - بيانات العرض
+     * @param {Object} productData - بيانات المنتج
+     * @param {Object} orderResult - نتيجة الطلب
+     */
+    renderUpsellPopup(upsellOffer, productData, orderResult) {
+        // حفظ البيانات للاستخدام اللاحق
+        this.currentUpsellData = {
+            offer: upsellOffer,
+            product: productData,
+            orderResult: orderResult
+        };
+
+        // إعداد التصميم
+        const design = upsellOffer.designSettings;
+        const productSettings = upsellOffer.productSettings;
+
+        // حساب السعر بعد الخصم
+        const originalPrice = productSettings.price / 100;
+        let discountedPrice = originalPrice;
+        let discountDisplay = '';
+
+        if (productSettings.discount.type === 'PERCENTAGE') {
+            const discountPercent = parseFloat(productSettings.discount.value);
+            discountedPrice = originalPrice * (1 - discountPercent / 100);
+            discountDisplay = `${discountPercent}% OFF`;
+        } else {
+            const discountAmount = parseFloat(productSettings.discount.value);
+            discountedPrice = originalPrice - discountAmount;
+            discountDisplay = `-${this.formatMoney(discountAmount)}`;
+        }
+
+        // استبدال العناصر النائبة في العنوان
+        let title = design.title || 'Add {product_name} to your order!';
+        title = title.replace(/{product_name}/g, productData.title);
+
+        // التحقق مما إذا كان المنتج يحتوي على متغيرات
+        const hasVariants = productData.variants && productData.variants.length > 1;
+        let variantsHTML = '';
+
+        if (hasVariants) {
+            variantsHTML = `
+            <div class="formino-upsell-variants" style="margin: 15px 0;">
+                <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #333;">
+                    Select Variant
+                </label>
+                <select id="upsell-variant-select" 
+                    style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                    ${productData.variants.map(variant => `
+                        <option value="${variant.id}" 
+                                ${variant.available ? '' : 'disabled'}
+                                data-price="${variant.price}">
+                            ${variant.title || 'Default'} - ${this.formatMoney(variant.price / 100)}
+                            ${!variant.available ? ' (Out of stock)' : ''}
+                        </option>
+                    `).join('')}
+                </select>
+            </div>
+        `;
+        }
+
+        // HTML للنافذة المنبثقة
+        const upsellHTML = `
+        <div class="formino-upsell-overlay" id="formino-upsell-overlay" 
+             style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                    background: rgba(0, 0, 0, 0.7); display: flex; align-items: center; 
+                    justify-content: center; z-index: 99999;">
             
-//             <img src="${productData?.featured_image || ''}" style="width: 150px; height: auto; border-radius: 8px; margin-bottom: 15px; object-fit: cover;">
-            
-//             <p style="color: ${designSettings.subtitleColor || '#666'}; margin-bottom: 10px;">${designSettings.subtitle || ''}</p>
-            
-//             ${variantSelectorHtml}
+            <div class="formino-upsell-container" 
+                 style="background: white; border-radius: 12px; max-width: 450px; 
+                        width: 90%; max-height: 90vh; overflow-y: auto; padding: 25px;
+                        box-shadow: 0 10px 40px rgba(0,0,0,0.2); position: relative;">
+                
+                <!-- زر الإغلاق -->
+                <button type="button" class="formino-upsell-close" 
+                        style="position: absolute; top: 15px; right: 15px; background: none; 
+                               border: none; font-size: 24px; cursor: pointer; color: #666; 
+                               width: 30px; height: 30px; display: flex; align-items: center; 
+                               justify-content: center; border-radius: 50%; 
+                               transition: all 0.2s;" 
+                        onmouseover="this.style.background='#f5f5f5'; this.style.color='#333';"
+                        onmouseout="this.style.background='none'; this.style.color='#666';">
+                    &times;
+                </button>
+                
+                <!-- العنوان -->
+                <h2 class="formino-upsell-title" 
+                    style="color: ${design.titleColor || '#333'}; font-size: 20px; 
+                           font-weight: 700; margin-bottom: 15px; text-align: center;">
+                    ${title}
+                </h2>
+                
+                <!-- النص الفرعي -->
+                ${design.subtitle ? `
+                    <p class="formino-upsell-subtitle" 
+                       style="color: ${design.subtitleColor || '#666'}; font-size: 16px; 
+                              margin-bottom: 20px; text-align: center;">
+                        ${design.subtitle}
+                    </p>
+                ` : ''}
+                
+                <!-- صورة المنتج -->
+                ${design.image?.show !== false ? `
+                    <div class="formino-upsell-image" 
+                         style="text-align: center; margin-bottom: 20px;">
+                        <img src="${productData.featured_image || productData.images?.[0]?.src || ''}" 
+                             alt="${productData.title}" 
+                             style="max-width: 200px; width: 100%; 
+                                    height: auto; border-radius: ${design.image?.borderRadius || 8}px;
+                                    ${design.image?.shadow ? 'box-shadow: 0 5px 15px rgba(0,0,0,0.1)' : ''};">
+                    </div>
+                ` : ''}
+                
+                <!-- عنوان المنتج -->
+                ${design.productTitle !== false ? `
+                    <h3 class="formino-upsell-product-title" 
+                        style="color: #333; font-size: 18px; font-weight: 600; 
+                               margin-bottom: 10px; text-align: center;">
+                        ${productData.title}
+                    </h3>
+                ` : ''}
+                
+                <!-- وصف المنتج -->
+                ${(design.productDescription && productData.description) ? `
+                    <div class="formino-upsell-description" 
+                         style="color: #666; font-size: 14px; margin-bottom: 15px; 
+                                text-align: center; line-height: 1.5;">
+                        ${productData.description.substring(0, 150)}${productData.description.length > 150 ? '...' : ''}
+                    </div>
+                ` : ''}
+                
+                <!-- المتغيرات -->
+                ${variantsHTML}
+                
+                <!-- السعر -->
+                <div class="formino-upsell-pricing" 
+                     style="margin: 20px 0; text-align: center;">
+                    
+                    <!-- السعر الأصلي (مشطوب) -->
+                    <div class="formino-upsell-original-price" 
+                         style="color: #999; text-decoration: line-through; 
+                                font-size: 16px; margin-bottom: 5px;">
+                        ${this.formatMoney(originalPrice)}
+                    </div>
+                    
+                    <!-- السعر بعد الخصم -->
+                    <div class="formino-upsell-discounted-price" 
+                         style="color: ${design.priceColor || '#d32f2f'}; 
+                                font-size: 24px; font-weight: 700;">
+                        ${this.formatMoney(discountedPrice)}
+                    </div>
+                    
+                    <!-- عرض الخصم -->
+                    <div class="formino-upsell-discount-badge" 
+                         style="display: inline-block; background: #ff4444; 
+                                color: white; padding: 4px 12px; border-radius: 20px; 
+                                font-size: 12px; font-weight: 600; margin-top: 8px;">
+                        ${discountDisplay}
+                    </div>
+                </div>
+                
+                <!-- الأزرار -->
+                <div class="formino-upsell-buttons" 
+                     style="display: flex; gap: 15px; flex-direction: column;">
+                    
+                    <!-- زر إضافة للطلب -->
+                    <button type="button" id="accept-upsell" 
+                            class="formino-upsell-add-button"
+                            style="background: ${design.addButton?.backgroundColor || '#000000'}; 
+                                   color: ${design.addButton?.textColor || '#ffffff'}; 
+                                   border: ${design.addButton?.borderWidth || 1}px solid ${design.addButton?.borderColor || '#000000'}; 
+                                   border-radius: ${design.addButton?.borderRadius || 8}px; 
+                                   padding: 16px; font-size: ${design.addButton?.fontSize || 16}px; 
+                                   font-weight: 600; cursor: pointer; width: 100%; 
+                                   transition: all 0.3s; display: flex; align-items: center; 
+                                   justify-content: center; gap: 8px;"
+                            onmouseover="this.style.opacity='0.9'"
+                            onmouseout="this.style.opacity='1'">
+                        ${design.addButton?.icon ? this.getButtonIcon(design.addButton.icon) : ''}
+                        ${design.addButton?.text || 'Add to my order'}
+                    </button>
+                    
+                    <!-- زر رفض العرض -->
+                    <button type="button" id="decline-upsell" 
+                            class="formino-upsell-decline-button"
+                            style="background: ${design.noButton?.backgroundColor || '#ffffff'}; 
+                                   color: ${design.noButton?.textColor || '#000000'}; 
+                                   border: ${design.noButton?.borderWidth || 1}px solid ${design.noButton?.borderColor || '#dddddd'}; 
+                                   border-radius: ${design.noButton?.borderRadius || 8}px; 
+                                   padding: 16px; font-size: ${design.noButton?.fontSize || 16}px; 
+                                   font-weight: 600; cursor: pointer; width: 100%; 
+                                   transition: all 0.3s;"
+                            onmouseover="this.style.background='#f5f5f5'"
+                            onmouseout="this.style.background='${design.noButton?.backgroundColor || '#ffffff'}'">
+                        ${design.noButton?.text || 'No thank you, complete my order'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
 
-//             <div style="margin: 20px 0; border: 2px dashed #eee; padding: 15px; background: #fafafa; border-radius: 10px;">
-//                 <p style="font-weight: bold; font-size: 1.3em; color: ${designSettings.priceColor || '#28a745'}; margin: 0;">
-//                     Price: ${productSettings.calculatedPrice} 
-//                     <span style="font-size: 14px; color: #ff4d4d;">(Save ${productSettings.discount.value}%)</span>
-//                 </p>
-//             </div>
+        // إضافة النافذة إلى DOM
+        document.body.insertAdjacentHTML('beforeend', upsellHTML);
 
-//             <button id="confirm-upsell" style="background: #28a745; color: white; width: 100%; padding: 16px; border: none; border-radius: 8px; font-size: 18px; cursor: pointer; font-weight: bold; transition: background 0.3s;">
-//                 YES, ADD TO MY ORDER!
-//             </button>
-            
-//             <button id="close-upsell" style="background: none; border: none; color: #888; margin-top: 15px; cursor: pointer; text-decoration: underline; font-size: 14px;">
-//                 No thanks, skip this offer
-//             </button>
-//         </div>
-//     `;
+        // إعداد معالجات الأحداث
+        this.setupUpsellPopupHandlers(upsellOffer, productData, orderResult);
 
-//     document.body.appendChild(overlay);
+        // إضافة تأثيرات الحركة
+        setTimeout(() => {
+            const container = document.querySelector('.formino-upsell-container');
+            if (container) {
+                container.style.transform = 'translateY(0)';
+                container.style.opacity = '1';
+            }
+        }, 10);
+    }
 
-//     // 3. معالجة الضغط على زر التأكيد
-//     document.getElementById('confirm-upsell').onclick = async () => {
-//         const confirmBtn = document.getElementById('confirm-upsell');
-        
-//         // جلب الـ Variant المختار من الـ Select أو القيمة الافتراضية أو أول Variant في المنتج
-//         const selectEl = document.getElementById('upsell-variant-select');
-//         let selectedVariantId = null;
+    /**
+     * إعداد معالجات الأحداث للنافذة المنبثقة
+     */
+    setupUpsellPopupHandlers(upsellOffer, productData, orderResult) {
+        const overlay = document.getElementById('formino-upsell-overlay');
+        const closeBtn = overlay.querySelector('.formino-upsell-close');
+        const acceptBtn = overlay.querySelector('#accept-upsell');
+        const declineBtn = overlay.querySelector('#decline-upsell');
+        const variantSelect = overlay.querySelector('#upsell-variant-select');
 
-//         if (selectEl && selectEl.value) {
-//             selectedVariantId = selectEl.value;
-//         } else if (defaultVariantId) {
-//             selectedVariantId = defaultVariantId;
-//         } else if (productData && productData.variants.length > 0) {
-//             selectedVariantId = productData.variants[0].id;
-//         }
+        // حفظ المتغير المختار
+        let selectedVariantId = productData.variants[0]?.id;
 
-//         // التحقق النهائي لمنع الـ null
-//         if (!selectedVariantId) {
-//             console.error("❌ Formino Error: Could not determine Variant ID");
-//             overlay.remove();
-//             this.showSuccessMessage(orderResult);
-//             return;
-//         }
+        // تحديث المتغير المختار
+        if (variantSelect) {
+            variantSelect.addEventListener('change', (e) => {
+                selectedVariantId = e.target.value;
+            });
+        }
 
-//         confirmBtn.innerText = "Adding in progress...";
-//         confirmBtn.disabled = true;
+        // إغلاق النافذة
+        const closePopup = () => {
+            if (overlay) {
+                overlay.style.opacity = '0';
+                setTimeout(() => {
+                    overlay.remove();
+                }, 300);
+            }
+        };
 
-//         try {
-//             const payload = {
-//                 shop: Shopify.shop || window.location.hostname,
-//                 orderId: orderResult.shopify?.orderId || orderResult.localOrder?.id,
-//                 variantId: String(selectedVariantId), // التأكد من أنه String
-//                 actionType: "upsell",
-//                 customerData: orderResult.customer || {},
-//                 upsellData: {
-//                     productId: productId,
-//                     variantId: selectedVariantId,
-//                     price: productSettings.calculatedPrice
-//                 }
-//             };
+        closeBtn?.addEventListener('click', closePopup);
 
-//             console.log("📤 Sending Upsell Payload:", payload);
+        // النقر خارج المحتوى
+        overlay?.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                closePopup();
+            }
+        });
 
-//             const response = await fetch(`${this.apiBaseUrl}/api/add-upsell`, {
-//                 method: 'POST',
-//                 headers: { 'Content-Type': 'application/json' },
-//                 body: JSON.stringify(payload)
-//             });
+        // زر رفض العرض
+        declineBtn?.addEventListener('click', () => {
+            closePopup();
+            this.showSuccessMessage(orderResult);
+        });
 
-//             const result = await response.json();
+        // زر قبول العرض
+        acceptBtn?.addEventListener('click', async () => {
+            try {
+                // تعطيل الزر أثناء المعالجة
+                acceptBtn.disabled = true;
+                acceptBtn.innerHTML = 'Adding to order...';
 
-//             if (response.ok && result.success) {
-//                 console.log("✅ Upsell Added Successfully");
-//             } else {
-//                 console.error("❌ Server Error adding upsell:", result.error);
-//             }
-//         } catch (err) {
-//             console.error("❌ Network Error sending upsell:", err);
-//         } finally {
-//             overlay.remove();
-//             // الانتقال لصفحة النجاح في كل الأحوال
-//             this.showSuccessMessage(orderResult);
-//         }
-//     };
+                // إضافة المنتج إلى الطلب
+                await this.addUpsellToOrder(upsellOffer, selectedVariantId, orderResult);
 
-//     document.getElementById('close-upsell').onclick = () => {
-//         overlay.remove();
-//         this.showSuccessMessage(orderResult);
-//     };
-// }
+                // إغلاق النافذة
+                closePopup();
+
+            } catch (error) {
+                console.error('❌ Error adding upsell to order:', error);
+                acceptBtn.disabled = false;
+                acceptBtn.innerHTML = 'Add to my order';
+
+                this.createCustomPopup({
+                    type: 'error',
+                    message: 'Failed to add product to your order. Please try again.'
+                });
+            }
+        });
+
+        // إغلاق بـ Escape
+        document.addEventListener('keydown', function handleEscape(e) {
+            if (e.key === 'Escape') {
+                closePopup();
+                document.removeEventListener('keydown', handleEscape);
+            }
+        });
+    }
+
+    /**
+ * إضافة منتج الـ Upsell إلى الطلب
+ */
+    async addUpsellToOrder(upsellOffer, selectedVariantId, originalOrderResult) {
+        try {
+            console.log('🔄 Adding upsell to order...', {
+                upsellOfferId: upsellOffer.id,
+                selectedVariantId,
+                originalOrderId: originalOrderResult.localOrder?.id
+            });
+
+            // التحقق من وجود بيانات الطلب الأصلي
+            if (!originalOrderResult?.localOrder?.id) {
+                throw new Error('Original order ID not found');
+            }
+
+            // الحصول على handle المنتج
+            const productHandle = upsellOffer.productSettings?.upsellProductHandle;
+            if (!productHandle) {
+                throw new Error('Product handle not found in upsell offer');
+            }
+
+            // جلب بيانات المنتج
+            let productData;
+            try {
+                productData = await this.fetchProductByHandle(productHandle);
+                console.log('✅ Product data fetched:', productData?.title);
+            } catch (error) {
+                console.error('❌ Failed to fetch product data, creating fallback data');
+                // إنشاء بيانات بديلة إذا فشل الجلب
+                productData = {
+                    id: this.extractIdFromGid(upsellOffer.productSettings.upsellProductId) || 'unknown',
+                    title: upsellOffer.name || 'Upsell Product',
+                    handle: productHandle,
+                    price: upsellOffer.productSettings.calculatedPrice * 100, // تحويل إلى سنتات
+                    featured_image: '',
+                    variants: [
+                        {
+                            id: selectedVariantId,
+                            price: upsellOffer.productSettings.calculatedPrice * 100,
+                            title: 'Default',
+                            available: true
+                        }
+                    ]
+                };
+            }
+
+            // التحقق من بيانات المنتج
+            if (!productData || !productData.id) {
+                console.error('❌ Invalid product data:', productData);
+                throw new Error('Invalid product data received');
+            }
+
+            const discount = upsellOffer.productSettings?.discount;
+            if (!discount) {
+                throw new Error('Discount information not found');
+            }
+
+            // حساب السعر النهائي
+            let finalPrice;
+            if (upsellOffer.productSettings.calculatedPrice) {
+                // استخدام calculatedPrice إذا كان متوفراً
+                finalPrice = upsellOffer.productSettings.calculatedPrice / 100;
+            } else if (discount.type === 'PERCENTAGE') {
+                const originalPrice = upsellOffer.productSettings.price / 100;
+                const discountPercent = parseFloat(discount.value);
+                finalPrice = originalPrice * (1 - discountPercent / 100);
+            } else {
+                finalPrice = upsellOffer.productSettings.price / 100;
+            }
+
+            // إعداد بيانات الطلب
+            const orderData = {
+                shop: window.Shopify?.shop || this.extractShopFromDOM() || window.location.hostname,
+                product: {
+                    id: productData.id,
+                    title: productData.title,
+                    handle: productHandle,
+                    price: finalPrice,
+                    featured_image: productData.featured_image || '',
+                    variants: productData.variants || [],
+                    calculatedPrice: upsellOffer.productSettings.calculatedPrice,
+                    originalPrice: upsellOffer.productSettings.price
+                },
+                variantId: selectedVariantId,
+                quantity: 1,
+                discount: discount,
+                originalOrderId: originalOrderResult.localOrder.id,
+                upsellId: upsellOffer.id
+            };
+
+            // محاولة الحصول على IP العميل
+            try {
+                orderData.clientIP = await this.getClientIP();
+            } catch (ipError) {
+                console.log('⚠️ Could not get client IP:', ipError);
+                orderData.clientIP = 'unknown';
+            }
+
+            console.log("📤 Sending upsell order data:", orderData);
+
+            // إرسال الطلب إلى API
+            const response = await fetch(`${this.apiBaseUrl}/api/add-upsell-order`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(orderData)
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('❌ API response error:', errorText);
+                throw new Error(`API request failed: ${response.status}`);
+            }
+
+            const result = await response.json();
+
+            if (result.success) {
+                console.log('✅ Upsell added successfully:', result);
+
+                // عرض رسالة النجاح
+                this.createCustomPopup({
+                    type: 'success',
+                    message: `✅ ${productData.title} has been added to your order!`
+                });
+
+                // بعد 2 ثانية، عرض رسالة النجاح الأصلية
+                setTimeout(() => {
+                    this.showSuccessMessage(originalOrderResult);
+                }, 2000);
+
+            } else {
+                console.error('❌ API returned failure:', result);
+                throw new Error(result.error || result.message || 'Failed to add upsell product');
+            }
+
+        } catch (error) {
+            console.error('❌ Error in addUpsellToOrder:', error);
+
+            // عرض رسالة الخطأ
+            this.createCustomPopup({
+                type: 'error',
+                message: error.message || 'Failed to add product to your order. Please try again.'
+            });
+
+            // إعادة تمكين زر الإضافة
+            const acceptBtn = document.querySelector('#accept-upsell');
+            if (acceptBtn) {
+                acceptBtn.disabled = false;
+                acceptBtn.innerHTML = 'Add to my order';
+            }
+
+            // العودة إلى رسالة النجاح الأصلية بعد 3 ثواني
+            setTimeout(() => {
+                this.showSuccessMessage(originalOrderResult);
+            }, 3000);
+        }
+    }
+
+    /**
+     * دالة مساعدة للحصول على IP العميل
+     */
+    async getClientIP() {
+        // try {
+        //     // محاولة الحصول على IP من خدمة خارجية
+        //     const response = await fetch('https://api.ipify.org?format=json', {
+        //         method: 'GET',
+        //         headers: {
+        //             'Accept': 'application/json'
+        //         }
+        //     });
+
+        //     if (response.ok) {
+        //         const data = await response.json();
+        //         return data.ip;
+        //     }
+        // } catch (error) {
+        //     console.log('⚠️ Could not fetch IP, using default');
+        // }
+
+        return '1.1.0.1';
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
