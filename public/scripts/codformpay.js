@@ -336,7 +336,7 @@ class ProductFormBuilder {
         this.activeDiscount = null;
         this.activeQuantityOffer = null;
         this.originalFormHTML = null;
-        this.apiBaseUrl = "https://instrumentation-fails-cast-bureau.trycloudflare.com";
+        this.apiBaseUrl = "https://picks-fantastic-qualify-ranking.trycloudflare.com";
         this.isSubmitting = false;
         this.init();
     }
