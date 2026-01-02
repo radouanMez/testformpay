@@ -336,7 +336,7 @@ class ProductFormBuilder {
         this.activeDiscount = null;
         this.activeQuantityOffer = null;
         this.originalFormHTML = null;
-        this.apiBaseUrl = "https://picks-fantastic-qualify-ranking.trycloudflare.com";
+        this.apiBaseUrl = "https://picking-entries-inches-swim.trycloudflare.com";
         this.isSubmitting = false;
         this.init();
     }
@@ -2760,7 +2760,7 @@ class ProductFormBuilder {
         const productSettings = upsellOffer.productSettings;
 
         // حساب السعر بعد الخصم
-        const originalPrice = productSettings.price / 100;
+        const originalPrice = productSettings.price;
         let discountedPrice = originalPrice;
         let discountDisplay = '';
 

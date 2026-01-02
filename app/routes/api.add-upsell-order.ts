@@ -23,7 +23,7 @@ export const action: ActionFunction = async ({ request }) => {
 
     try {
         const requestData = await request.json();
-        
+
         const {
             shop,
             product,
@@ -81,42 +81,43 @@ export const action: ActionFunction = async ({ request }) => {
 
         if (!originalOrder) {
             return new Response(
-                JSON.stringify({ 
-                    success: false, 
+                JSON.stringify({
+                    success: false,
                     error: "Original order not found",
-                    orderId: originalOrderId 
+                    orderId: originalOrderId
                 }),
                 { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
             );
         }
 
-        // 2️⃣ حساب السعر بعد الخصم
-        const originalPrice = product.price || (product.variants?.[0]?.price || 0) / 100;
-        let finalPrice = originalPrice * quantity;
+        // 2️⃣ حساب السعر بعد الخصم للـ Upsell
+        const originalPrice = product.price || (product.variants?.[0]?.price || 0);
+        let upsellFinalPrice = originalPrice;
+        // let upsellFinalPrice = originalPrice * quantity;
         let discountApplied: any = null;
 
         if (discount) {
             discountApplied = {
                 type: discount.type,
                 value: discount.value,
-                originalPrice: finalPrice
+                originalPrice: upsellFinalPrice
             };
 
             if (discount.type === 'PERCENTAGE') {
-                const discountAmount = finalPrice * (parseFloat(discount.value) / 100);
-                finalPrice = finalPrice - discountAmount;
+                const discountAmount = upsellFinalPrice * (parseFloat(discount.value) / 100);
+                // upsellFinalPrice = upsellFinalPrice - discountAmount;
                 discountApplied = {
                     ...discountApplied,
                     discountAmount: discountAmount,
-                    finalPrice: finalPrice
+                    finalPrice: upsellFinalPrice
                 };
             } else if (discount.type === 'FIXED_AMOUNT') {
                 const discountAmount = parseFloat(discount.value);
-                finalPrice = finalPrice - discountAmount;
+                // upsellFinalPrice = upsellFinalPrice - discountAmount;
                 discountApplied = {
                     ...discountApplied,
                     discountAmount: discountAmount,
-                    finalPrice: finalPrice
+                    finalPrice: upsellFinalPrice
                 };
             }
         }
@@ -128,7 +129,7 @@ export const action: ActionFunction = async ({ request }) => {
             title: product.title,
             variantId: variantId,
             variantTitle: product.variants?.find((v: any) => v.id == variantId)?.title || "Default",
-            price: finalPrice,
+            price: upsellFinalPrice,
             originalPrice: originalPrice,
             quantity: parseInt(quantity) || 1,
             discountApplied: discountApplied,
@@ -138,18 +139,22 @@ export const action: ActionFunction = async ({ request }) => {
             status: "pending"
         };
 
-        // 4️⃣ تحديث الطلب الأصلي
+        // 4️⃣ تحديث الطلب المحلي (بدون حذفه)
         const currentMetadata = originalOrder.metadata as any || {};
         const currentUpsells = currentMetadata.upsells || [];
         const currentItems = originalOrder.items as any[] || [];
+        const totalOriginalAmount = originalOrder.totalAmount || 0;
+        const newTotalAmount = totalOriginalAmount + upsellFinalPrice;
 
+        // تحديث الطلب المحلي
         const updatedOrder = await prisma.order.update({
             where: { id: originalOrderId },
             data: {
                 metadata: {
                     ...currentMetadata,
                     upsells: [...currentUpsells, upsellItem],
-                    lastUpsellAdded: new Date().toISOString(),
+                    isUpsellAdded: true,
+                    upsellAddedAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString()
                 },
                 items: [
@@ -158,7 +163,7 @@ export const action: ActionFunction = async ({ request }) => {
                         id: variantId,
                         productId: product.id,
                         title: product.title,
-                        price: finalPrice,
+                        price: upsellFinalPrice,
                         quantity: parseInt(quantity) || 1,
                         variantId: variantId,
                         isUpsell: true,
@@ -166,171 +171,131 @@ export const action: ActionFunction = async ({ request }) => {
                         addedAt: new Date().toISOString()
                     }
                 ],
-                totalAmount: (originalOrder.totalAmount || 0) + finalPrice
+                totalAmount: newTotalAmount
             }
         });
 
-        console.log("✅ Upsell added to order:", {
+        console.log("✅ Upsell added to local order:", {
             orderId: updatedOrder.id,
             upsellItem: upsellItem,
             newTotal: updatedOrder.totalAmount
         });
 
-        // 5️⃣ إضافة المنتج إلى Shopify
+        // 5️⃣ التعامل مع Shopify
         let shopifyResponse = null;
         let shopifyError = null;
-        let shopifyOrderId = null;
+        let newShopifyOrderId = null;
 
         try {
             // الحصول على معرف طلب Shopify من الميتاداتا
             const shopifyResponseMetadata = currentMetadata.shopifyResponse as any;
-            const shopifyOrderIdFromMetadata = currentMetadata.shopifyOrderId || 
-                                              shopifyResponseMetadata?.order?.id ||
-                                              shopifyResponseMetadata?.draft_order?.id;
+            const existingShopifyOrderId = currentMetadata.shopifyOrderId ||
+                shopifyResponseMetadata?.order?.id ||
+                shopifyResponseMetadata?.draft_order?.id;
 
-            if (shopifyOrderIdFromMetadata) {
-                shopifyResponse = await addProductToShopifyOrder(
-                    shop,
-                    accessToken,
-                    shopifyOrderIdFromMetadata,
-                    product,
-                    variantId,
-                    quantity,
-                    finalPrice,
-                    discountApplied,
-                    originalOrder.orderNumber || "Unknown",
-                    clientIP
-                );
+            if (existingShopifyOrderId) {
+                console.log("🗑️ Deleting existing Shopify order:", existingShopifyOrderId);
 
-                const shopifyResult = shopifyResponse as any;
-                shopifyOrderId = shopifyResult.order?.id || shopifyResult.draft_order?.id;
-                
-                console.log("✅ Product added to Shopify order:", shopifyOrderId);
-
-                // تحديث حالة الـ Upsell
-                const updatedUpsells = [...currentUpsells, {
-                    ...upsellItem,
-                    status: "added_to_shopify",
-                    shopifyOrderId: shopifyOrderId,
-                    shopifyResponse: shopifyResult,
-                    updatedAt: new Date().toISOString()
-                }];
-
-                await prisma.order.update({
-                    where: { id: originalOrderId },
-                    data: {
-                        metadata: {
-                            ...currentMetadata,
-                            upsells: updatedUpsells,
-                            lastShopifyUpdate: new Date().toISOString()
-                        }
-                    }
-                });
-
-            } else {
-                console.log("⚠️ No Shopify order ID found in metadata, creating new draft order");
-                
-                shopifyResponse = await createNewShopifyDraftOrder(
-                    shop,
-                    accessToken,
-                    product,
-                    variantId,
-                    quantity,
-                    finalPrice,
-                    discountApplied,
-                    originalOrder.orderNumber || "Unknown",
-                    clientIP
-                );
-
-                const shopifyResult = shopifyResponse as any;
-                shopifyOrderId = shopifyResult.draft_order?.id;
-                
-                // تحديث الميتاداتا
-                await prisma.order.update({
-                    where: { id: originalOrderId },
-                    data: {
-                        metadata: {
-                            ...currentMetadata,
-                            shopifyOrderId: shopifyOrderId,
-                            shopifyResponse: shopifyResult,
-                            upsells: [...currentUpsells, {
-                                ...upsellItem,
-                                status: "new_draft_created",
-                                shopifyOrderId: shopifyOrderId,
-                                updatedAt: new Date().toISOString()
-                            }]
-                        }
-                    }
-                });
+                // حذف طلب Shopify القديم
+                await deleteShopifyOrder(shop, accessToken, existingShopifyOrderId);
+                console.log("✅ Shopify order deleted successfully");
             }
+
+            // إنشاء طلب Shopify جديد بالمنتجات الأصلية + الـ Upsell
+            console.log("🔄 Creating new Shopify order with upsell");
+            shopifyResponse = await createCompleteShopifyOrder(
+                shop,
+                accessToken,
+                originalOrder,
+                product,
+                variantId,
+                quantity,
+                upsellFinalPrice,
+                discountApplied,
+                clientIP
+            );
+
+            const shopifyResult = shopifyResponse as any;
+            newShopifyOrderId = shopifyResult.order?.id || shopifyResult.draft_order?.id;
+
+            console.log("✅ New Shopify order created:", newShopifyOrderId);
+
+            // تحديث الميتاداتا في الطلب المحلي
+            await prisma.order.update({
+                where: { id: originalOrderId },
+                data: {
+                    metadata: {
+                        ...currentMetadata,
+                        shopifyOrderId: newShopifyOrderId,
+                        shopifyResponse: shopifyResult,
+                        originalShopifyOrderDeleted: true,
+                        deletedShopifyOrderId: existingShopifyOrderId,
+                        upsells: [...currentUpsells, {
+                            ...upsellItem,
+                            status: "added_to_shopify",
+                            shopifyOrderId: newShopifyOrderId,
+                            shopifyResponse: shopifyResult,
+                            updatedAt: new Date().toISOString()
+                        }],
+                        lastShopifyUpdate: new Date().toISOString()
+                    }
+                }
+            });
 
         } catch (shopifyErr: any) {
             shopifyError = {
                 message: shopifyErr.message,
                 type: "shopify_error"
             };
-            console.error("❌ Error adding product to Shopify:", shopifyErr);
-            
-            // تحديث حالة الـ Upsell بالفشل
-            const updatedUpsells = [...currentUpsells, {
-                ...upsellItem,
-                status: "shopify_failed",
-                error: shopifyErr.message,
-                updatedAt: new Date().toISOString()
-            }];
+            console.error("❌ Error in Shopify operations:", shopifyErr);
 
+            // تحديث حالة الـ Upsell بالفشل
             await prisma.order.update({
                 where: { id: originalOrderId },
                 data: {
                     metadata: {
                         ...currentMetadata,
-                        upsells: updatedUpsells,
+                        upsells: [...currentUpsells, {
+                            ...upsellItem,
+                            status: "shopify_failed",
+                            error: shopifyErr.message,
+                            updatedAt: new Date().toISOString()
+                        }],
                         lastError: new Date().toISOString()
                     }
                 }
             });
         }
 
-        // 6️⃣ تحديث إحصائيات الـ Upsell إذا كان موجودًا في قاعدة البيانات
-        if (upsellId) {
-            try {
-                // البحث في جدول Upsell إذا كان موجودًا
-                // سنحتاج للتحقق من هيكل قاعدة البيانات أولاً
-                console.log("📊 Would update statistics for upsell:", upsellId);
-                // await updateUpsellStatistics(upsellId, 'accepted');
-            } catch (statsError) {
-                console.error("❌ Error updating upsell statistics:", statsError);
-            }
-        }
-
-        // 7️⃣ إعداد الرد النهائي
+        // 6️⃣ إعداد الرد النهائي
         const responseBody = {
             success: true,
-            message: shopifyResponse 
-                ? "Upsell product added successfully" 
-                : "Upsell saved but Shopify integration failed",
-            
-            order: {
+            message: shopifyResponse
+                ? "Upsell added and new Shopify order created successfully"
+                : "Upsell saved locally but Shopify integration failed",
+
+            localOrder: {
                 id: updatedOrder.id,
                 orderNumber: updatedOrder.orderNumber,
                 status: updatedOrder.status,
                 totalAmount: updatedOrder.totalAmount,
+                itemCount: (updatedOrder.items as any[]).length,
                 updatedAt: updatedOrder.updatedAt
             },
-            
+
             upsell: {
                 item: upsellItem,
                 status: shopifyResponse ? "added" : "failed",
                 discountApplied: discountApplied
             },
-            
+
             shopify: {
                 success: !!shopifyResponse,
-                orderId: shopifyOrderId,
+                newOrderId: newShopifyOrderId,
                 response: shopifyResponse,
                 error: shopifyError
             },
-            
+
             statistics: {
                 upsellId: upsellId,
                 conversionType: "post_purchase",
@@ -352,7 +317,7 @@ export const action: ActionFunction = async ({ request }) => {
 
         const errorBody = JSON.stringify({
             success: false,
-            error: "Failed to add upsell product to order",
+            error: "Failed to add upsell to order",
             details: error.message,
             stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
@@ -368,26 +333,19 @@ export const action: ActionFunction = async ({ request }) => {
 };
 
 /**
- * إضافة منتج إلى طلب Shopify الحالي
+ * حذف طلب Shopify
  */
-async function addProductToShopifyOrder(
+async function deleteShopifyOrder(
     shop: string,
     accessToken: string,
-    shopifyOrderId: string,
-    product: any,
-    variantId: string,
-    quantity: string,
-    price: number,
-    discountApplied: any,
-    originalOrderNumber: string,
-    clientIP: string
-): Promise<any> {
+    shopifyOrderId: string
+): Promise<void> {
     try {
-        // جلب الطلب الحالي
-        const existingOrderResponse = await fetch(
-            `https://${shop}/admin/api/2024-01/orders/${shopifyOrderId}.json`,
+        // محاولة حذف كـ Draft Order أولاً
+        let response = await fetch(
+            `https://${shop}/admin/api/2024-01/draft_orders/${shopifyOrderId}.json`,
             {
-                method: "GET",
+                method: "DELETE",
                 headers: {
                     "X-Shopify-Access-Token": accessToken,
                     "Content-Type": "application/json",
@@ -395,156 +353,312 @@ async function addProductToShopifyOrder(
             }
         );
 
-        if (!existingOrderResponse.ok) {
-            throw new Error(`Failed to fetch Shopify order: ${existingOrderResponse.status}`);
+        if (response.ok) {
+            console.log("✅ Draft order deleted successfully");
+            return;
         }
 
-        const existingOrder = await existingOrderResponse.json();
-        const order = existingOrder.order;
-        
-        // إضافة المنتج الجديد
-        const updatedLineItems = [
-            ...order.line_items,
+        // إذا لم يكن Draft، نجرب حذف كـ Order
+        response = await fetch(
+            `https://${shop}/admin/api/2024-01/orders/${shopifyOrderId}/cancel.json`,
             {
-                variant_id: parseInt(variantId),
-                quantity: parseInt(quantity) || 1,
-                title: product.title,
-                price: price,
-                properties: [
-                    { name: "Upsell", value: "Yes" },
-                    { name: "Original Order", value: originalOrderNumber },
-                    { name: "Added Via", value: "Formino Post-Purchase" }
-                ]
-            }
-        ];
-
-        const discountText = discountApplied ? 
-            `Discount: ${discountApplied.type} ${discountApplied.value}` : 
-            "No discount";
-            
-        const newNote = `${order.note || ''}\n\n---\n🎯 POST-PURCHASE UPSELL ADDED:\n• Product: ${product.title}\n• ${discountText}\n• Price: ${price} ${order.currency}\n• Added at: ${new Date().toLocaleString()}\n• Client IP: ${clientIP}`;
-
-        // تحديث الطلب
-        const updateResponse = await fetch(
-            `https://${shop}/admin/api/2024-01/orders/${shopifyOrderId}.json`,
-            {
-                method: "PUT",
+                method: "POST",
                 headers: {
                     "X-Shopify-Access-Token": accessToken,
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    order: {
-                        id: parseInt(shopifyOrderId),
-                        line_items: updatedLineItems,
-                        note: newNote.trim(),
-                        tags: order.tags ? `${order.tags}, post-purchase-upsell` : "post-purchase-upsell"
-                    }
+                    reason: "Replaced with new order containing upsell"
                 }),
             }
         );
 
-        if (!updateResponse.ok) {
-            const errorData = await updateResponse.json();
-            throw new Error(`Shopify Order Update error: ${JSON.stringify(errorData.errors || errorData.message)}`);
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`Failed to delete/cancel Shopify order: ${JSON.stringify(errorData.errors || errorData.message)}`);
         }
 
-        return await updateResponse.json();
+        console.log("✅ Order cancelled successfully");
 
     } catch (error) {
-        console.error("❌ Error in addProductToShopifyOrder:", error);
+        console.error("❌ Error deleting Shopify order:", error);
         throw error;
     }
 }
 
 /**
- * إنشاء طلب Draft جديد للـ Upsell
+ * إنشاء طلب Shopify جديد كامل (المنتجات الأصلية + الـ Upsell)
  */
-async function createNewShopifyDraftOrder(
+async function createCompleteShopifyOrder(
     shop: string,
     accessToken: string,
-    product: any,
+    originalOrder: any,
+    upsellProduct: any,
     variantId: string,
     quantity: string,
-    price: number,
+    upsellPrice: number,
     discountApplied: any,
-    originalOrderNumber: string,
     clientIP: string
 ): Promise<any> {
-    const discountText = discountApplied ? 
-        `Discount: ${discountApplied.type} ${discountApplied.value}` : 
+
+    const originalItems = originalOrder.items as any[] || [];
+    const originalCustomer = originalOrder.customer as any || {};
+    const discountText = discountApplied ?
+        `Upsell Discount: ${discountApplied.type} ${discountApplied.value}` :
         "No discount";
-    
-    const draftOrderData = {
-        draft_order: {
-            line_items: [{
-                variant_id: parseInt(variantId),
-                quantity: parseInt(quantity) || 1,
-                title: product.title,
+
+    // تحويل المنتجات الأصلية إلى تنسيق Shopify line_items
+    const originalLineItems = originalItems
+        .filter((item: any) => !item.isUpsell)
+        .map((item: any) => {
+            const productData = item.product || item;
+            const variantId = item.variantId || productData.variantId;
+            const quantity = item.quantity || 1;
+            const title = item.title || productData.title || "Product";
+
+            let price = 0;
+            if (item.price !== undefined && item.price !== null) {
+                price = item.price;
+            } else if (productData.price !== undefined && productData.price !== null) {
+                price = productData.price;
+            } else if (productData.variants && productData.variants[0]?.price) {
+                price = productData.variants[0].price;
+            }
+
+            // تحويل السعر إلى قروش
+            // if (price < 1000 && price > 0) {
+            //     price = price * 100;
+            // }
+
+            return {
+                variant_id: parseInt(variantId) || 0,
+                quantity: quantity,
+                title: title,
                 price: price,
                 properties: [
-                    { name: "Upsell", value: "Yes" },
-                    { name: "Original Order", value: originalOrderNumber },
-                    { name: "Added Via", value: "Formino Post-Purchase" },
-                    { name: "Discount", value: discountText }
+                    { name: "From Original Order", value: originalOrder.orderNumber || "Unknown" },
+                    { name: "Order Source", value: "Formino App" }
                 ]
-            }],
-            note: `🎯 POST-PURCHASE UPSELL ORDER\n• Original Order: ${originalOrderNumber}\n• Product: ${product.title}\n• Price: ${price}\n• ${discountText}\n• Added at: ${new Date().toLocaleString()}\n• Client IP: ${clientIP}\n\nCreated via Formino Upsell System`,
-            tags: "formino-app,upsell-order,post-purchase",
-        }
+            };
+        });
+
+    // إضافة الـ Upsell product
+    const upsellLineItem = {
+        variant_id: parseInt(variantId),
+        quantity: parseInt(quantity) || 1,
+        title: upsellProduct.title,
+        price: upsellPrice * 100, // تحويل درهم إلى قروش
+        properties: [
+            { name: "Upsell", value: "Yes" },
+            { name: "Original Order", value: originalOrder.orderNumber || "Unknown" },
+            { name: "Added Via", value: "Formino Post-Purchase" },
+            { name: "Discount", value: discountText }
+        ]
     };
 
-    console.log("📤 Creating new draft order for upsell");
+    const allLineItems = [
+        ...originalLineItems,
+        upsellLineItem
+    ];
 
-    const response = await fetch(`https://${shop}/admin/api/2024-01/draft_orders.json`, {
+    // استخدام إعدادات الطلب الأصلية
+    const orderOptions = (originalOrder.metadata as any)?.orderOptions || {
+        saveAsDraft: false,
+        createCODOrders: false
+    };
+
+    // إعداد عنوان الشحن
+    const shippingAddress = {
+        first_name: originalCustomer.first_name || "",
+        last_name: originalCustomer.last_name || "",
+        address1: originalCustomer.address || "",
+        address2: originalCustomer.address_2 || "",
+        city: originalCustomer.city || "",
+        province: originalCustomer.province || "",
+        zip: originalCustomer.zip_code || "",
+        country: "MA",
+        phone: originalCustomer.phone || ""
+    };
+
+    // 1️⃣ البحث عن العميل الموجود في Shopify (نفس منطق shopify.service.ts)
+    let existingCustomer = null;
+    let customerEmail = originalCustomer.email || "";
+    let customerPhone = originalCustomer.phone || "";
+
+    try {
+        console.log("🔍 Searching for existing customer in Shopify...");
+
+        // البحث بالبريد الإلكتروني أولاً (نفس وظيفة findCustomerByEmail)
+        if (customerEmail && customerEmail.trim() !== '') {
+            const searchResponse = await fetch(
+                `https://${shop}/admin/api/2024-01/customers/search.json?query=email:${encodeURIComponent(customerEmail)}`,
+                {
+                    method: "GET",
+                    headers: {
+                        "X-Shopify-Access-Token": accessToken,
+                        "Content-Type": "application/json",
+                    },
+                }
+            );
+
+            if (searchResponse.ok) {
+                const data = await searchResponse.json();
+                if (data.customers && data.customers.length > 0) {
+                    existingCustomer = data.customers[0];
+                    console.log("✅ Found existing customer by email:", existingCustomer.id);
+                }
+            }
+        }
+
+        // إذا لم نجده بالبريد، نبحث برقم الهاتف (نفس وظيفة findCustomerByPhone)
+        if (!existingCustomer && customerPhone && customerPhone.trim() !== '') {
+            const searchResponse = await fetch(
+                `https://${shop}/admin/api/2024-01/customers/search.json?query=phone:${encodeURIComponent(customerPhone)}`,
+                {
+                    method: "GET",
+                    headers: {
+                        "X-Shopify-Access-Token": accessToken,
+                        "Content-Type": "application/json",
+                    },
+                }
+            );
+
+            if (searchResponse.ok) {
+                const data = await searchResponse.json();
+                if (data.customers && data.customers.length > 0) {
+                    existingCustomer = data.customers[0];
+                    console.log("✅ Found existing customer by phone:", existingCustomer.id);
+                }
+            }
+        }
+
+        if (!existingCustomer) {
+            console.log("⚠️ No existing customer found, will create new one");
+        }
+    } catch (searchError) {
+        console.error("❌ Error searching for customer:", searchError);
+        // نستمر في العملية حتى لو فشل البحث
+    }
+
+    // 2️⃣ إعداد بيانات الطلب مع مراعاة العميل الموجود
+    const orderBaseData: any = {
+        line_items: allLineItems,
+        note: `🔄 ORDER UPDATED WITH UPSELL\n• Replaced Order: ${originalOrder.orderNumber}\n• Customer: ${originalCustomer.first_name} ${originalCustomer.last_name}\n• Email: ${customerEmail}\n• Phone: ${customerPhone}\n\n---\n🎯 UPSELL PRODUCT ADDED:\n• Product: ${upsellProduct.title}\n• ${discountText}\n• Price: ${upsellPrice*100} MAD\n• Added at: ${new Date().toLocaleString()}\n• Client IP: ${clientIP}\n\nCreated via Formino Upsell System`,
+        tags: "formino-app,upsell-order,post-purchase,updated-order",
+        shipping_address: shippingAddress,
+        use_customer_default_address: true
+    };
+
+    // تحديد بيانات العميل بناءً على ما إذا كان موجوداً
+    if (existingCustomer) {
+        // ✅ استخدام العميل الموجود
+        orderBaseData.customer = {
+            id: existingCustomer.id,
+            first_name: existingCustomer.first_name || originalCustomer.first_name || "Customer",
+            last_name: existingCustomer.last_name || originalCustomer.last_name || "",
+            email: existingCustomer.email || customerEmail,
+            phone: existingCustomer.phone || customerPhone,
+        };
+        console.log("👤 Using existing customer ID:", existingCustomer.id);
+    } else {
+        // 🔄 إنشاء عميل جديد (بعد إصلاح مشكلة رقم الهاتف)
+        const customerData = {
+            first_name: originalCustomer.first_name || "Customer",
+            last_name: originalCustomer.last_name || "",
+            email: customerEmail || "",
+            phone: customerPhone || "",
+        };
+
+        // إذا كان رقم الهاتف فارغاً، لا نرسله
+        if (!customerData.phone || customerData.phone.trim() === '') {
+            delete customerData.phone;
+        }
+
+        orderBaseData.customer = customerData;
+        console.log("👤 Creating new customer:", customerData);
+    }
+
+    // 3️⃣ إعداد بيانات الطلب النهائية
+    const draftOrderData = {
+        draft_order: orderBaseData
+    };
+
+    console.log("📤 Creating new Shopify order with", allLineItems.length, "items");
+
+    const endpoint = orderOptions.saveAsDraft ? "draft_orders" : "orders";
+    const url = `https://${shop}/admin/api/2024-01/${endpoint}.json`;
+
+    const requestBody = orderOptions.saveAsDraft ?
+        draftOrderData :
+        {
+            order: {
+                ...orderBaseData,
+                financial_status: orderOptions.createCODOrders ? "pending" : "paid",
+                send_receipt: true,
+                send_fulfillment_receipt: false
+            }
+        };
+
+    console.log("🚀 Sending to Shopify:", {
+        endpoint: endpoint,
+        url: url,
+        customerId: existingCustomer?.id || "new",
+        customerEmail: customerEmail
+    });
+
+    const response = await fetch(url, {
         method: "POST",
         headers: {
             "X-Shopify-Access-Token": accessToken,
             "Content-Type": "application/json",
         },
-        body: JSON.stringify(draftOrderData),
+        body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`Shopify Draft Order API error: ${JSON.stringify(errorData.errors || errorData.message)}`);
+        const errorText = await response.text();
+        console.error("❌ Shopify API error response:", errorText);
+
+        // إذا كان الخطأ متعلقاً بالعميل، نحاول مرة أخرى بدون بيانات العميل
+        if (errorText.includes("customer") || errorText.includes("phone_number")) {
+            console.log("⚠️ Customer data issue, retrying without customer...");
+
+            // إعادة المحاولة بدون بيانات العميل
+            delete orderBaseData.customer;
+            orderBaseData.note += "\n\n⚠️ Created without customer data due to validation issues";
+
+            const retryResponse = await fetch(url, {
+                method: "POST",
+                headers: {
+                    "X-Shopify-Access-Token": accessToken,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(orderOptions.saveAsDraft ?
+                    { draft_order: orderBaseData } :
+                    { order: { ...orderBaseData, financial_status: "paid" } }
+                ),
+            });
+
+            if (retryResponse.ok) {
+                console.log("✅ Retry successful without customer data");
+                return await retryResponse.json();
+            }
+        }
+
+        throw new Error(`Shopify API error: ${response.status} - ${errorText}`);
     }
 
-    return await response.json();
+    const result = await response.json();
+    console.log("✅ Shopify order created successfully:", result);
+    return result;
 }
-
 /**
- * دالة لمعالجة إحصائيات الـ Upsell (بدون خطأ)
+ * دالة لمعالجة إحصائيات الـ Upsell
  */
 async function updateUpsellStatistics(upsellId: string, action: 'viewed' | 'accepted' | 'declined') {
     try {
-        // إذا كان لديك جدول UpsellOffer في قاعدة البيانات
         console.log(`📊 Statistics update for upsell ${upsellId}: ${action}`);
-        // يمكنك تفعيل هذا الكود إذا كان لديك جدول upsellOffers:
-        /*
-        const upsellOffer = await prisma.upsellOffer.findUnique({
-            where: { id: upsellId }
-        });
-
-        if (upsellOffer) {
-            const currentStats = upsellOffer.statistics as any || {};
-            const updatedStats = {
-                ...currentStats,
-                views: (currentStats.views || 0) + (action === 'viewed' ? 1 : 0),
-                clicks: (currentStats.clicks || 0) + (action === 'accepted' ? 1 : 0),
-                conversions: (currentStats.conversions || 0) + (action === 'accepted' ? 1 : 0),
-                lastAction: action,
-                lastActionAt: new Date().toISOString()
-            };
-
-            await prisma.upsellOffer.update({
-                where: { id: upsellId },
-                data: {
-                    statistics: updatedStats
-                }
-            });
-        }
-        */
+        // Implementation here
     } catch (error) {
         console.error("❌ Error updating upsell statistics:", error);
     }
