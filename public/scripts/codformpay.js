@@ -1,4 +1,4 @@
-console.log("CODFORMPAY V.1.0.9");
+console.log("CODFORMPAY V.1.1.0");
 
 class ProductPageDetector {
     constructor() {
@@ -336,7 +336,7 @@ class ProductFormBuilder {
         this.activeDiscount = null;
         this.activeQuantityOffer = null;
         this.originalFormHTML = null;
-        this.apiBaseUrl = "https://picking-entries-inches-swim.trycloudflare.com";
+        this.apiBaseUrl = "https://santa-agricultural-frog-producers.trycloudflare.com";
         this.isSubmitting = false;
         this.init();
     }
@@ -1417,7 +1417,9 @@ class ProductFormBuilder {
             let finalPriceUnit = 0;
             let originalPriceUnit = this.detector.getCurrentPrice() / 100;
 
+            console.log("qty offer externe")
             if (this.activeQuantityTier) {
+                console.log("qty offer interne")
                 const quantity = this.activeQuantityTier.quantity || 1;
                 const discountType = this.activeQuantityTier.discountType;
                 const discountValue = parseFloat(this.activeQuantityTier.discountValue);
@@ -1469,6 +1471,8 @@ class ProductFormBuilder {
                 total: finalPriceUnit + shippingPrice,
                 timestamp: new Date().toISOString()
             };
+            console.log("totals")
+            console.log(totals)
             formDataToSend.append('totals', JSON.stringify(totals));
 
             formDataToSend.append('config', JSON.stringify(this.config || {}));
@@ -2811,99 +2815,170 @@ class ProductFormBuilder {
                     justify-content: center; z-index: 99999;">
             
             <div class="formino-upsell-container" 
-                 style="background: white; border-radius: 12px; max-width: 450px; 
-                        width: 90%; max-height: 90vh; overflow-y: auto; padding: 25px;
-                        box-shadow: 0 10px 40px rgba(0,0,0,0.2); position: relative;">
+                style="
+                background: white; 
+                border-radius: 12px; 
+                max-width: 420px; 
+                width: 90%; 
+                max-height: 95vh; 
+                overflow-y: auto; 
+                padding: 15px;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.2); 
+                position: relative;"
+            >
                 
-                <!-- زر الإغلاق -->
-                <button type="button" class="formino-upsell-close" 
-                        style="position: absolute; top: 15px; right: 15px; background: none; 
-                               border: none; font-size: 24px; cursor: pointer; color: #666; 
-                               width: 30px; height: 30px; display: flex; align-items: center; 
-                               justify-content: center; border-radius: 50%; 
-                               transition: all 0.2s;" 
+                <button 
+                    type="button" 
+                    class="formino-upsell-close" 
+                        style="
+                            position: absolute; 
+                            top: 15px; 
+                            right: 15px; 
+                            background: none; 
+                            border: none; 
+                            font-size: 24px; 
+                            cursor: pointer; 
+                            color: #666; 
+                            width: 30px; 
+                            height: 30px; 
+                            display: flex; 
+                            align-items: center; 
+                            justify-content: center; 
+                            border-radius: 50%; 
+                            transition: all 0.2s;
+                        " 
                         onmouseover="this.style.background='#f5f5f5'; this.style.color='#333';"
-                        onmouseout="this.style.background='none'; this.style.color='#666';">
+                        onmouseout="this.style.background='none'; this.style.color='#666';"
+                    >
                     &times;
                 </button>
                 
-                <!-- العنوان -->
                 <h2 class="formino-upsell-title" 
-                    style="color: ${design.titleColor || '#333'}; font-size: 20px; 
-                           font-weight: 700; margin-bottom: 15px; text-align: center;">
+                    style="
+                        color: ${design.titleColor || '#333'}; 
+                        font-size: 20px; 
+                        font-weight: 700; 
+                        margin-bottom: 15px; 
+                        text-align: center;"
+                >
                     ${title}
                 </h2>
                 
-                <!-- النص الفرعي -->
                 ${design.subtitle ? `
-                    <p class="formino-upsell-subtitle" 
-                       style="color: ${design.subtitleColor || '#666'}; font-size: 16px; 
-                              margin-bottom: 20px; text-align: center;">
+                    <p  class="formino-upsell-subtitle" 
+                        style="
+                            color: ${design.subtitleColor || '#666'}; 
+                            font-size: 16px; 
+                            margin-bottom: 20px; 
+                            text-align: center;"
+                        >
                         ${design.subtitle}
                     </p>
                 ` : ''}
                 
-                <!-- صورة المنتج -->
                 ${design.image?.show !== false ? `
-                    <div class="formino-upsell-image" 
-                         style="text-align: center; margin-bottom: 20px;">
-                        <img src="${productData.featured_image || productData.images?.[0]?.src || ''}" 
-                             alt="${productData.title}" 
-                             style="max-width: 200px; width: 100%; 
-                                    height: auto; border-radius: ${design.image?.borderRadius || 8}px;
-                                    ${design.image?.shadow ? 'box-shadow: 0 5px 15px rgba(0,0,0,0.1)' : ''};">
+                    <div 
+                        class="formino-upsell-image" 
+                        style="
+                            text-align: center; 
+                            height: 250px;
+                            overflow: hidden;
+                            width: 250px;
+                            margin: 0px auto;
+                        >
+                        <img 
+                            src="${productData.featured_image || productData.images?.[0]?.src || ''}" 
+                            alt="${productData.title}" 
+                            style="
+                                max-width: 100%; 
+                                width: 100%; 
+                                height: auto; 
+                                border: 1px solid #eee;
+                                border-radius: ${design.image?.borderRadius || 8}px;
+                                ${design.image?.shadow ? 'box-shadow: 0 5px 15px rgba(0,0,0,0.1)' : ''};"
+                        >
                     </div>
                 ` : ''}
                 
-                <!-- عنوان المنتج -->
                 ${design.productTitle !== false ? `
                     <h3 class="formino-upsell-product-title" 
-                        style="color: #333; font-size: 18px; font-weight: 600; 
-                               margin-bottom: 10px; text-align: center;">
+                        style="
+                            color: #333; 
+                            font-size: 18px; 
+                            font-weight: 600; 
+                            margin-bottom: 10px; 
+                            text-align: left;"
+                    >
                         ${productData.title}
                     </h3>
                 ` : ''}
                 
-                <!-- وصف المنتج -->
                 ${(design.productDescription && productData.description) ? `
                     <div class="formino-upsell-description" 
-                         style="color: #666; font-size: 14px; margin-bottom: 15px; 
-                                text-align: center; line-height: 1.5;">
+                        style="
+                            color: #666; 
+                            font-size: 14px; 
+                            margin-bottom: 15px; 
+                            text-align: center; 
+                            line-height: 1.5;
+                        "
+                        >
                         ${productData.description.substring(0, 150)}${productData.description.length > 150 ? '...' : ''}
                     </div>
                 ` : ''}
                 
-                <!-- المتغيرات -->
                 ${variantsHTML}
                 
-                <!-- السعر -->
-                <div class="formino-upsell-pricing" 
-                     style="margin: 20px 0; text-align: center;">
-                    
-                    <!-- السعر الأصلي (مشطوب) -->
-                    <div class="formino-upsell-original-price" 
-                         style="color: #999; text-decoration: line-through; 
-                                font-size: 16px; margin-bottom: 5px;">
-                        ${this.formatMoney(originalPrice)}
-                    </div>
-                    
-                    <!-- السعر بعد الخصم -->
+                <div 
+                    class="formino-upsell-pricing" 
+                    style="
+                        margin: 0px; 
+                        text-align: left;
+                        display: flex;
+                    "
+                >
                     <div class="formino-upsell-discounted-price" 
-                         style="color: ${design.priceColor || '#d32f2f'}; 
-                                font-size: 24px; font-weight: 700;">
+                        style="
+                            color: ${design.priceColor || '#d32f2f'}; 
+                            font-size: 20px; 
+                            font-weight: 700;
+                        "
+                    >
                         ${this.formatMoney(discountedPrice)}
                     </div>
-                    
-                    <!-- عرض الخصم -->
-                    <div class="formino-upsell-discount-badge" 
-                         style="display: inline-block; background: #ff4444; 
-                                color: white; padding: 4px 12px; border-radius: 20px; 
-                                font-size: 12px; font-weight: 600; margin-top: 8px;">
-                        ${discountDisplay}
+                    <div 
+                        class="formino-upsell-original-price" 
+                        style="
+                            color: #999; 
+                            text-decoration: line-through; 
+                            font-size: 16px; 
+                            margin-bottom: 0px;
+                            position: relative;
+                            top: 5px;
+                            left: 10px;
+                            font-weight: 600;
+                        "
+                        >
+                        ${this.formatMoney(originalPrice)}
                     </div>
                 </div>
+
+                <div 
+                    class="formino-upsell-discount-badge" 
+                    style="
+                        display: inline-block; 
+                        background: #ff4444; 
+                        color: white; 
+                        padding: 4px 12px; 
+                        border-radius: 20px; 
+                        font-size: 12px; 
+                        font-weight: 600; 
+                        margin-bottom: 15px;
+                        margin-top: 8px;"
+                    >
+                    ${discountDisplay}
+                </div>
                 
-                <!-- الأزرار -->
                 <div class="formino-upsell-buttons" 
                      style="display: flex; gap: 15px; flex-direction: column;">
                     

@@ -1,5 +1,4 @@
-// 📁 مسار الملف: /app/api/add-upsell-order/route.tsx
-
+// 📁 /app/api/add-upsell-order/route.tsx
 import { type ActionFunction, type LoaderFunction } from "react-router";
 import { prisma } from "../db.server";
 import { getClientIP } from "./api.create-order/utils/security.utils";
@@ -56,7 +55,6 @@ export const action: ActionFunction = async ({ request }) => {
             );
         }
 
-        // الحصول على بيانات المستخدم والتوكين
         const user = await prisma.user.findUnique({
             where: { shop },
             include: {
@@ -74,7 +72,6 @@ export const action: ActionFunction = async ({ request }) => {
         const accessToken = user.sessions[0].accessToken;
         const clientIP = providedClientIP || getClientIP(request);
 
-        // 1️⃣ البحث عن الطلب الأصلي
         const originalOrder = await prisma.order.findUnique({
             where: { id: originalOrderId }
         });
@@ -90,7 +87,6 @@ export const action: ActionFunction = async ({ request }) => {
             );
         }
 
-        // 2️⃣ حساب السعر بعد الخصم للـ Upsell
         const originalPrice = product.price || (product.variants?.[0]?.price || 0);
         let upsellFinalPrice = originalPrice;
         // let upsellFinalPrice = originalPrice * quantity;
@@ -122,7 +118,6 @@ export const action: ActionFunction = async ({ request }) => {
             }
         }
 
-        // 3️⃣ إعداد بيانات الـ Upsell
         const upsellItem = {
             id: `upsell_${Date.now()}`,
             productId: product.id,
@@ -139,14 +134,12 @@ export const action: ActionFunction = async ({ request }) => {
             status: "pending"
         };
 
-        // 4️⃣ تحديث الطلب المحلي (بدون حذفه)
         const currentMetadata = originalOrder.metadata as any || {};
         const currentUpsells = currentMetadata.upsells || [];
         const currentItems = originalOrder.items as any[] || [];
         const totalOriginalAmount = originalOrder.totalAmount || 0;
         const newTotalAmount = totalOriginalAmount + upsellFinalPrice;
 
-        // تحديث الطلب المحلي
         const updatedOrder = await prisma.order.update({
             where: { id: originalOrderId },
             data: {
@@ -181,13 +174,11 @@ export const action: ActionFunction = async ({ request }) => {
             newTotal: updatedOrder.totalAmount
         });
 
-        // 5️⃣ التعامل مع Shopify
         let shopifyResponse = null;
         let shopifyError = null;
         let newShopifyOrderId = null;
 
         try {
-            // الحصول على معرف طلب Shopify من الميتاداتا
             const shopifyResponseMetadata = currentMetadata.shopifyResponse as any;
             const existingShopifyOrderId = currentMetadata.shopifyOrderId ||
                 shopifyResponseMetadata?.order?.id ||
@@ -196,12 +187,10 @@ export const action: ActionFunction = async ({ request }) => {
             if (existingShopifyOrderId) {
                 console.log("🗑️ Deleting existing Shopify order:", existingShopifyOrderId);
 
-                // حذف طلب Shopify القديم
                 await deleteShopifyOrder(shop, accessToken, existingShopifyOrderId);
                 console.log("✅ Shopify order deleted successfully");
             }
 
-            // إنشاء طلب Shopify جديد بالمنتجات الأصلية + الـ Upsell
             console.log("🔄 Creating new Shopify order with upsell");
             shopifyResponse = await createCompleteShopifyOrder(
                 shop,
@@ -220,7 +209,6 @@ export const action: ActionFunction = async ({ request }) => {
 
             console.log("✅ New Shopify order created:", newShopifyOrderId);
 
-            // تحديث الميتاداتا في الطلب المحلي
             await prisma.order.update({
                 where: { id: originalOrderId },
                 data: {
@@ -249,7 +237,6 @@ export const action: ActionFunction = async ({ request }) => {
             };
             console.error("❌ Error in Shopify operations:", shopifyErr);
 
-            // تحديث حالة الـ Upsell بالفشل
             await prisma.order.update({
                 where: { id: originalOrderId },
                 data: {
@@ -267,7 +254,6 @@ export const action: ActionFunction = async ({ request }) => {
             });
         }
 
-        // 6️⃣ إعداد الرد النهائي
         const responseBody = {
             success: true,
             message: shopifyResponse
@@ -332,16 +318,12 @@ export const action: ActionFunction = async ({ request }) => {
     }
 };
 
-/**
- * حذف طلب Shopify
- */
 async function deleteShopifyOrder(
     shop: string,
     accessToken: string,
     shopifyOrderId: string
 ): Promise<void> {
     try {
-        // محاولة حذف كـ Draft Order أولاً
         let response = await fetch(
             `https://${shop}/admin/api/2024-01/draft_orders/${shopifyOrderId}.json`,
             {
@@ -358,7 +340,6 @@ async function deleteShopifyOrder(
             return;
         }
 
-        // إذا لم يكن Draft، نجرب حذف كـ Order
         response = await fetch(
             `https://${shop}/admin/api/2024-01/orders/${shopifyOrderId}/cancel.json`,
             {
@@ -386,9 +367,7 @@ async function deleteShopifyOrder(
     }
 }
 
-/**
- * إنشاء طلب Shopify جديد كامل (المنتجات الأصلية + الـ Upsell)
- */
+
 async function createCompleteShopifyOrder(
     shop: string,
     accessToken: string,
@@ -407,7 +386,6 @@ async function createCompleteShopifyOrder(
         `Upsell Discount: ${discountApplied.type} ${discountApplied.value}` :
         "No discount";
 
-    // تحويل المنتجات الأصلية إلى تنسيق Shopify line_items
     const originalLineItems = originalItems
         .filter((item: any) => !item.isUpsell)
         .map((item: any) => {
@@ -425,11 +403,6 @@ async function createCompleteShopifyOrder(
                 price = productData.variants[0].price;
             }
 
-            // تحويل السعر إلى قروش
-            // if (price < 1000 && price > 0) {
-            //     price = price * 100;
-            // }
-
             return {
                 variant_id: parseInt(variantId) || 0,
                 quantity: quantity,
@@ -442,12 +415,11 @@ async function createCompleteShopifyOrder(
             };
         });
 
-    // إضافة الـ Upsell product
     const upsellLineItem = {
         variant_id: parseInt(variantId),
         quantity: parseInt(quantity) || 1,
         title: upsellProduct.title,
-        price: upsellPrice * 100, // تحويل درهم إلى قروش
+        price: upsellPrice * 100,
         properties: [
             { name: "Upsell", value: "Yes" },
             { name: "Original Order", value: originalOrder.orderNumber || "Unknown" },
@@ -460,14 +432,12 @@ async function createCompleteShopifyOrder(
         ...originalLineItems,
         upsellLineItem
     ];
-
-    // استخدام إعدادات الطلب الأصلية
+    
     const orderOptions = (originalOrder.metadata as any)?.orderOptions || {
         saveAsDraft: false,
         createCODOrders: false
     };
 
-    // إعداد عنوان الشحن
     const shippingAddress = {
         first_name: originalCustomer.first_name || "",
         last_name: originalCustomer.last_name || "",
@@ -480,7 +450,6 @@ async function createCompleteShopifyOrder(
         phone: originalCustomer.phone || ""
     };
 
-    // 1️⃣ البحث عن العميل الموجود في Shopify (نفس منطق shopify.service.ts)
     let existingCustomer = null;
     let customerEmail = originalCustomer.email || "";
     let customerPhone = originalCustomer.phone || "";
@@ -488,7 +457,6 @@ async function createCompleteShopifyOrder(
     try {
         console.log("🔍 Searching for existing customer in Shopify...");
 
-        // البحث بالبريد الإلكتروني أولاً (نفس وظيفة findCustomerByEmail)
         if (customerEmail && customerEmail.trim() !== '') {
             const searchResponse = await fetch(
                 `https://${shop}/admin/api/2024-01/customers/search.json?query=email:${encodeURIComponent(customerEmail)}`,
@@ -537,21 +505,17 @@ async function createCompleteShopifyOrder(
         }
     } catch (searchError) {
         console.error("❌ Error searching for customer:", searchError);
-        // نستمر في العملية حتى لو فشل البحث
     }
 
-    // 2️⃣ إعداد بيانات الطلب مع مراعاة العميل الموجود
     const orderBaseData: any = {
         line_items: allLineItems,
         note: `🔄 ORDER UPDATED WITH UPSELL\n• Replaced Order: ${originalOrder.orderNumber}\n• Customer: ${originalCustomer.first_name} ${originalCustomer.last_name}\n• Email: ${customerEmail}\n• Phone: ${customerPhone}\n\n---\n🎯 UPSELL PRODUCT ADDED:\n• Product: ${upsellProduct.title}\n• ${discountText}\n• Price: ${upsellPrice*100} MAD\n• Added at: ${new Date().toLocaleString()}\n• Client IP: ${clientIP}\n\nCreated via Formino Upsell System`,
-        tags: "formino-app,upsell-order,post-purchase,updated-order",
+        tags: "formpay-app,upsell-order,post-purchase,updated-order",
         shipping_address: shippingAddress,
         use_customer_default_address: true
     };
 
-    // تحديد بيانات العميل بناءً على ما إذا كان موجوداً
     if (existingCustomer) {
-        // ✅ استخدام العميل الموجود
         orderBaseData.customer = {
             id: existingCustomer.id,
             first_name: existingCustomer.first_name || originalCustomer.first_name || "Customer",
@@ -561,7 +525,6 @@ async function createCompleteShopifyOrder(
         };
         console.log("👤 Using existing customer ID:", existingCustomer.id);
     } else {
-        // 🔄 إنشاء عميل جديد (بعد إصلاح مشكلة رقم الهاتف)
         const customerData = {
             first_name: originalCustomer.first_name || "Customer",
             last_name: originalCustomer.last_name || "",
@@ -569,7 +532,6 @@ async function createCompleteShopifyOrder(
             phone: customerPhone || "",
         };
 
-        // إذا كان رقم الهاتف فارغاً، لا نرسله
         if (!customerData.phone || customerData.phone.trim() === '') {
             delete customerData.phone;
         }
@@ -578,7 +540,6 @@ async function createCompleteShopifyOrder(
         console.log("👤 Creating new customer:", customerData);
     }
 
-    // 3️⃣ إعداد بيانات الطلب النهائية
     const draftOrderData = {
         draft_order: orderBaseData
     };
@@ -619,11 +580,9 @@ async function createCompleteShopifyOrder(
         const errorText = await response.text();
         console.error("❌ Shopify API error response:", errorText);
 
-        // إذا كان الخطأ متعلقاً بالعميل، نحاول مرة أخرى بدون بيانات العميل
         if (errorText.includes("customer") || errorText.includes("phone_number")) {
             console.log("⚠️ Customer data issue, retrying without customer...");
 
-            // إعادة المحاولة بدون بيانات العميل
             delete orderBaseData.customer;
             orderBaseData.note += "\n\n⚠️ Created without customer data due to validation issues";
 
@@ -652,13 +611,11 @@ async function createCompleteShopifyOrder(
     console.log("✅ Shopify order created successfully:", result);
     return result;
 }
-/**
- * دالة لمعالجة إحصائيات الـ Upsell
- */
+
+
 async function updateUpsellStatistics(upsellId: string, action: 'viewed' | 'accepted' | 'declined') {
     try {
         console.log(`📊 Statistics update for upsell ${upsellId}: ${action}`);
-        // Implementation here
     } catch (error) {
         console.error("❌ Error updating upsell statistics:", error);
     }

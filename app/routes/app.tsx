@@ -49,6 +49,7 @@ export default function App() {
         <s-link href="/app/designer">Form Designer</s-link>
         <s-link href="/app/sales-booster">Sales Booster</s-link>
         <s-link href="/app/settings">Settings</s-link>
+        <s-link href="/app/orders">Orders</s-link>
         <s-link href="/app/fraud-prevention">Fraud Prevention</s-link>
         <s-link href="/app/billing">Billing</s-link>
       </s-app-nav>

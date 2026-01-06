@@ -25,7 +25,9 @@ export async function createShopifyOrder(
     shipping: any,
     customerData: CustomerData,
     orderOptions: OrderOptions,
-    clientIP: string
+    clientIP: string,
+    discountApplied: any = null,
+    quantityOffer: any = null
 ) {
     const shopifyOrderType = orderOptions.saveAsDraft ? "draft_order" : "order";
     console.log(`🛍️ Creating ${shopifyOrderType} in Shopify`);
@@ -34,7 +36,19 @@ export async function createShopifyOrder(
         if (orderOptions.saveAsDraft) {
             return await createDraftOrder(shop, accessToken, variantId, quantity, product, shipping, customerData, orderOptions, clientIP);
         } else {
-            return await createFullOrder(shop, accessToken, variantId, quantity, product, shipping, customerData, orderOptions, clientIP);
+            return await createFullOrder(
+                shop,
+                accessToken,
+                variantId,
+                quantity,
+                product,
+                shipping,
+                customerData,
+                orderOptions,
+                clientIP,
+                discountApplied,
+                quantityOffer,
+            );
         }
     } catch (error: any) {
         console.error(`❌ Error creating ${shopifyOrderType}:`, error);
@@ -113,9 +127,20 @@ async function createDraftOrder(shop: string, accessToken: string, variantId: st
     return await response.json();
 }
 
-async function createFullOrder(shop: string, accessToken: string, variantId: string, quantity: string, product: any, shipping: any, customerData: CustomerData, orderOptions: OrderOptions, clientIP: string) {
+async function createFullOrder(
+    shop: string, 
+    accessToken: string, 
+    variantId: string, 
+    quantity: string,
+    product: any, 
+    shipping: any, 
+    customerData: CustomerData, 
+    orderOptions: OrderOptions, 
+    clientIP: string, 
+    discountData: any = null, 
+    quantityOfferData: any = null
+) {
     try {
-        // 🔥 البحث عن العميل الحالي بواسطة البريد الإلكتروني أو الهاتف
         let existingCustomer = null;
 
         if (customerData.email && customerData.email.trim() !== '') {
@@ -126,11 +151,53 @@ async function createFullOrder(shop: string, accessToken: string, variantId: str
             existingCustomer = await findCustomerByPhone(shop, accessToken, customerData.phone);
         }
 
-        // 🔥 إنشاء note
-        const customerNote = generateCustomerNote(customerData, clientIP, orderOptions);
+        let finalPrice = product?.price || 0;
+        let originalPrice = product?.price || 0;
+        let orderNote = generateCustomerNote(customerData, clientIP, orderOptions);
 
-        console.log("*******************************************************************************")
-        console.log(shipping)
+        if (quantityOfferData) {
+            const tierQuantity = quantityOfferData.quantity || 1;
+            const discountType = quantityOfferData.discountType;
+            const discountValue = quantityOfferData.discountValue;
+
+            if (parseInt(quantity) !== tierQuantity) {
+                console.log(`🔄 Adjusting quantity from ${quantity} to ${tierQuantity} for quantity offer`);
+                quantity = tierQuantity.toString();
+            }
+
+            const totalBeforeDiscount = originalPrice * tierQuantity;
+
+            if (discountType === "PERCENTAGE") {
+                finalPrice = totalBeforeDiscount * (1 - discountValue / 100);
+            } else if (discountType === "FIXED_AMOUNT") {
+                finalPrice = totalBeforeDiscount - discountValue;
+            } else {
+                finalPrice = totalBeforeDiscount;
+            }
+
+            orderNote += `\n\n📦 QUANTITY OFFER APPLIED:\n`;
+            orderNote += `- Quantity: ${tierQuantity}\n`;
+            orderNote += `- Discount: ${discountValue}${discountType === "PERCENTAGE" ? "%" : ` ${product?.currency || "MAD"}`}\n`;
+            orderNote += `- Original Price: ${originalPrice * tierQuantity} ${product?.currency || "MAD"}\n`;
+            orderNote += `- Final Price: ${finalPrice} ${product?.currency || "MAD"}\n`;
+            orderNote += `- Savings: ${(originalPrice * tierQuantity) - finalPrice} ${product?.currency || "MAD"}`;
+
+        } else if (discountData) {
+            finalPrice = discountData.newPrice || finalPrice;
+
+            orderNote += `\n\n🎯 DISCOUNT APPLIED:\n`;
+            orderNote += `- Original Price: ${originalPrice} ${product?.currency || "MAD"}\n`;
+            orderNote += `- Discounted Price: ${finalPrice} ${product?.currency || "MAD"}\n`;
+            orderNote += `- Savings: ${originalPrice - finalPrice} ${product?.currency || "MAD"}`;
+        }
+
+        finalPrice = Math.max(0, finalPrice);
+
+        console.log("💰 Price Summary:");
+        console.log("- Original Price:", originalPrice);
+        console.log("- Final Price after discounts:", finalPrice);
+        console.log("- Quantity:", quantity);
+        console.log("- Total:", finalPrice);
 
         const orderData: any = {
             order: {
@@ -138,9 +205,24 @@ async function createFullOrder(shop: string, accessToken: string, variantId: str
                     variant_id: parseInt(variantId),
                     quantity: parseInt(quantity) || 1,
                     title: product?.title,
-                    price: product?.price,
+                    price: finalPrice,
+                    ...(discountData || quantityOfferData ? {
+                        properties: [
+                            {
+                                name: "discount_type",
+                                value: quantityOfferData?.discountType || discountData?.type || "none"
+                            },
+                            {
+                                name: "discount_value",
+                                value: quantityOfferData?.discountValue?.toString() || discountData?.value?.toString() || "0"
+                            },
+                            {
+                                name: "original_price",
+                                value: (originalPrice * parseInt(quantity)).toString()
+                            }
+                        ]
+                    } : {})
                 }],
-                // 🔥 استخدام العميل الحالي إذا وجد، وإلا إنشاء جديد
                 customer: existingCustomer ? {
                     id: existingCustomer.id,
                     first_name: existingCustomer.first_name || customerData.firstName,
@@ -175,12 +257,12 @@ async function createFullOrder(shop: string, accessToken: string, variantId: str
                     country: "MA",
                     phone: customerData.phone || "",
                 },
-                email: customerData.email || "", // يمكن أن يكون فارغاً
-                phone: customerData.phone || "", // يمكن أن يكون فارغاً
+                email: customerData.email || "",
+                phone: customerData.phone || "",
                 financial_status: orderOptions.createCODOrders ? "pending" : "pending",
-                send_receipt: false, 
+                send_receipt: false,
                 send_fulfillment_receipt: false,
-                note: customerNote,
+                note: orderNote,
                 tags: "formpay-app" + (orderOptions.createCODOrders ? ",cod" : ""),
                 shipping_lines: shipping ? [
                     {
@@ -189,6 +271,15 @@ async function createFullOrder(shop: string, accessToken: string, variantId: str
                         code: shipping.id || "standard"
                     }
                 ] : [],
+                ...(discountData || quantityOfferData ? {
+                    discount_codes: [
+                        {
+                            code: quantityOfferData ? `QTY_OFFER` : `DISCOUNT_CODE`,
+                            amount: ((originalPrice * parseInt(quantity)) - finalPrice).toString(),
+                            type: "fixed_amount"
+                        }
+                    ]
+                } : {})
             }
         };
 
@@ -211,11 +302,9 @@ async function createFullOrder(shop: string, accessToken: string, variantId: str
 
         if (!response.ok) {
             console.error("❌ Shopify API Error Details:", responseData);
-
-            // 🔥 محاولة بديلة: إنشاء الطلب بدون بيانات العميل
             if (responseData.errors && hasCustomerErrors(responseData.errors)) {
                 console.log("🔄 Trying without customer data...");
-                return await createOrderWithoutCustomer(shop, accessToken, variantId, quantity, product, customerNote, orderOptions);
+                return await createOrderWithoutCustomer(shop, accessToken, variantId, quantity, product, orderNote, orderOptions, finalPrice);
             }
 
             throw new Error(`Shopify Order API error: ${JSON.stringify(responseData.errors || responseData.message)}`);
@@ -278,26 +367,25 @@ function hasCustomerErrors(errors: any): boolean {
     );
 }
 
-async function createOrderWithoutCustomer(shop: string, accessToken: string, variantId: string, quantity: string, product: any, note: string, orderOptions: OrderOptions) {
+async function createOrderWithoutCustomer(shop: string, accessToken: string, variantId: string, quantity: string, product: any, note: string, orderOptions: OrderOptions, finalPrice: any) {
     const orderData: any = {
         order: {
             line_items: [{
                 variant_id: parseInt(variantId),
                 quantity: parseInt(quantity) || 1,
                 title: product?.title,
-                price: product?.price,
+                price: finalPrice,
             }],
-            // 🔥 لا نرسل بيانات العميل نهائياً
             shipping_address: {
                 first_name: "Customer",
-                last_name: "Formino",
+                last_name: "FORMPAY",
                 address1: "Address not provided",
                 city: "City not provided",
                 country: "MA",
             },
             billing_address: {
                 first_name: "Customer",
-                last_name: "Formino",
+                last_name: "FORMPAY",
                 address1: "Address not provided",
                 city: "City not provided",
                 country: "MA",
@@ -306,7 +394,7 @@ async function createOrderWithoutCustomer(shop: string, accessToken: string, var
             send_receipt: false,
             send_fulfillment_receipt: false,
             note: note + "\n\n⚠️ Created without customer data due to validation issues",
-            tags: "formino-app" + (orderOptions.createCODOrders ? ",cod" : ""),
+            tags: "formpay-app" + (orderOptions.createCODOrders ? ",cod" : ""),
             shipping_lines: [],
         }
     };
@@ -336,15 +424,14 @@ async function createOrderWithoutCustomer(shop: string, accessToken: string, var
 
 function generateCustomerNote(customerData: CustomerData, clientIP: string, orderOptions: OrderOptions): string {
     const noteLines = [
-        "=== FORMINO APP ORDER ===",
+        "=== FORMPAY APP ORDER ===",
         `📅 Created: ${new Date().toLocaleString()}`,
-        `🌐 Source: Formino App`,
+        `🌐 Source: FORMPAY App`,
         `🖥️ Client IP: ${clientIP}`,
         "",
         "👤 CUSTOMER INFORMATION:"
     ];
 
-    // إضافة معلومات العميل فقط إذا كانت تحتوي على قيمة
     if (customerData.firstName || customerData.lastName) {
         noteLines.push(`• Name: ${customerData.firstName} ${customerData.lastName}`.trim());
     }
@@ -357,7 +444,6 @@ function generateCustomerNote(customerData: CustomerData, clientIP: string, orde
 
     noteLines.push("");
 
-    // إضافة العنوان فقط إذا كانت هناك معلومات عنوان
     const hasAddressInfo = customerData.address || customerData.city || customerData.province || customerData.zipCode;
     if (hasAddressInfo) {
         noteLines.push("📍 SHIPPING ADDRESS:");
@@ -390,7 +476,6 @@ function generateCustomerNote(customerData: CustomerData, clientIP: string, orde
         "Created via Formino App"
     );
 
-    // تصفية الأسطر الفارغة ودمجها
     return noteLines.filter(line => line !== null && line !== "").join('\n');
 }
 
@@ -399,7 +484,6 @@ function generateCustomerNoteShort(customerData: CustomerData, clientIP: string,
         "📋 Formino App Order"
     ];
 
-    // إضافة معلومات العميل فقط إذا كانت تحتوي على قيمة
     if (customerData.firstName || customerData.lastName) {
         lines.push(`👤 ${customerData.firstName} ${customerData.lastName}`.trim());
     }
@@ -409,8 +493,7 @@ function generateCustomerNoteShort(customerData: CustomerData, clientIP: string,
     if (customerData.phone) {
         lines.push(`📞 ${customerData.phone}`);
     }
-
-    // إضافة العنوان فقط إذا كانت هناك معلومات عنوان
+    
     const hasAddressInfo = customerData.address || customerData.city || customerData.province || customerData.zipCode;
     if (hasAddressInfo) {
         const addressParts = [];
@@ -439,7 +522,7 @@ function generateCustomerNoteShort(customerData: CustomerData, clientIP: string,
 function generateCustomerNoteTable(customerData: CustomerData, clientIP: string, orderOptions: OrderOptions): string {
 
     const lines = [
-        "FORMINO APP ORDER DETAILS",
+        "FORMPAY APP ORDER DETAILS",
         "========================"
     ];
 
@@ -481,7 +564,7 @@ function generateCustomerNoteTable(customerData: CustomerData, clientIP: string,
         `Draft:       ${orderOptions.saveAsDraft ? 'Yes' : 'No'}`,
         `Created:     ${new Date().toLocaleString()}`,
         "",
-        "Created via Formino App"
+        "Created via FORMPAY APP"
     );
 
     return lines.join('\n');
@@ -492,7 +575,6 @@ function hasValue(value: string | undefined | null): boolean {
 }
 
 function generateSmartCustomerNote(customerData: CustomerData, clientIP: string, orderOptions: OrderOptions): string {
-
     const filledFields = [
         customerData.firstName,
         customerData.lastName,

@@ -38,6 +38,9 @@ export const action: ActionFunction = async ({ request }) => {
         const clientIP = getClientIP(request);
         console.log("🔍 Client IP:", clientIP);
 
+        const quantityOfferData = formData.get("quantity_offer") as string;
+        const discountAppliedData = formData.get("discount_applied") as string;
+
         // التحقق من الحظر
         const blockingCheck = await checkBlockingSettings(shop, formData, clientIP);
         if (blockingCheck.blocked) {
@@ -63,6 +66,22 @@ export const action: ActionFunction = async ({ request }) => {
         }
 
         const accessToken = user.sessions[0].accessToken;
+
+        let quantityOffer = null;
+        let discountApplied = null;
+
+        try {
+            if (quantityOfferData) {
+                quantityOffer = JSON.parse(quantityOfferData);
+                console.log("📦 Quantity Offer Data Received:", quantityOffer);
+            }
+            if (discountAppliedData) {
+                discountApplied = JSON.parse(discountAppliedData);
+                console.log("🎯 Discount Data Received:", discountApplied);
+            }
+        } catch (e) {
+            console.error("❌ Error parsing discount/quantity offer data:", e);
+        }
 
         // 🔥 استخراج جميع البيانات من الفورم
         const first_name = (formData.get("first_name") as string) || "";
@@ -274,7 +293,9 @@ export const action: ActionFunction = async ({ request }) => {
                 shipping,
                 customerData,
                 orderOptions,
-                clientIP // 🔥 إضافة الـ IP هنا
+                clientIP,
+                discountApplied,
+                quantityOffer,
             );
 
             shopifyOrderType = orderOptions.saveAsDraft ? "draft_order" : "order";
