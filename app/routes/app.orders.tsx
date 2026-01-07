@@ -43,7 +43,10 @@ interface OrderItem {
     id: string;
     title: string;
     quantity: number;
+    price?: number;
     variantId?: string;
+    productId?: string;
+    upsellId?: string;
     product?: any;
 }
 
@@ -102,54 +105,62 @@ export default function OrdersPage() {
         end: null
     });
 
+    // أضف هذه داخل OrdersPage
+    const [currentPage, setCurrentPage] = useState(1);
+    const [paginationInfo, setPaginationInfo] = useState({
+        hasNext: false,
+        hasPrevious: false,
+        totalPages: 1,
+        totalCount: 0
+    });
+
+    const [totalGlobalRevenue, setTotalGlobalRevenue] = useState(0);
+
     // جلب الطلبات من API
     const fetchOrders = useCallback(async () => {
-    setLoading(true);
-    try {
-        const response = await fetch("/api/orders");
-        const data = await response.json();
+        setLoading(true);
+        try {
+            // نرسل رقم الصفحة الحالية والحد (مثلاً 10 أو 20)
+            const response = await fetch(`/api/orders?page=${currentPage}&limit=20`);
+            const data = await response.json();
 
-        console.log('API Response:', data); // تحقق من الرد
+            if (data.success) {
+                const ordersData = data.data.map((order: any) => {
+                    const parseData = (field: any) => {
+                        if (!field) return null;
+                        if (typeof field === 'object') return field;
+                        try { return JSON.parse(String(field)); } catch { return field; }
+                    };
 
-        if (data.success) {
-            const ordersData = data.data.map((order: any) => {
-                // تحويل البيانات بطريقة أكثر أماناً
-                const parseData = (field: any) => {
-                    if (!field) return null;
-                    if (typeof field === 'object') return field;
-                    try {
-                        return JSON.parse(String(field));
-                    } catch {
-                        return field;
-                    }
-                };
+                    return {
+                        ...order,
+                        createdAt: order.createdAt ? new Date(order.createdAt).toISOString() : new Date().toISOString(),
+                        customer: parseData(order.customer),
+                        items: parseData(order.items) || [],
+                        totals: parseData(order.totals) || {},
+                        shipping: parseData(order.shipping),
+                    };
+                });
 
-                return {
-                    ...order,
-                    createdAt: order.createdAt ? new Date(order.createdAt).toISOString() : new Date().toISOString(),
-                    updatedAt: order.updatedAt ? new Date(order.updatedAt).toISOString() : new Date().toISOString(),
-                    customer: parseData(order.customer),
-                    items: parseData(order.items) || [],
-                    totals: parseData(order.totals) || {},
-                    shipping: parseData(order.shipping),
-                    discounts: parseData(order.discounts) || [],
-                    coupons: parseData(order.coupons) || [],
-                    upsells: parseData(order.upsells) || [],
-                    metadata: parseData(order.metadata) || {}
-                };
-            });
+                setOrders(ordersData);
 
-            console.log('Processed orders data:', ordersData); // تحقق من البيانات المعالجة
-            setOrders(ordersData);
-        } else {
-            console.error("Error fetching orders:", data.error);
+                // تحديث معلومات الترقيم من الـ API
+                setPaginationInfo({
+                    hasNext: currentPage < data.pagination.pages,
+                    hasPrevious: currentPage > 1,
+                    totalPages: data.pagination.pages,
+                    totalCount: data.pagination.total
+                });
+
+                setTotalGlobalRevenue(data.totalRevenue || 0);
+
+            }
+        } catch (error) {
+            console.error("Error fetching orders:", error);
+        } finally {
+            setLoading(false);
         }
-    } catch (error) {
-        console.error("Error fetching orders:", error);
-    } finally {
-        setLoading(false);
-    }
-}, []);
+    }, [currentPage]); // ملاحظة: يجب إضافة currentPage هنا ليعاد التحميل عند تغير الصفحة
 
     useEffect(() => {
         fetchOrders();
@@ -212,9 +223,9 @@ export default function OrdersPage() {
             order: order
         });
 
-        const customerName = order.customer ? 
-                `${order.customer?.first_name || ''} ${order.customer?.last_name || ''}`.trim() 
-                : 'No Name'
+        const customerName = order.customer ?
+            `${order.customer?.first_name || ''} ${order.customer?.last_name || ''}`.trim()
+            : 'No Name'
 
         const phone = order.customerPhone || customer.phone || 'No Phone';
 
@@ -320,102 +331,56 @@ export default function OrdersPage() {
             >
                 {/* بطاقات الإحصائيات */}
                 <div style={{ marginBottom: '20px' }}>
-                    <InlineStack gap="400">
-                        <LegacyCard sectioned>
-                            <BlockStack gap="100">
-                                <Text variant="headingMd" as="h3">Total Orders</Text>
-                                <Text variant="headingLg" as="p">{orderStats.total}</Text>
-                            </BlockStack>
-                        </LegacyCard>
-                        <LegacyCard sectioned>
-                            <BlockStack gap="100">
-                                <Text variant="headingMd" as="h3">Pending</Text>
-                                <Text variant="headingLg" as="p">{orderStats.pending}</Text>
-                            </BlockStack>
-                        </LegacyCard>
-                        <LegacyCard sectioned>
-                            <BlockStack gap="100">
-                                <Text variant="headingMd" as="h3">Completed</Text>
-                                <Text variant="headingLg" as="p">{orderStats.completed}</Text>
-                            </BlockStack>
-                        </LegacyCard>
-                        <LegacyCard sectioned>
-                            <BlockStack gap="100">
-                                <Text variant="headingMd" as="h3">Total Revenue</Text>
-                                <Text variant="headingLg" as="p">${orderStats.totalRevenue.toFixed(2)}</Text>
-                            </BlockStack>
-                        </LegacyCard>
-                    </InlineStack>
-                </div>
-
-                {/* فلترة البحث */}
-                <LegacyCard sectioned>
-                    <BlockStack gap="400">
-                        <InlineStack align="start" wrap={false} gap="400">
-                            <Box width="300px">
-                                <TextField
-                                    label="Search orders"
-                                    labelHidden
-                                    placeholder="Search by order #, email, name..."
-                                    value={searchQuery}
-                                    onChange={setSearchQuery}
-                                    prefix={<Icon source={SearchIcon} />}
-                                    autoComplete="off"
-                                />
-                            </Box>
-
-                            <Box width="200px">
-                                <Select
-                                    label="Status"
-                                    labelHidden
-                                    options={[
-                                        { label: 'All Statuses', value: 'all' },
-                                        { label: 'Pending', value: 'pending' },
-                                        { label: 'Processing', value: 'processing' },
-                                        { label: 'Completed', value: 'completed' },
-                                        { label: 'Paid', value: 'paid' },
-                                        { label: 'Cancelled', value: 'cancelled' },
-                                        { label: 'Refunded', value: 'refunded' },
-                                    ]}
-                                    value={statusFilter}
-                                    onChange={setStatusFilter}
-                                    placeholder="Status"
-                                />
-                            </Box>
-
-                            {/* <Box width="200px">
-                                <DatePicker
-                                    month={dateFilter.start || new Date()}
-                                    year={(dateFilter.start || new Date()).getFullYear()}
-                                    onChange={({ start, end }) => setDateFilter({ start, end })}
-                                    onMonthChange={() => { }}
-                                    selected={dateFilter}
-                                    allowRange={true}
-                                    disableDatesAfter={new Date()}
-                                >
-                                    <Button icon={FilterIcon} disclosure>
-                                        {dateFilter.start
-                                            ? `${dateFilter.start.toLocaleDateString()} ${dateFilter.end ? `- ${dateFilter.end.toLocaleDateString()}` : ''}`
-                                            : 'Date Range'}
-                                    </Button>
-                                </DatePicker>
-                            </Box> */}
-
-                            <Box>
-                                <Button
-                                    onClick={() => {
-                                        setStatusFilter('all');
-                                        setSearchQuery('');
-                                        setDateFilter({ start: null, end: null });
-                                    }}
-                                    variant="tertiary"
-                                >
-                                    Clear Filters
-                                </Button>
-                            </Box>
+                    <Box padding="200">
+                        <InlineStack align="start" blockAlign="start" gap="400">
+                            <div style={{ flex: 1 }}>
+                                <LegacyCard>
+                                    <div style={{ padding: "15px" }}>
+                                        <Text variant="headingMd" as="h3">
+                                            Total Orders
+                                        </Text>
+                                        <Text variant="headingLg" as="p">
+                                            {paginationInfo.totalCount}
+                                        </Text>
+                                    </div>
+                                </LegacyCard>
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <LegacyCard>
+                                    <div style={{ padding: "15px" }}>
+                                        <Text variant="headingMd" as="h3">Total Revenue</Text>
+                                        <Text variant="headingLg" as="p">
+                                            ${totalGlobalRevenue.toLocaleString(undefined, {
+                                                minimumFractionDigits: 2,
+                                                maximumFractionDigits: 2,
+                                            })}
+                                        </Text>
+                                    </div>
+                                </LegacyCard>
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <LegacyCard>
+                                    <div style={{ padding: "15px" }}>
+                                        <Text variant="headingMd" as="h3">Total Revenue</Text>
+                                        <Text variant="headingLg" as="p">
+                                            ${orderStats.totalRevenue.toFixed(2)}
+                                        </Text>
+                                    </div>
+                                </LegacyCard>
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <LegacyCard>
+                                    <div style={{ padding: "15px" }}>
+                                        <Text variant="headingMd" as="h3">Total Revenue</Text>
+                                        <Text variant="headingLg" as="p">
+                                            ${orderStats.totalRevenue.toFixed(2)}
+                                        </Text>
+                                    </div>
+                                </LegacyCard>
+                            </div>
                         </InlineStack>
-                    </BlockStack>
-                </LegacyCard>
+                    </Box>
+                </div>
 
                 {/* جدول الطلبات */}
                 <Card>
@@ -437,7 +402,7 @@ export default function OrdersPage() {
                         </EmptyState>
                     ) : (
                         <IndexTable
-                            resourceName={{ singular: 'order', plural: 'orders' }}
+                            resourceName={{ singular: 'order', plural: 'orders + All' }}
                             itemCount={filteredOrders.length}
                             selectedItemsCount={selectedResources.length}
                             onSelectionChange={handleSelectionChange}
@@ -447,13 +412,19 @@ export default function OrdersPage() {
                                 { title: 'Customer' },
                                 { title: 'Total' },
                                 { title: 'Items' },
+                                { title: 'Actions' },
                             ]}
                             hasZebraStriping
+                            // التعديل هنا:
                             pagination={{
-                                hasNext: false,
-                                hasPrevious: false,
-                                onNext: () => { },
-                                onPrevious: () => { },
+                                hasNext: paginationInfo.hasNext,
+                                hasPrevious: paginationInfo.hasPrevious,
+                                onNext: () => {
+                                    setCurrentPage((prev) => prev + 1);
+                                },
+                                onPrevious: () => {
+                                    setCurrentPage((prev) => prev - 1);
+                                },
                             }}
                         >
                             {ordersTableRows.map((row, index) => (
@@ -502,6 +473,7 @@ export default function OrdersPage() {
                                     </IndexTable.Cell>
                                 </IndexTable.Row>
                             ))}
+
                         </IndexTable>
                     )}
                 </Card>
@@ -516,14 +488,14 @@ export default function OrdersPage() {
                             content: 'Close',
                             onAction: () => setDetailModalOpen(false),
                         }}
-                        // large
+                    // large
                     >
                         <Modal.Section>
                             <BlockStack gap="400">
                                 {/* معلومات الطلب الأساسية */}
                                 <LegacyCard sectioned>
                                     <BlockStack gap="200">
-                                        
+
                                         <Grid grid={{ xs: 1, sm: 2, md: 2, lg: 4, xl: 4 }} gap="200">
                                             <Box>
                                                 <Text variant="bodySm" as="p" tone="subdued">Order ID</Text>
@@ -623,105 +595,189 @@ export default function OrdersPage() {
                                     </BlockStack>
                                 </LegacyCard>
 
-                                {/* المنتجات */}
                                 <LegacyCard title="Order Items" sectioned>
                                     <BlockStack gap="200">
-    {selectedOrder.items && selectedOrder.items.length > 0 ? (
-        selectedOrder.items.map((item, index) => {
-            const product = item.product;
-            const variantId = item.variantId;
-            
-            // البحث عن الـ variant المحدد
-            const selectedVariant = product?.variants?.find((v: any) => 
-                v.id == variantId || v.id.toString() === variantId?.toString()
-            );
-            
-            // استخدام الصورة من المنتج أو الـ variant
-            const imageUrl = product?.featured_image || 
-                            selectedVariant?.featured_image || 
-                            product?.images?.[0];
-            
-            // السعر: أولوية للسعر المخصص ثم سعر الـ variant ثم سعر المنتج
-            const price = item.product.compare_at_price || 
-                         selectedVariant?.price || 
-                         product?.price || 
-                         product?.price_min || 
-                         0;
-            
-            // اسم الـ variant
-            const variantTitle = selectedVariant?.title || 
-                                selectedVariant?.name || 
-                                'Default';
-            
-            // اسم المنتج
-            const productTitle = product?.title || 'Product';
-            
-            return (
-                <div key={index} style={{ padding: '10px 0', borderBottom: '1px solid #f1f1f1' }}>
-                    <InlineStack align="start" gap="200">
-                        {/* الصورة */}
-                        {imageUrl && (
-                            <div style={{ 
-                                width: '60px', 
-                                height: '60px', 
-                                borderRadius: '4px',
-                                overflow: 'hidden',
-                                flexShrink: 0
-                            }}>
-                                <img 
-                                    src={imageUrl} 
-                                    alt={productTitle}
-                                    style={{ 
-                                        width: '100%', 
-                                        height: '100%', 
-                                        objectFit: 'cover' 
-                                    }}
-                                    onError={(e) => {
-                                        (e.target as HTMLImageElement).style.display = 'none';
-                                    }}
-                                />
-                            </div>
-                        )}
-                        
-                        {/* تفاصيل المنتج */}
-                        <div style={{ flex: 1 }}>
-                            <InlineStack align="space-between">
-                                <div>
-                                    <Text variant="bodyMd" as="p" fontWeight="bold">
-                                        {productTitle}
-                                    </Text>
-                                    
-                                    {/* عرض اسم الـ variant إذا كان مختلفاً عن الافتراضي */}
-                                    {variantTitle !== 'Default Title' && variantTitle !== 'Default' && (
-                                        <Text variant="bodySm" as="p" tone="subdued">
-                                            Variant: {variantTitle}
-                                        </Text>
-                                    )}
-                                    
-                                    <Text variant="bodySm" as="p" tone="subdued">
-                                        Qty: {item.quantity || 1}
-                                    </Text>
-                                </div>
-                                
-                                {/* السعر */}
-                                <Text variant="bodyMd" as="p" fontWeight="bold">
-                                    ${((price / 100) * (item.quantity || 1)).toFixed(2)}
-                                </Text>
-                            </InlineStack>
-                            
-                            {/* سعر الوحدة */}
-                            <Text variant="bodySm" as="p" tone="subdued">
-                                ${(price / 100).toFixed(2)}
-                            </Text>
-                        </div>
-                    </InlineStack>
-                </div>
-            );
-        })
-    ) : (
-        <Text variant="bodyMd" as="p" tone="subdued">No items in this order</Text>
-    )}
-</BlockStack>
+                                        {selectedOrder.items && selectedOrder.items.length > 0 ? (
+                                            selectedOrder.items.map((item, index) => {
+                                                console.log(`Processing item ${index}:`, item);
+
+                                                // 1. التحقق من نوع العنصر
+                                                const isUpsellItem = selectedOrder.upsells?.length != 0;
+                                                console.log("isUpsellItem")
+                                                console.log("isUpsellItem")
+                                                console.log("isUpsellItem")
+                                                console.log("********************************")
+                                                console.log(selectedOrder.upsells)
+                                                console.log(selectedOrder)
+                                                console.log("********************************")
+                                                console.log(isUpsellItem)
+                                                // 2. معالجة العناصر العادية
+                                                if (!item.upsellId && item.product) {
+                                                    const product = item.product;
+                                                    const variantId = item.variantId;
+
+                                                    // البحث عن الـ variant المحدد
+                                                    const selectedVariant = product?.variants?.find((v: any) =>
+                                                        v.id == variantId || v.id.toString() === variantId?.toString()
+                                                    );
+
+                                                    // استخدام الصورة من المنتج أو الـ variant
+                                                    const imageUrl = product?.featured_image ||
+                                                        selectedVariant?.featured_image ||
+                                                        product?.images?.[0];
+
+                                                    // الحصول على السعر
+                                                    let price = 0;
+                                                    if (item.product.variants[0].price) {
+                                                        price = item.product.variants[0].price;
+                                                    }
+                                                    else if (selectedVariant?.price) price = selectedVariant.price;
+                                                    else if (product?.price_min) price = product.price_min;
+                                                    else if (product?.price) price = product.price;
+
+                                                    // اسم الـ variant
+                                                    const variantTitle = selectedVariant?.title ||
+                                                        selectedVariant?.name ||
+                                                        'Default';
+
+                                                    // اسم المنتج
+                                                    const productTitle = product?.title || 'Product';
+
+                                                    // الكمية
+                                                    const quantity = item.quantity || 1;
+
+                                                    return (
+                                                        <div key={index} style={{ padding: '10px 0', borderBottom: '1px solid #f1f1f1' }}>
+                                                            <InlineStack align="start" gap="200">
+                                                                {/* الصورة */}
+                                                                {imageUrl && (
+                                                                    <div style={{
+                                                                        width: '60px',
+                                                                        height: '60px',
+                                                                        borderRadius: '4px',
+                                                                        overflow: 'hidden',
+                                                                        flexShrink: 0
+                                                                    }}>
+                                                                        <img
+                                                                            src={imageUrl.startsWith('//') ? `https:${imageUrl}` : imageUrl}
+                                                                            alt={productTitle}
+                                                                            style={{
+                                                                                width: '100%',
+                                                                                height: '100%',
+                                                                                objectFit: 'cover'
+                                                                            }}
+                                                                            onError={(e) => {
+                                                                                (e.target as HTMLImageElement).style.display = 'none';
+                                                                            }}
+                                                                        />
+                                                                    </div>
+                                                                )}
+
+                                                                {/* تفاصيل المنتج */}
+                                                                <div style={{ flex: 1 }}>
+                                                                    <InlineStack align="space-between">
+                                                                        <div>
+                                                                            <Text variant="bodyMd" as="p" fontWeight="bold">
+                                                                                {productTitle}
+                                                                            </Text>
+
+                                                                            {variantTitle !== 'Default Title' && variantTitle !== 'Default' && (
+                                                                                <Text variant="bodySm" as="p" tone="subdued">
+                                                                                    Variant: {variantTitle}
+                                                                                </Text>
+                                                                            )}
+
+                                                                            <Text variant="bodySm" as="p" tone="subdued">
+                                                                                Qty: {quantity}
+                                                                            </Text>
+                                                                        </div>
+
+                                                                        {/* السعر */}
+                                                                        <Text variant="bodyMd" as="p" fontWeight="bold">
+                                                                            ${((price / 100) * quantity).toFixed(2)}
+                                                                        </Text>
+                                                                    </InlineStack>
+
+                                                                    {price > 0 && (
+                                                                        <Text variant="bodySm" as="p" tone="subdued">
+                                                                            ${(price / 100).toFixed(2)} each
+                                                                        </Text>
+                                                                    )}
+                                                                </div>
+                                                            </InlineStack>
+                                                        </div>
+                                                    );
+                                                }
+
+                                                // 3. معالجة عناصر الـ Upsell
+                                                else if (item.upsellId) {
+                                                    const upsellTitle = item.title || 'Upsell Product';
+                                                    const price = (item?.price) || 0;
+                                                    const quantity = item.quantity || 1;
+                                                    const variantId = item.variantId;
+                                                    const productId = item.productId;
+                                                    const upsellId = item.upsellId;
+
+                                                    return (
+                                                        <div key={index} style={{
+                                                            padding: '10px 0',
+                                                        }}>
+                                                            <InlineStack align="start" gap="200">
+                                                                {/* تفاصيل الـ Upsell */}
+                                                                <div style={{ flex: 1 }}>
+                                                                    <InlineStack align="space-between">
+                                                                        <div>
+                                                                            <Text variant="bodyMd" as="p" fontWeight="bold">
+                                                                                {upsellTitle}
+                                                                            </Text>
+
+                                                                            <InlineStack align="center">
+                                                                                <Badge size="small" tone="success">
+                                                                                    UPSELL
+                                                                                </Badge>
+                                                                            </InlineStack>
+
+                                                                            <Text variant="bodySm" as="p" tone="subdued">
+                                                                                Qty: {quantity}
+                                                                            </Text>
+
+                                                                            {variantId && (
+                                                                                <Text variant="bodySm" as="p" tone="subdued">
+                                                                                    Variant ID: {variantId}
+                                                                                </Text>
+                                                                            )}
+                                                                        </div>
+
+                                                                        {/* السعر */}
+                                                                        <Text variant="bodyMd" as="p" fontWeight="bold" tone="success">
+                                                                            ${((price * 100) * quantity).toFixed(2)}
+                                                                        </Text>
+                                                                    </InlineStack>
+
+                                                                    {price > 0 && (
+                                                                        <Text variant="bodySm" as="p" tone="subdued">
+                                                                            ${(price * 100).toFixed(2)}
+                                                                        </Text>
+                                                                    )}
+                                                                </div>
+                                                            </InlineStack>
+                                                        </div>
+                                                    );
+                                                }
+
+                                                // 4. حالة العنصر غير المعروف
+                                                else {
+                                                    return (
+                                                        <h3>
+                                                            Upsell
+                                                        </h3>
+                                                    );
+                                                }
+                                            })
+                                        ) : (
+                                            <Text variant="bodyMd" as="p" tone="subdued">No items in this order</Text>
+                                        )}
+                                    </BlockStack>
                                 </LegacyCard>
 
                                 {/* الملخص المالي */}
@@ -805,7 +861,7 @@ export default function OrdersPage() {
                     </Modal>
                 )}
             </Page>
-        </Frame>
+        </Frame >
     );
 }
 

@@ -24,12 +24,11 @@ export const loader: LoaderFunction = async ({ request, params }) => {
         const url = new URL(request.url);
         const orderId = params.id || url.searchParams.get("id");
 
-        // إذا كان هناك ID محدد، جلب طلب واحد
         if (orderId) {
             const order = await prisma.order.findFirst({
                 where: {
                     id: orderId,
-                    shop // للتأكد من أن الطلب ينتمي للمتجر
+                    shop
                 },
                 include: {
                     appliedUpsells: true,
@@ -145,10 +144,18 @@ export const loader: LoaderFunction = async ({ request, params }) => {
             metadata: parsePrismaJson(order.metadata) || {}
         }));
 
+        const aggregate = await prisma.order.aggregate({
+            where, // نفس فلتر البحث
+            _sum: {
+                totalAmount: true
+            }
+        });
+
         return new Response(
             JSON.stringify({
                 success: true,
                 data: formattedOrders,
+                totalRevenue: aggregate._sum.totalAmount || 0,
                 pagination: {
                     page,
                     limit,

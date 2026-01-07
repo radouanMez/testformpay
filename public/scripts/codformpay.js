@@ -336,7 +336,7 @@ class ProductFormBuilder {
         this.activeDiscount = null;
         this.activeQuantityOffer = null;
         this.originalFormHTML = null;
-        this.apiBaseUrl = "https://santa-agricultural-frog-producers.trycloudflare.com";
+        this.apiBaseUrl = "https://static-interior-amber-premium.trycloudflare.com";
         this.isSubmitting = false;
         this.init();
     }
