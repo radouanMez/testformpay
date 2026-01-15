@@ -892,10 +892,15 @@ class ProductFormBuilder {
                             justify-content: center;
                             border: ${settings.borderWidth}px solid ${settings.borderColor};
                             ${settings.shadow ? 'box-shadow: 0 2px 10px rgba(0,0,0,0.1)' : ''}">
+                <span class="elementButtonGROWCOD" style="
+                            display: flex;
+                            flex-wrap: wrap;
+                            justify-content: center;">
                 ${iconHtml}
                 <span>${this.replacePlaceholders(settings.buttonText)}</span>
                 ${settings.buttonSubtitle ?
                 `<span class="formino-button-subtitle">${settings.buttonSubtitle}</span>` : ''}
+                </span>
             </button>
         </div>
         `;
@@ -1282,12 +1287,27 @@ class ProductFormBuilder {
             return;
         }
 
-        // ✅ 2. حالة التحميل على الزر
         const submitButton = form.querySelector('.formino-submit-button');
         if (submitButton) {
             submitButton.classList.add('loading');
             submitButton.disabled = true;
-            submitButton.style.color = 'transparent';
+
+            if (!submitButton.dataset.originalContent) {
+                // حفظ العنصر الداخلي كاملاً
+                const innerContent = submitButton.querySelector('.elementButtonGROWCOD');
+                if (innerContent) {
+                    submitButton.dataset.originalContent = innerContent.outerHTML;
+                }
+            }
+
+            // إخفاء المحتوى الأصلي وإظهار spinner فقط
+            submitButton.innerHTML = `
+                <div class="formino-spinner"></div>
+            `;
+
+            // إضافة فئة لتوسيع الزر إذا لزم الأمر
+            submitButton.classList.add('formino-loading-state');
+
         }
 
         try {
@@ -1371,10 +1391,14 @@ class ProductFormBuilder {
                 message: 'Something went wrong while sending your order. Please try again.'
             });
         } finally {
-            if (submitButton) {
+            if (submitButton && submitButton.dataset.originalContent) {
                 submitButton.classList.remove('loading');
+                submitButton.classList.remove('formino-loading-state');
                 submitButton.disabled = false;
-                submitButton.style.color = this.configButton.textColor;
+                submitButton.innerHTML = submitButton.dataset.originalContent;
+
+                // إعادة ربط الأحداث إذا لزم الأمر
+                this.setupFormHandlers();
             }
         }
     }
@@ -1933,6 +1957,39 @@ class ProductFormBuilder {
             .formino-popup-button:active {
                 transform: translateY(0);
             }
+
+             .formino-spinner {
+                display: inline-block;
+                width: 20px;
+                height: 20px;
+                border: 2px solid rgba(255, 255, 255, 0.3);
+                border-radius: 50%;
+                border-top-color: #fff;
+                animation: formino-spin 1s ease-in-out infinite;
+                margin-left: 10px;
+            }
+            
+            .formino-submit-button.loading .formino-spinner {
+                display: inline-block;
+            }
+            
+            .formino-submit-button:not(.loading) .formino-spinner {
+                display: none;
+            }
+            
+            @keyframes formino-spin {
+                to { transform: rotate(360deg); }
+            }
+            
+            .formino-submit-button.loading {
+                opacity: 0.9;
+                cursor: wait;
+            }
+            
+            .formino-submit-button.loading svg {
+                opacity: 0.5;
+            }
+
         `;
 
         document.head.appendChild(style);
@@ -2276,7 +2333,7 @@ class ProductFormBuilder {
         if (submitButton) {
             submitButton.disabled = false;
             submitButton.classList.remove('loading');
-            submitButton.style.color = '';
+            // submitButton.style.color = '';
         }
     }
 
@@ -2960,7 +3017,6 @@ class ProductFormBuilder {
                 <div class="formino-upsell-buttons" 
                      style="display: flex; gap: 15px; flex-direction: column;">
                     
-                    <!-- زر إضافة للطلب -->
                     <button type="button" id="accept-upsell" 
                             class="formino-upsell-add-button"
                             style="background: ${design.addButton?.backgroundColor || '#000000'}; 
@@ -2977,7 +3033,6 @@ class ProductFormBuilder {
                         ${design.addButton?.text || 'Add to my order'}
                     </button>
                     
-                    <!-- زر رفض العرض -->
                     <button type="button" id="decline-upsell" 
                             class="formino-upsell-decline-button"
                             style="background: ${design.noButton?.backgroundColor || '#ffffff'}; 
