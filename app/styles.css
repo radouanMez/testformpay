@@ -764,3 +764,9 @@ input:checked+.slider:before {
     line-height: 1.2;
     letter-spacing: normal;
 }
+
+.image_steps_install img {
+    border: 3px solid #4e5f35;
+    border-radius: 10px;
+    max-width: 270px;
+}
