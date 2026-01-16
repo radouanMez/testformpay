@@ -343,7 +343,7 @@ class ProductFormBuilder {
         this.activeDiscount = null;
         this.activeQuantityOffer = null;
         this.originalFormHTML = null;
-        this.apiBaseUrl = "https://seafood-neutral-celebrate-celebrate.trycloudflare.com";
+        this.apiBaseUrl = "https://cord-cheapest-iii-condo.trycloudflare.com";
         this.isSubmitting = false;
         this.init();
     }
@@ -417,7 +417,7 @@ class ProductFormBuilder {
 // ============================================
 // القسم 4: باني النموذج - الجزء الثاني: إنشاء النموذج
 // ============================================
-ProductFormBuilder.prototype.createEmbeddedForm = function() {
+ProductFormBuilder.prototype.createEmbeddedForm = function () {
     let formContainer = document.getElementById('formino-cod-form');
 
     if (formContainer) {
@@ -491,12 +491,12 @@ ProductFormBuilder.prototype.createEmbeddedForm = function() {
     }
 };
 
-ProductFormBuilder.prototype.createPopupForm = function() {
+ProductFormBuilder.prototype.createPopupForm = function () {
     this.createPopupButton();
     this.createPopupModal();
 };
 
-ProductFormBuilder.prototype.createPopupButton = function() {
+ProductFormBuilder.prototype.createPopupButton = function () {
     const buyButton = this.config.form.buyButton;
     if (!buyButton) return;
 
@@ -530,7 +530,7 @@ ProductFormBuilder.prototype.createPopupButton = function() {
     this.setupPopupButtonHandlers();
 };
 
-ProductFormBuilder.prototype.setupPopupButtonStyles = function() {
+ProductFormBuilder.prototype.setupPopupButtonStyles = function () {
     const button = document.getElementById('formino-popup-trigger');
     if (!button || !this.config.form.buyButton) return;
 
@@ -566,7 +566,7 @@ ProductFormBuilder.prototype.setupPopupButtonStyles = function() {
 // ============================================
 // القسم 5: باني النموذج - الجزء الثالث: توليد HTML للنموذج
 // ============================================
-ProductFormBuilder.prototype.generateFormHTML = function(type) {
+ProductFormBuilder.prototype.generateFormHTML = function (type) {
     if (!this.config) return '';
 
     let closeButton = '';
@@ -604,7 +604,7 @@ ProductFormBuilder.prototype.generateFormHTML = function(type) {
         <div class="formino-header">
             <h3>${this.config.form.title}</h3>
             ${this.config.form.formType !== 'EMBEDDED' && !this.config.form.hideCloseButton ?
-                '<button type="button" class="formino-close-button formino-popup-close">&times;</button>' : ''}
+            '<button type="button" class="formino-close-button formino-popup-close">&times;</button>' : ''}
         </div>
         <form class="formino-form" id="formino-main-form">
           ${fields}
@@ -613,7 +613,7 @@ ProductFormBuilder.prototype.generateFormHTML = function(type) {
     `;
 };
 
-ProductFormBuilder.prototype.renderField = function(field) {
+ProductFormBuilder.prototype.renderField = function (field) {
     switch (field.type) {
         case 'input':
             return this.renderInputField(field);
@@ -628,7 +628,7 @@ ProductFormBuilder.prototype.renderField = function(field) {
     }
 };
 
-ProductFormBuilder.prototype.renderInputField = function(field) {
+ProductFormBuilder.prototype.renderInputField = function (field) {
     const iconHTML = field.showIcon ? this.getIconForField(field.label) : '';
     let label = '';
     if (this.config['form'].hideFieldLabels == false) {
@@ -662,7 +662,7 @@ ProductFormBuilder.prototype.renderInputField = function(field) {
     `;
 };
 
-ProductFormBuilder.prototype.renderSectionField = function(field) {
+ProductFormBuilder.prototype.renderSectionField = function (field) {
     switch (field.id) {
         case 15: // TOTALS SUMMARY
             return this.renderTotalsSection(field);
@@ -680,7 +680,7 @@ ProductFormBuilder.prototype.renderSectionField = function(field) {
 // ============================================
 // القسم 6: باني النموذج - الجزء الرابع: عرض الأقسام المختلفة
 // ============================================
-ProductFormBuilder.prototype.renderTotalsSection = function(field) {
+ProductFormBuilder.prototype.renderTotalsSection = function (field) {
     const settings = field.totalSettings;
     const subtotal = this.detector.getCurrentPrice() / 100;
     const shipping = this.currentShipping ? this.currentShipping.price : 0;
@@ -708,7 +708,7 @@ ProductFormBuilder.prototype.renderTotalsSection = function(field) {
     `;
 };
 
-ProductFormBuilder.prototype.renderShippingSection = function(field) {
+ProductFormBuilder.prototype.renderShippingSection = function (field) {
     const settings = field.shippingSettings;
     if (!this.config.shipping || this.config.shipping.length === 0) return '';
 
@@ -729,7 +729,7 @@ ProductFormBuilder.prototype.renderShippingSection = function(field) {
     `;
 };
 
-ProductFormBuilder.prototype.renderDiscountSection = function(field) {
+ProductFormBuilder.prototype.renderDiscountSection = function (field) {
     if (!field.visible) return '';
     const settings = field.discountSettings;
 
@@ -747,7 +747,7 @@ ProductFormBuilder.prototype.renderDiscountSection = function(field) {
 `;
 };
 
-ProductFormBuilder.prototype.renderUpsellSection = function(field) {
+ProductFormBuilder.prototype.renderUpsellSection = function (field) {
     if (!field.visible) return '';
     return `
         <div class="formino-section formino-upsell-section" style="display: none;" data-field-id="${field.id}">
@@ -756,7 +756,7 @@ ProductFormBuilder.prototype.renderUpsellSection = function(field) {
     `;
 };
 
-ProductFormBuilder.prototype.renderGenericSection = function(field) {
+ProductFormBuilder.prototype.renderGenericSection = function (field) {
     const settings = field.sectionSettings || {};
     return `
   <div class="formino-section formino-generic-section" data-field-id="${field.id}"
@@ -768,7 +768,7 @@ ProductFormBuilder.prototype.renderGenericSection = function(field) {
 `;
 };
 
-ProductFormBuilder.prototype.renderButtonField = function(field) {
+ProductFormBuilder.prototype.renderButtonField = function (field) {
     const settings = field.buttonSettings;
     this.configButton = settings;
     const iconHtml = settings.buttonIcon && settings.buttonIcon !== 'none' ? this.getButtonIcon(settings.buttonIcon) : '';
@@ -800,7 +800,7 @@ ProductFormBuilder.prototype.renderButtonField = function(field) {
     `;
 };
 
-ProductFormBuilder.prototype.renderSubscribeField = function(field) {
+ProductFormBuilder.prototype.renderSubscribeField = function (field) {
     return `
         <div class="titleSubscribeFormino">
         <input type="checkbox" id="forminoSubscribe" name="forminoSubscribe" value="true">
@@ -816,7 +816,7 @@ ProductFormBuilder.prototype.renderSubscribeField = function(field) {
 // ============================================
 // القسم 7: باني النموذج - الجزء الخامس: الأدوات المساعدة
 // ============================================
-ProductFormBuilder.prototype.getIconForField = function(label) {
+ProductFormBuilder.prototype.getIconForField = function (label) {
     const fieldName = label.toLowerCase().replace(/\s+/g, "");
 
     switch (fieldName) {
@@ -876,7 +876,7 @@ ProductFormBuilder.prototype.getIconForField = function(label) {
     }
 };
 
-ProductFormBuilder.prototype.getButtonIcon = function(icon) {
+ProductFormBuilder.prototype.getButtonIcon = function (icon) {
     switch (icon) {
         case 'cart':
             return (
@@ -940,7 +940,7 @@ ProductFormBuilder.prototype.getButtonIcon = function(icon) {
 // ============================================
 // القسم 8: باني النموذج - الجزء السادس: معالجات الأحداث
 // ============================================
-ProductFormBuilder.prototype.setupPopupButtonHandlers = function() {
+ProductFormBuilder.prototype.setupPopupButtonHandlers = function () {
     document.addEventListener('click', (e) => {
         if (e.target.id === 'formino-popup-trigger' || e.target.closest('#formino-popup-trigger')) {
             this.openPopupModal();
@@ -956,7 +956,7 @@ ProductFormBuilder.prototype.setupPopupButtonHandlers = function() {
     });
 };
 
-ProductFormBuilder.prototype.setupFormHandlers = function() {
+ProductFormBuilder.prototype.setupFormHandlers = function () {
     const form = document.getElementById('formino-main-form');
     if (!form) return;
 
@@ -1033,7 +1033,7 @@ ProductFormBuilder.prototype.setupFormHandlers = function() {
     }
 };
 
-ProductFormBuilder.prototype.setupValidation = function() {
+ProductFormBuilder.prototype.setupValidation = function () {
     const form = document.getElementById('formino-main-form');
     if (!form) {
         console.warn('⚠️ setupValidation: formino-main-form not found.');
@@ -1055,7 +1055,7 @@ ProductFormBuilder.prototype.setupValidation = function() {
     }, true);
 };
 
-ProductFormBuilder.prototype.validateField = function(input) {
+ProductFormBuilder.prototype.validateField = function (input) {
     if (!input) return false;
 
     const field = input.closest('.formino-group-input');
@@ -1103,7 +1103,7 @@ ProductFormBuilder.prototype.validateField = function(input) {
     return true;
 };
 
-ProductFormBuilder.prototype.showError = function(field, message) {
+ProductFormBuilder.prototype.showError = function (field, message) {
     if (!field) return;
 
     const group = field.closest('.formino-group-input') || field;
@@ -1124,7 +1124,7 @@ ProductFormBuilder.prototype.showError = function(field, message) {
     errorElement.textContent = message || 'Invalid field';
 };
 
-ProductFormBuilder.prototype.clearError = function(field) {
+ProductFormBuilder.prototype.clearError = function (field) {
     if (!field) return;
     const group = field.closest('.formino-group-input') || field;
     const errorElement = group.querySelector('.formino-error-message');
@@ -1133,7 +1133,7 @@ ProductFormBuilder.prototype.clearError = function(field) {
     }
 };
 
-ProductFormBuilder.prototype.clearFieldError = function(input) {
+ProductFormBuilder.prototype.clearFieldError = function (input) {
     if (!input) return;
     const field = input.closest('.formino-group-input');
     if (field) {
@@ -1145,7 +1145,7 @@ ProductFormBuilder.prototype.clearFieldError = function(input) {
 // ============================================
 // القسم 9: باني النموذج - الجزء السابع: معالجة النموذج
 // ============================================
-ProductFormBuilder.prototype.handleFormSubmit = async function(e) {
+ProductFormBuilder.prototype.handleFormSubmit = async function (e) {
     e.preventDefault();
 
     const form = document.getElementById('formino-main-form');
@@ -1271,7 +1271,7 @@ ProductFormBuilder.prototype.handleFormSubmit = async function(e) {
     }
 };
 
-ProductFormBuilder.prototype.submitOrder = async function(payload = {}) {
+ProductFormBuilder.prototype.submitOrder = async function (payload = {}) {
     try {
         if (this.isSubmitting) {
             return { success: false, error: "already_submitting" };
@@ -1400,7 +1400,7 @@ ProductFormBuilder.prototype.submitOrder = async function(payload = {}) {
 // ============================================
 // القسم 10: باني النموذج - الجزء الثامن: النوافذ المنبثقة والإشعارات
 // ============================================
-ProductFormBuilder.prototype.showSuccessMessage = function(response) {
+ProductFormBuilder.prototype.showSuccessMessage = function (response) {
     const redirect = response.redirect;
 
     let redirectUrl = redirect.redirectURL;
@@ -1470,7 +1470,7 @@ ProductFormBuilder.prototype.showSuccessMessage = function(response) {
     }
 };
 
-ProductFormBuilder.prototype.createCustomPopup = function(message) {
+ProductFormBuilder.prototype.createCustomPopup = function (message) {
     try {
         this.removeExistingPopup();
 
@@ -1531,7 +1531,7 @@ ProductFormBuilder.prototype.createCustomPopup = function(message) {
 // ============================================
 // القسم 11: باني النموذج - الجزء التاسع: عمليات النافذة المنبثقة
 // ============================================
-ProductFormBuilder.prototype.openPopupModal = function() {
+ProductFormBuilder.prototype.openPopupModal = function () {
     if (!document.getElementById('formino-modal-overlay')) {
         this.createPopupModal();
     }
@@ -1544,7 +1544,7 @@ ProductFormBuilder.prototype.openPopupModal = function() {
     }
 };
 
-ProductFormBuilder.prototype.createPopupModal = function() {
+ProductFormBuilder.prototype.createPopupModal = function () {
     const existingModal = document.getElementById('formino-modal-overlay');
     if (existingModal) {
         existingModal.remove();
@@ -1566,7 +1566,7 @@ ProductFormBuilder.prototype.createPopupModal = function() {
     this.setupPopupCloseHandlers();
 };
 
-ProductFormBuilder.prototype.setupPopupCloseHandlers = function() {
+ProductFormBuilder.prototype.setupPopupCloseHandlers = function () {
     document.addEventListener('click', (e) => {
         if (e.target.classList.contains('formino-popup-close') ||
             e.target.classList.contains('formino-close-button')) {
@@ -1590,7 +1590,7 @@ ProductFormBuilder.prototype.setupPopupCloseHandlers = function() {
     });
 };
 
-ProductFormBuilder.prototype.closePopupModal = function(forceClose = false) {
+ProductFormBuilder.prototype.closePopupModal = function (forceClose = false) {
     if (!forceClose && this.config.form.formType !== 'EMBEDDED' && !this.downsellShown && this.downsells && this.downsells.length > 0) {
         const downsellOffer = this.getMatchingDownsell();
         if (downsellOffer) {
@@ -1620,7 +1620,7 @@ ProductFormBuilder.prototype.closePopupModal = function(forceClose = false) {
 // ============================================
 // القسم 12: باني النموذج - الجزء العاشر: Downsell
 // ============================================
-ProductFormBuilder.prototype.getMatchingDownsell = function() {
+ProductFormBuilder.prototype.getMatchingDownsell = function () {
     if (!this.detector.currentProduct) return null;
     const currentId = this.detector.currentProduct.id.toString();
 
@@ -1630,7 +1630,7 @@ ProductFormBuilder.prototype.getMatchingDownsell = function() {
     });
 };
 
-ProductFormBuilder.prototype.showDownsellPopup = function(offer) {
+ProductFormBuilder.prototype.showDownsellPopup = function (offer) {
     const contentDiv = document.querySelector('.formino-modal-content');
     if (!contentDiv) {
         console.error('❌ No modal content found');
@@ -1776,7 +1776,7 @@ ProductFormBuilder.prototype.showDownsellPopup = function(offer) {
     this.applySubmitButtonStyles();
 };
 
-ProductFormBuilder.prototype.applyDownsellDiscount = function(offer) {
+ProductFormBuilder.prototype.applyDownsellDiscount = function (offer) {
     const originalPriceUnit = this.detector.getCurrentPrice() / 100;
     let newPriceUnit = originalPriceUnit;
 
@@ -1806,7 +1806,7 @@ ProductFormBuilder.prototype.applyDownsellDiscount = function(offer) {
 // ============================================
 // القسم 13: باني النموذج - الجزء الحادي عشر: عروض الكمية
 // ============================================
-ProductFormBuilder.prototype.handleQuantityOffers = function() {
+ProductFormBuilder.prototype.handleQuantityOffers = function () {
     if (!this.config.offers || !this.config.offers.quantityOffers) {
         return;
     }
@@ -1825,7 +1825,7 @@ ProductFormBuilder.prototype.handleQuantityOffers = function() {
     }
 };
 
-ProductFormBuilder.prototype.findMatchingQuantityOffer = function(currentProductId) {
+ProductFormBuilder.prototype.findMatchingQuantityOffer = function (currentProductId) {
     if (!this.config.offers || !this.config.offers.quantityOffers) {
         return null;
     }
@@ -1857,7 +1857,7 @@ ProductFormBuilder.prototype.findMatchingQuantityOffer = function(currentProduct
     return null;
 };
 
-ProductFormBuilder.prototype.renderQuantityOffers = function(offer) {
+ProductFormBuilder.prototype.renderQuantityOffers = function (offer) {
     const upsellSection = document.querySelector('.formino-upsell-section');
     if (upsellSection) {
         this.renderQuantityOffersInContainer(offer, upsellSection);
@@ -1869,7 +1869,7 @@ ProductFormBuilder.prototype.renderQuantityOffers = function(offer) {
 // ============================================
 // القسم 14: باني النموذج - الجزء الثاني عشر: عروض Upsell
 // ============================================
-ProductFormBuilder.prototype.showUpsellPopup = function(upsellOffer, orderResult) {
+ProductFormBuilder.prototype.showUpsellPopup = function (upsellOffer, orderResult) {
     try {
         const productHandle = upsellOffer.productSettings.upsellProductHandle;
 
@@ -1899,7 +1899,7 @@ ProductFormBuilder.prototype.showUpsellPopup = function(upsellOffer, orderResult
     }
 };
 
-ProductFormBuilder.prototype.fetchProductByHandle = async function(productHandle) {
+ProductFormBuilder.prototype.fetchProductByHandle = async function (productHandle) {
     try {
         const response = await fetch(`/products/${productHandle}.js`);
 
@@ -1919,7 +1919,7 @@ ProductFormBuilder.prototype.fetchProductByHandle = async function(productHandle
 // ============================================
 // القسم 15: باني النموذج - الجزء الثالث عشر: وظائف مساعدة
 // ============================================
-ProductFormBuilder.prototype.hsbToRgba = function({ hue, saturation, brightness, alpha }) {
+ProductFormBuilder.prototype.hsbToRgba = function ({ hue, saturation, brightness, alpha }) {
     const h = hue;
     const s = saturation;
     const v = brightness;
@@ -1944,25 +1944,25 @@ ProductFormBuilder.prototype.hsbToRgba = function({ hue, saturation, brightness,
     return `rgba(${r}, ${g}, ${b}, ${a})`;
 };
 
-ProductFormBuilder.prototype.formatMoney = function(amount) {
+ProductFormBuilder.prototype.formatMoney = function (amount) {
     return amount.toLocaleString('en-US', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
     }) + ' ' + (this.config?.form?.currency || Shopify.currency.active);
 };
 
-ProductFormBuilder.prototype.isValidEmail = function(email) {
+ProductFormBuilder.prototype.isValidEmail = function (email) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email.trim());
 };
 
-ProductFormBuilder.prototype.replacePlaceholders = function(text) {
+ProductFormBuilder.prototype.replacePlaceholders = function (text) {
     if (!text) return '';
     return text.replace(/{order_total}/g, '<span class="formino-dynamic-total">' + this.formatMoney(0) + '</span>')
         .replace(/{order_subtotal}/g, '<span class="formino-dynamic-subtotal">' + this.formatMoney(0) + '</span>');
 };
 
-ProductFormBuilder.prototype.extractIdFromGid = function(gid) {
+ProductFormBuilder.prototype.extractIdFromGid = function (gid) {
     if (!gid || typeof gid !== 'string') return null;
 
     if (gid.startsWith('gid://')) {
@@ -1976,7 +1976,7 @@ ProductFormBuilder.prototype.extractIdFromGid = function(gid) {
 // ============================================
 // القسم 16: باني النموذج - الجزء الرابع عشر: إدارة النماذج
 // ============================================
-ProductFormBuilder.prototype.collectFormData = function() {
+ProductFormBuilder.prototype.collectFormData = function () {
     const form = document.getElementById('formino-main-form');
     const formData = new FormData(form);
     const data = {};
@@ -1995,7 +1995,7 @@ ProductFormBuilder.prototype.collectFormData = function() {
     };
 };
 
-ProductFormBuilder.prototype.calculateTotals = function() {
+ProductFormBuilder.prototype.calculateTotals = function () {
     const subtotal = this.detector.getCurrentPrice() / 100;
     const shipping = this.currentShipping ? this.currentShipping.price : 0;
     const total = subtotal + shipping;
@@ -2007,7 +2007,7 @@ ProductFormBuilder.prototype.calculateTotals = function() {
     };
 };
 
-ProductFormBuilder.prototype.updateFormTotals = function() {
+ProductFormBuilder.prototype.updateFormTotals = function () {
     const unitPrice = this.detector.getCurrentPrice() / 100;
     let subtotal = unitPrice;
     let discountAmount = 0;
@@ -2079,7 +2079,7 @@ ProductFormBuilder.prototype.updateFormTotals = function() {
 // ============================================
 // القسم 17: باني النموذج - الجزء الخامس عشر: إعادة التعيين والإعدادات
 // ============================================
-ProductFormBuilder.prototype.resetForm = function() {
+ProductFormBuilder.prototype.resetForm = function () {
     const form = document.getElementById('formino-main-form');
     if (!form) return;
 
@@ -2107,7 +2107,7 @@ ProductFormBuilder.prototype.resetForm = function() {
     }
 };
 
-ProductFormBuilder.prototype.initializeCart = async function() {
+ProductFormBuilder.prototype.initializeCart = async function () {
     await this.cartManager.clearCart();
 
     const variantId = this.detector.currentVariantId;
@@ -2117,13 +2117,13 @@ ProductFormBuilder.prototype.initializeCart = async function() {
     }
 };
 
-ProductFormBuilder.prototype.setupMonitoring = function() {
+ProductFormBuilder.prototype.setupMonitoring = function () {
     this.detector.addObserver((data) => {
         this.handleProductChange(data);
     });
 };
 
-ProductFormBuilder.prototype.handleProductChange = function(data) {
+ProductFormBuilder.prototype.handleProductChange = function (data) {
     switch (data.type) {
         case 'variant_changed':
             this.handleVariantChange(data.variantId, data.price);
@@ -2137,7 +2137,7 @@ ProductFormBuilder.prototype.handleProductChange = function(data) {
 // ============================================
 // القسم 18: باني النموذج - الجزء السادس عشر: الأنماط والتنسيقات
 // ============================================
-ProductFormBuilder.prototype.applyFormStyles = function() {
+ProductFormBuilder.prototype.applyFormStyles = function () {
     const formContainer = document.querySelector('.formino-form-container');
     if (!formContainer || !this.config) return;
 
@@ -2161,9 +2161,14 @@ ProductFormBuilder.prototype.applyFormStyles = function() {
     document.documentElement.style.setProperty('--formino-primary', formStyle.primaryColor);
     document.documentElement.style.setProperty('--formino-text', formStyle.textColor);
     document.documentElement.style.setProperty('--formino-background', formStyle.backgroundColor);
+
+    if (formStyle.rtlSupport) {
+        this.applyRTLSupport();
+    }
+
 };
 
-ProductFormBuilder.prototype.applyPopupModalStyles = function() {
+ProductFormBuilder.prototype.applyPopupModalStyles = function () {
     const style = document.createElement('style');
     style.textContent = `
         .formino-modal-overlay {
@@ -2367,7 +2372,7 @@ ProductFormBuilder.prototype.applyPopupModalStyles = function() {
     document.head.appendChild(style);
 };
 
-ProductFormBuilder.prototype.setupPopupHandlers = function() {
+ProductFormBuilder.prototype.setupPopupHandlers = function () {
     const popup = document.getElementById('formino-thankyou-popup');
     if (!popup) return;
 
@@ -2420,7 +2425,7 @@ ProductFormBuilder.prototype.setupPopupHandlers = function() {
     });
 };
 
-ProductFormBuilder.prototype.removeExistingPopup = function() {
+ProductFormBuilder.prototype.removeExistingPopup = function () {
     const existingPopup = document.getElementById('formino-thankyou-popup');
     const forminoPopup = document.getElementById('formino-modal-overlay');
     if (existingPopup) {
@@ -2429,6 +2434,423 @@ ProductFormBuilder.prototype.removeExistingPopup = function() {
     if (forminoPopup) {
         forminoPopup.remove();
     }
+};
+
+// ********************************************
+ProductFormBuilder.prototype.renderUpsellPopup = function (upsellOffer, productData, orderResult) {
+    // حفظ البيانات للاستخدام اللاحق
+    this.currentUpsellData = {
+        offer: upsellOffer,
+        product: productData,
+        orderResult: orderResult
+    };
+
+    // إعداد التصميم
+    const design = upsellOffer.designSettings;
+    const productSettings = upsellOffer.productSettings;
+
+    // حساب السعر بعد الخصم
+    const originalPrice = productSettings.price / 100; // تحويل من سنتات
+    let discountedPrice = productSettings.calculatedPrice / 100; // استخدام calculatedPrice مباشرة
+    let discountDisplay = '';
+
+    if (productSettings.discount.type === 'PERCENTAGE') {
+        discountDisplay = `${productSettings.discount.value}% OFF`;
+    } else {
+        discountDisplay = `-${this.formatMoney(productSettings.discount.value)}`;
+    }
+
+    // استبدال العناصر النائبة في العنوان
+    let title = design.title || 'Add {product_name} to your order!';
+    title = title.replace(/{product_name}/g, productData.title);
+
+    // التحقق مما إذا كان المنتج يحتوي على متغيرات
+    const hasVariants = productData.variants && productData.variants.length > 1;
+    let variantsHTML = '';
+
+    if (hasVariants) {
+        variantsHTML = `
+            <div class="formino-upsell-variants" style="margin: 15px 0;">
+                <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #333;">
+                    Select Variant
+                </label>
+                <select id="upsell-variant-select" 
+                    style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                    ${productData.variants.map(variant => `
+                        <option value="${variant.id}" 
+                                ${variant.available ? '' : 'disabled'}
+                                data-price="${variant.price}">
+                            ${variant.title || 'Default'} - ${this.formatMoney(variant.price / 100)}
+                            ${!variant.available ? ' (Out of stock)' : ''}
+                        </option>
+                    `).join('')}
+                </select>
+            </div>
+        `;
+    }
+
+    // HTML للنافذة المنبثقة
+    const upsellHTML = `
+        <div class="formino-upsell-overlay" id="formino-upsell-overlay" 
+             style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                    background: rgba(0, 0, 0, 0.7); display: flex; align-items: center; 
+                    justify-content: center; z-index: 99999;">
+            
+            <div class="formino-upsell-container" 
+                style="
+                    background: white; 
+                    border-radius: 12px; 
+                    max-width: 420px; 
+                    width: 90%; 
+                    max-height: 95vh; 
+                    overflow-y: auto; 
+                    padding: 25px;
+                    box-shadow: 0 10px 40px rgba(0,0,0,0.2); 
+                    position: relative;"
+            >
+                
+                <button type="button" class="formino-upsell-close" 
+                        style="position: absolute; top: 15px; right: 15px; 
+                               background: none; border: none; font-size: 24px; 
+                               cursor: pointer; color: #666; width: 30px; 
+                               height: 30px; display: flex; align-items: center; 
+                               justify-content: center; border-radius: 50%; 
+                               transition: all 0.2s;"
+                        onmouseover="this.style.background='#f5f5f5'; this.style.color='#333';"
+                        onmouseout="this.style.background='none'; this.style.color='#666';">
+                    &times;
+                </button>
+                
+                <h2 class="formino-upsell-title" 
+                    style="color: ${design.titleColor || '#333'}; 
+                           font-size: 24px; 
+                           font-weight: 700; 
+                           margin-bottom: 10px; 
+                           text-align: center;">
+                    ${title}
+                </h2>
+                
+                ${design.subtitle ? `
+                    <p class="formino-upsell-subtitle" 
+                       style="color: ${design.subtitleColor || '#666'}; 
+                              font-size: 16px; 
+                              margin-bottom: 20px; 
+                              text-align: center;">
+                        ${design.subtitle}
+                    </p>
+                ` : ''}
+                
+                ${design.image?.show !== false ? `
+                    <div class="formino-upsell-image" 
+                         style="text-align: center; margin-bottom: 20px;">
+                        <img src="${productData.featured_image || productData.images?.[0]?.src || ''}" 
+                             alt="${productData.title}" 
+                             style="max-width: 100%; 
+                                    width: ${design.image?.size === 'LARGE' ? '300px' : design.image?.size === 'MEDIUM' ? '200px' : '150px'}; 
+                                    height: auto; 
+                                    border: 1px solid #eee;
+                                    border-radius: ${design.image?.borderRadius || 8}px;
+                                    ${design.image?.shadow ? 'box-shadow: 0 5px 15px rgba(0,0,0,0.1)' : ''};">
+                    </div>
+                ` : ''}
+                
+                ${design.productTitle !== false ? `
+                    <h3 class="formino-upsell-product-title" 
+                        style="color: #333; 
+                               font-size: 18px; 
+                               font-weight: 600; 
+                               margin-bottom: 10px; 
+                               text-align: center;">
+                        ${productData.title}
+                    </h3>
+                ` : ''}
+                
+                ${variantsHTML}
+                
+                <div class="formino-upsell-pricing" 
+                     style="margin: 20px 0; text-align: center;">
+                    <div class="formino-upsell-discounted-price" 
+                         style="color: ${design.priceColor || '#d32f2f'}; 
+                                font-size: 28px; 
+                                font-weight: 700;">
+                        ${this.formatMoney(discountedPrice)}
+                    </div>
+                    
+                    ${originalPrice > discountedPrice ? `
+                        <div class="formino-upsell-original-price" 
+                             style="color: #999; 
+                                    text-decoration: line-through; 
+                                    font-size: 18px; 
+                                    margin-bottom: 10px;">
+                            ${this.formatMoney(originalPrice)}
+                        </div>
+                    ` : ''}
+                    
+                    <div class="formino-upsell-discount-badge" 
+                         style="display: inline-block; 
+                                background: #ff4444; 
+                                color: white; 
+                                padding: 6px 16px; 
+                                border-radius: 20px; 
+                                font-size: 14px; 
+                                font-weight: 600;">
+                        ${discountDisplay}
+                    </div>
+                </div>
+                
+                <div class="formino-upsell-buttons" 
+                     style="display: flex; gap: 15px; flex-direction: column;">
+                    
+                    <button type="button" id="accept-upsell" 
+                            class="formino-upsell-add-button"
+                            style="background: ${design.addButton?.backgroundColor || '#000000'}; 
+                                   color: ${design.addButton?.textColor || '#ffffff'}; 
+                                   border: ${design.addButton?.borderWidth || 1}px solid ${design.addButton?.borderColor || '#000000'}; 
+                                   border-radius: ${design.addButton?.borderRadius || 8}px; 
+                                   padding: 16px; 
+                                   font-size: ${design.addButton?.fontSize || 16}px; 
+                                   font-weight: 600; 
+                                   cursor: pointer; 
+                                   width: 100%; 
+                                   transition: all 0.3s;">
+                        ${design.addButton?.text || 'Add to my order'}
+                    </button>
+                    
+                    <button type="button" id="decline-upsell" 
+                            class="formino-upsell-decline-button"
+                            style="background: ${design.noButton?.backgroundColor || '#ffffff'}; 
+                                   color: ${design.noButton?.textColor || '#000000'}; 
+                                   border: ${design.noButton?.borderWidth || 1}px solid ${design.noButton?.borderColor || '#dddddd'}; 
+                                   border-radius: ${design.noButton?.borderRadius || 8}px; 
+                                   padding: 16px; 
+                                   font-size: ${design.noButton?.fontSize || 16}px; 
+                                   font-weight: 600; 
+                                   cursor: pointer; 
+                                   width: 100%; 
+                                   transition: all 0.3s;">
+                        ${design.noButton?.text || 'No thank you, complete my order'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // إضافة النافذة إلى DOM
+    document.body.insertAdjacentHTML('beforeend', upsellHTML);
+
+    // إعداد معالجات الأحداث
+    this.setupUpsellPopupHandlers(upsellOffer, productData, orderResult);
+
+    // إضافة تأثيرات الحركة
+    setTimeout(() => {
+        const container = document.querySelector('.formino-upsell-container');
+        if (container) {
+            container.style.transform = 'translateY(0)';
+            container.style.opacity = '1';
+        }
+    }, 10);
+};
+
+ProductFormBuilder.prototype.setupUpsellPopupHandlers = function (upsellOffer, productData, orderResult) {
+    const overlay = document.getElementById('formino-upsell-overlay');
+    if (!overlay) return;
+
+    const closeBtn = overlay.querySelector('.formino-upsell-close');
+    const acceptBtn = overlay.querySelector('#accept-upsell');
+    const declineBtn = overlay.querySelector('#decline-upsell');
+    const variantSelect = overlay.querySelector('#upsell-variant-select');
+
+    // حفظ المتغير المختار
+    let selectedVariantId = productData.variants[0]?.id;
+
+    // تحديث المتغير المختار
+    if (variantSelect) {
+        variantSelect.addEventListener('change', (e) => {
+            selectedVariantId = e.target.value;
+        });
+    }
+
+    // إغلاق النافذة
+    const closePopup = () => {
+        if (overlay) {
+            overlay.style.opacity = '0';
+            setTimeout(() => {
+                overlay.remove();
+            }, 300);
+        }
+    };
+
+    closeBtn?.addEventListener('click', closePopup);
+
+    // النقر خارج المحتوى
+    overlay?.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+            closePopup();
+        }
+    });
+
+    // زر رفض العرض
+    declineBtn?.addEventListener('click', () => {
+        closePopup();
+        this.showSuccessMessage(orderResult);
+    });
+
+    // زر قبول العرض
+    acceptBtn?.addEventListener('click', async () => {
+        try {
+            // تعطيل الزر أثناء المعالجة
+            acceptBtn.disabled = true;
+            acceptBtn.innerHTML = 'Adding to order...';
+
+            // إضافة المنتج إلى الطلب
+            await this.addUpsellToOrder(upsellOffer, selectedVariantId, orderResult);
+
+            // إغلاق النافذة
+            closePopup();
+
+        } catch (error) {
+            console.error('❌ Error adding upsell to order:', error);
+            acceptBtn.disabled = false;
+            acceptBtn.innerHTML = 'Add to my order';
+
+            this.createCustomPopup({
+                type: 'error',
+                message: 'Failed to add product to your order. Please try again.'
+            });
+        }
+    });
+
+    // إغلاق بـ Escape
+    const handleEscape = (e) => {
+        if (e.key === 'Escape') {
+            closePopup();
+            document.removeEventListener('keydown', handleEscape);
+        }
+    };
+    document.addEventListener('keydown', handleEscape);
+};
+
+// ********************************************
+// ********************************************
+// ********************************************
+ProductFormBuilder.prototype.applyRTLSupport = function () {
+    if (!this.config?.form?.rtlSupport) return;
+
+    const formContainer = document.querySelector('.formino-form-container');
+    if (!formContainer) return;
+
+    // تطبيق RTL على الحاوية الرئيسية
+    formContainer.style.direction = 'rtl';
+    formContainer.style.textAlign = 'right';
+
+    // تطبيق RTL على الحقول
+    const form = document.getElementById('formino-main-form');
+    if (!form) return;
+
+    // تعديل اتجاه labels
+    const labels = form.querySelectorAll('label');
+    labels.forEach(label => {
+        label.style.direction = 'rtl';
+        label.style.textAlign = 'right';
+        label.style.display = 'block';
+    });
+
+    // تعديل اتجاه inputs
+    const inputs = form.querySelectorAll('.formino-input');
+    inputs.forEach(input => {
+        input.style.direction = 'rtl';
+        input.style.textAlign = 'right';
+    });
+
+    // تعديل الأيقونات في الحقول
+    const iconContainers = form.querySelectorAll('.formino-field-group, .iconInputFormino');
+    iconContainers.forEach(container => {
+        const icon = container.querySelector('.iconInputFormino');
+        const input = container.querySelector('.formino-input');
+
+        if (icon && input) {
+            icon.style.borderLeft = '1px solid rgb(224, 224, 224)';
+            icon.style.borderRight = 'none';
+
+            input.style.paddingRight = '40px';
+            input.style.paddingLeft = '12px';
+        }
+    });
+
+    // تعديل الأقسام
+    const sections = form.querySelectorAll('.formino-section');
+    sections.forEach(section => {
+        section.style.direction = 'rtl';
+        section.style.textAlign = 'right';
+    });
+
+    // تعديل أقسام الشحن
+    const shippingOptions = form.querySelectorAll('.formino-shipping-option');
+    shippingOptions.forEach(option => {
+        // option.style.direction = 'rtl';
+        // option.style.textAlign = 'right';
+        // option.style.display = 'flex';
+        // option.style.flexDirection = 'row-reverse';
+        // option.style.justifyContent = 'space-between';
+    });
+
+    // تعديل أقسام الإجماليات
+    // const totalLines = form.querySelectorAll('.formino-total-line');
+    // totalLines.forEach(line => {
+        // line.style.direction = 'rtl';
+        // line.style.textAlign = 'right';
+        // line.style.display = 'flex';
+        // line.style.flexDirection = 'row-reverse';
+        // line.style.justifyContent = 'space-between';
+    // });
+
+    // تعديل زر الإرسال
+    const submitButton = form.querySelector('.formino-submit-button');
+    if (submitButton) {
+        const icon = submitButton.querySelector('svg');
+        if (icon) {
+            // نقل الأيقونة إلى اليمين في الزر
+            const span = icon.closest('span');
+            if (span) {
+                span.style.direction = 'rtl';
+                span.style.flexDirection = 'row-reverse';
+            }
+        }
+    }
+
+    // تعديل أقسام الـ upsell و quantity offers إذا كانت موجودة
+    const upsellSection = form.querySelector('.formino-upsell-section');
+    if (upsellSection) {
+        upsellSection.style.direction = 'rtl';
+        upsellSection.style.textAlign = 'right';
+    }
+
+    const quantityOffers = form.querySelector('.formino-quantity-offers-container');
+    if (quantityOffers) {
+        quantityOffers.style.direction = 'rtl';
+        quantityOffers.style.textAlign = 'right';
+    }
+
+    const tierItems = form.querySelectorAll('.formino-tier-item');
+    tierItems.forEach(item => {
+        item.style.direction = 'rtl';
+        item.style.textAlign = 'right';
+        item.style.flexDirection = 'row-reverse';
+
+        // تعديل وضع الصورة
+        const imgContainer = item.querySelector('div[style*="margin-right"]');
+        if (imgContainer) {
+            imgContainer.style.marginRight = '0';
+            imgContainer.style.marginLeft = '12px';
+        }
+
+        // تعديل وضع checkbox
+        const checkbox = item.querySelector('.tier-checkbox');
+        if (checkbox) {
+            checkbox.style.right = 'auto';
+            checkbox.style.left = '-10px';
+        }
+    });
 };
 
 // ============================================
