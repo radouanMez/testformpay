@@ -829,24 +829,25 @@ export default function UpsellCreatePage() {
                       id={upsell.id}
                       onClick={() => { }}
                       persistActions
-                      media={
-                        <Badge
-                          tone={
-                            upsell.status === "ACTIVE" ? "success" :
-                              upsell.status === "DRAFT" ? "warning" : "critical"
-                          }
-                        >
-                          {upsell.status}
-                        </Badge>
-                      }
                     >
                       <InlineStack align="space-between" blockAlign="center">
                         <div className="upsellListingDetails">
                           <TextContainer>
-                            <p><strong>{upsell.name}</strong></p>
-                            <p style={{ color: '#6d7175', fontSize: '13px' }}>• Type: {upsell.type}</p>
-                            <p style={{ color: '#6d7175', fontSize: '13px' }}>
-                              • Created: {new Date(upsell.createdAt).toLocaleDateString()}
+                            <h3 style={{ fontSize: '15px' }}>
+                              <strong>{upsell.name}</strong>
+                            </h3>
+                            <p style={{ color: '#323232', fontSize: '13px' }}>
+                              <strong> Created: </strong> {new Date(upsell.createdAt).toLocaleDateString()}
+                            </p>
+                            <p style={{ marginTop: '5px' }}>
+                              <Badge
+                                tone={
+                                  upsell.status === "ACTIVE" ? "success" :
+                                    upsell.status === "DRAFT" ? "warning" : "critical"
+                                }
+                              >
+                                {upsell.status}
+                              </Badge>
                             </p>
                           </TextContainer>
                         </div>

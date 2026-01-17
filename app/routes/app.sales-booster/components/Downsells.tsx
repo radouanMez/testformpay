@@ -492,25 +492,27 @@ export default function DownsellManager() {
                     id={downsell.id}
                     onClick={() => { }}
                     persistActions
-                    media={
-                      <Badge
-                        tone={
-                          downsell.status === "ACTIVE" ? "success" :
-                            downsell.status === "DRAFT" ? "warning" : "critical"
-                        }
-                      >
-                        {downsell.status}
-                      </Badge>
-                    }
                   >
                     <InlineStack align="space-between" blockAlign="center">
                       <div className="downsellListingDetails">
                         <TextContainer>
-                          <p><strong>{downsell.name}</strong></p>
-                          <p style={{ color: '#6d7175', fontSize: '13px' }}>
-                            • Product: {getProductName(downsell)}
+                          <h3 style={{ fontSize: '15px' }}>
+                            <strong>{downsell.name}</strong>
+                          </h3>
+                          <p style={{ color: '#323232', fontSize: '13px', marginTop: '5px' }}>
+                            <strong>Product: </strong> {getProductName(downsell)}
                             <br />
-                            • Created: {new Date(downsell.createdAt).toLocaleDateString()}
+                            <strong>Created: </strong> {new Date(downsell.createdAt).toLocaleDateString()}
+                          </p>
+                          <p style={{ marginTop: '5px' }}>
+                            <Badge
+                              tone={
+                                downsell.status === "ACTIVE" ? "success" :
+                                  downsell.status === "DRAFT" ? "warning" : "critical"
+                              }
+                            >
+                              {downsell.status}
+                            </Badge>
                           </p>
                         </TextContainer>
                       </div>
