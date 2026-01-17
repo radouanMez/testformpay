@@ -5,7 +5,8 @@ import {
   BlockStack,
   Text,
   Button,
-  InlineStack
+  InlineStack,
+  Icon
 } from "@shopify/polaris";
 import { ViewIcon } from "@shopify/polaris-icons";
 
@@ -139,11 +140,13 @@ export function LivePreview({ formConfig }: LivePreviewProps) {
 
   return (
     <div className={styles.Previewdisplay}>
-      <InlineStack align="space-between" blockAlign="center">
-        <Text variant="headingSm" as="h4">Live Preview</Text>
-        <Button variant="plain" icon={ViewIcon} size="slim">
-          Full
-        </Button>
+      <InlineStack>
+        <Text variant="headingSm" as="h3">
+          Live Preview
+        </Text>
+        <div className={styles.previewIcon}>
+          <Icon source={ViewIcon} tone="base" />
+        </div>
       </InlineStack>
       <div className={formConfig.formType === 'POPUP' ? styles.cardPreviewShow : ''}>
         <Box padding="300">
@@ -196,12 +199,12 @@ export function LivePreview({ formConfig }: LivePreviewProps) {
           </BlockStack>
           <Box padding="300">
             <Text as="p" variant="bodySm" alignment="center" tone="subdued">
-              © 2025 My Store. Secure COD Form
+              © 2026 GrowCOD. Secure COD Form
             </Text>
           </Box>
         </Box>
       </div>
-      <div>
+      {/* <div>
         <Box paddingBlockStart="300">
           <Text as="p" variant="bodySm" tone="subdued">
             Form Type: <strong>{formConfig.formType}</strong> |
@@ -210,9 +213,8 @@ export function LivePreview({ formConfig }: LivePreviewProps) {
             Submit Button: <strong>{submitButtonField ? 'Custom' : 'Default'}</strong>
           </Text>
         </Box>
-      </div>
+      </div> */}
 
-      {/* إضافة أنماط CSS للأنيميشن */}
       <style>
         {`
           @keyframes pulse {

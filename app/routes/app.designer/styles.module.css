@@ -115,6 +115,13 @@
   height: fit-content;
   max-height: calc(100vh - 32px);
   overflow-y: auto;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.previewIcon {
+  margin: 0px 5px !important;
 }
 
 .previewToggle {
@@ -132,7 +139,7 @@
 
 .cardPreviewShow {
   overflow: auto;
-  background-color: rgba(0, 0, 0, 0.071);
+  background-color: rgba(0, 0, 0, 0.611);
   font-size: 16.8px;
   color: #000;
 }
@@ -172,4 +179,3 @@
     display: none;
   }
 }
-

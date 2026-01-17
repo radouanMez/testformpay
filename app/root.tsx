@@ -43,7 +43,7 @@ export default function App() {
           <Outlet />
           <div className="footer-copywrite">
             <p className="padding-bottom-20">
-              © COD FormPay 2025 - <a href="https://shopify.pxf.io/PyvNjM">Shopify</a>
+              © COD FormPay 2026 - <a href="https://shopify.pxf.io/PyvNjM">Shopify</a>
             </p>
           </div>
         </AppProvider>
