@@ -4,7 +4,7 @@ import {
   Page,
   Card,
   Layout,
-  Text,
+  Text, 
   Box,
   Badge,
   ProgressBar,
@@ -14,12 +14,15 @@ import {
   Icon,
   Button,
   Banner,
-  Grid
+  Grid,
+  Select,
+  InlineGrid,
+  BlockStack
 } from "@shopify/polaris";
 
 import { InfoIcon } from "@shopify/polaris-icons";
 import { prisma } from "../db.server";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { action as installFormAction } from "./_index/actions";
 
 import { authenticate, getCurrentShop, getCurrentUser } from "../shopify.server";
@@ -57,6 +60,26 @@ type DashboardData = {
   shop: string | null;
   userId: string | number | null;
 };
+
+// قائمة اللغات المدعومة
+const SUPPORTED_LANGUAGES = [
+  { value: 'en', label: 'English', flag: '🇺🇸' },
+  { value: 'ar', label: 'العربية', flag: '🇸🇦' },
+  { value: 'fr', label: 'Français', flag: '🇫🇷' },
+  { value: 'es', label: 'Español', flag: '🇪🇸' },
+  { value: 'de', label: 'Deutsch', flag: '🇩🇪' },
+  { value: 'tr', label: 'Türkçe', flag: '🇹🇷' },
+  { value: 'it', label: 'Italiano', flag: '🇮🇹' },
+  { value: 'pt', label: 'Português', flag: '🇵🇹' },
+  { value: 'ru', label: 'Русский', flag: '🇷🇺' },
+  { value: 'zh', label: '中文', flag: '🇨🇳' },
+  { value: 'ja', label: '日本語', flag: '🇯🇵' },
+  { value: 'ko', label: '한국어', flag: '🇰🇷' },
+  { value: 'hi', label: 'हिन्दी', flag: '🇮🇳' },
+  { value: 'nl', label: 'Nederlands', flag: '🇳🇱' },
+  { value: 'sv', label: 'Svenska', flag: '🇸🇪' },
+  { value: 'pl', label: 'Polski', flag: '🇵🇱' },
+];
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
 
@@ -216,11 +239,14 @@ export default function Dashboard() {
     shop
   } = useLoaderData<DashboardData>();
 
-
   const submit = useSubmit();
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
   const actionData = useActionData<typeof action>();
+
+  // حالات التحديد
+  const [selectedLanguage, setSelectedLanguage] = useState('en');
+  const [showLanguageSelector, setShowLanguageSelector] = useState(false);
 
   useEffect(() => {
     if (actionData?.reload) {
@@ -228,12 +254,36 @@ export default function Dashboard() {
     }
   }, [actionData]);
 
+  const handleLanguageChange = useCallback((value: string) => {
+    setSelectedLanguage(value);
+  }, []);
+
   const handleInstallForm = useCallback(() => {
-    submit(null, { method: "post" });
-  }, [submit]);
+    if (!showLanguageSelector) {
+      // إظهار محدد اللغة
+      setShowLanguageSelector(true);
+    } else {
+      // إرسال البيانات مع اللغة المختارة
+      const formData = new FormData();
+      formData.append('language', selectedLanguage);
+      formData.append('shop', shop || '');
+      submit(formData, { method: "post" });
+    }
+  }, [submit, showLanguageSelector, selectedLanguage, shop]);
+
+  const handleCancelLanguageSelection = useCallback(() => {
+    setShowLanguageSelector(false);
+    // إعادة الضبط إلى الإنجليزية
+    setSelectedLanguage('en');
+  }, []);
 
   const usedNumber = Number(plan.used);
   const progressPercentage = (usedNumber / plan.limit) * 100;
+
+  // العثور على اسم اللغة المحددة
+  const selectedLanguageInfo = SUPPORTED_LANGUAGES.find(l => l.value === selectedLanguage);
+  const selectedLanguageName = selectedLanguageInfo?.label || selectedLanguage;
+  const selectedLanguageFlag = selectedLanguageInfo?.flag || '🌐';
 
   return (
     <Page title="Dashboard">
@@ -268,14 +318,22 @@ export default function Dashboard() {
                         Open Theme Editor
                       </Button>
                     ) : (
-                      <Button
-                        variant="primary"
-                        onClick={handleInstallForm}
-                        loading={isSubmitting}
-                        disabled={isSubmitting}
-                      >
-                        {isSubmitting ? "Installing..." : "Install Form"}
-                      </Button>
+                      <InlineStack gap="200">
+                        {showLanguageSelector && (
+                          <Button onClick={handleCancelLanguageSelection}>
+                            Cancel
+                          </Button>
+                        )}
+                        <Button
+                          variant="primary"
+                          onClick={handleInstallForm}
+                          loading={isSubmitting}
+                          disabled={isSubmitting}
+                        >
+                          {isSubmitting ? "Installing..." : 
+                           showLanguageSelector ? "Activate Now" : "Install Form"}
+                        </Button>
+                      </InlineStack>
                     )}
                   </InlineStack>
 
@@ -290,9 +348,42 @@ export default function Dashboard() {
                   )}
                 </Box>
 
+                {showLanguageSelector && themeAppEmbed.status === "OFF" && (
+                  <Box padding="400" borderBlockStartWidth="025" borderColor="border">
+                    <BlockStack gap="400">
+                      <Text as="h3" variant="headingSm">
+                        Select Form Language
+                      </Text>
+                      
+                      <Select
+                        label="Choose language for your form"
+                        options={SUPPORTED_LANGUAGES.map(lang => ({
+                          value: lang.value,
+                          label: `${lang.flag} ${lang.label}`
+                        }))}
+                        value={selectedLanguage}
+                        onChange={handleLanguageChange}
+                        helpText="The form will be displayed in this language to your customers"
+                      />
+
+                      <Box padding="200" background="bg-surface-tertiary" borderRadius="200">
+                        <InlineStack gap="200" align="center">
+                          <Icon source={InfoIcon} tone="base" />
+                          <Text as="p" variant="bodySm">
+                            Your form will be created in 
+                            <Text as="span" fontWeight="bold">{selectedLanguageFlag} {selectedLanguageName}</Text>. 
+                            You can change the language later in form settings.
+                          </Text>
+                        </InlineStack>
+                      </Box>
+
+                    </BlockStack>
+                  </Box>
+                )}
+
                 <Box padding="400">
                   <div className="image_steps_install">
-                    <img src="/images/app_embed.png" alt="app embed" />
+                    {/* <img src="/images/app_embed.png" alt="app embed" /> */}
                     <Text as="h4">
                       Navigate to Theme Customize {'>'} Apps section and activate our App embed COD FormPay App Embed.
                     </Text>
@@ -313,12 +404,12 @@ export default function Dashboard() {
                   </Text>
                   <br />
                   <Text as="p" variant="bodyMd">
-                    Thanks for joining COD FormPay! We’re happy to have you with us.
+                    Thanks for joining COD FormPay! We're happy to have you with us.
                   </Text>
                   <Box>
                     <Text as="p" variant="bodyMd">
                       <strong>
-                        We’ve saved your email in our system to keep your account secure, send you important updates, and provide better support.
+                        We've saved your email in our system to keep your account secure, send you important updates, and provide better support.
                       </strong>
                     </Text>
                   </Box>

@@ -1,4 +1,4 @@
-console.log("CODFORMPAY V.1.1.0");
+console.log("CODFORMPAY V.1.1.1");
 
 // ============================================
 // القسم 1: كاشف صفحة المنتج (ProductPageDetector)
@@ -343,7 +343,7 @@ class ProductFormBuilder {
         this.activeDiscount = null;
         this.activeQuantityOffer = null;
         this.originalFormHTML = null;
-        this.apiBaseUrl = "https://cord-cheapest-iii-condo.trycloudflare.com";
+        this.apiBaseUrl = "https://bell-privilege-vat-comments.trycloudflare.com";
         this.isSubmitting = false;
         this.init();
     }
@@ -636,13 +636,18 @@ ProductFormBuilder.prototype.renderInputField = function (field) {
         label = field.required ? label + '<span style="margin-left: 3px; color: #c70505;">*</span>' : label;
     }
 
+    const isRTL = this.config?.form?.rtlSupport || false;
+
     return `
-        <div class="formino-group-input">
-            <label for="formino-field-${field.id}">${label}</label>
-            <div class="formino-field-group">
+        <div class="formino-group-input" ${isRTL ? 'style="direction: rtl; text-align: right;"' : ''}>
+            <label for="formino-field-${field.id}" ${isRTL ? 'style="direction: rtl; text-align: right; display: block;"' : ''}>
+                ${label}
+            </label>
+            <div class="formino-field-group" ${isRTL ? 'style="position: relative;"' : ''}>
                 <div 
                     class="formino-field formino-input-field" 
                     data-field-id="${field.id}"
+                    ${isRTL ? 'style="position: relative;"' : ''}
                 >
                     ${iconHTML}
                     <input 
@@ -654,9 +659,12 @@ ProductFormBuilder.prototype.renderInputField = function (field) {
                     minlength="${field.minLength}"
                     maxlength="${field.maxLength}"
                     class="formino-input"
+                    ${isRTL ? 'style="direction: rtl; text-align: right; padding-right: 40px; padding-left: 12px;"' : ''}
                     >
                 </div>
-                <div class="formino-error-message">${field.errorText}</div>
+                <div class="formino-error-message" ${isRTL ? 'style="direction: rtl; text-align: right;"' : ''}>
+                    ${field.errorText}
+                </div>
             </div>
         </div>
     `;
@@ -2797,11 +2805,11 @@ ProductFormBuilder.prototype.applyRTLSupport = function () {
     // تعديل أقسام الإجماليات
     // const totalLines = form.querySelectorAll('.formino-total-line');
     // totalLines.forEach(line => {
-        // line.style.direction = 'rtl';
-        // line.style.textAlign = 'right';
-        // line.style.display = 'flex';
-        // line.style.flexDirection = 'row-reverse';
-        // line.style.justifyContent = 'space-between';
+    // line.style.direction = 'rtl';
+    // line.style.textAlign = 'right';
+    // line.style.display = 'flex';
+    // line.style.flexDirection = 'row-reverse';
+    // line.style.justifyContent = 'space-between';
     // });
 
     // تعديل زر الإرسال
