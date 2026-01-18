@@ -375,38 +375,38 @@ export const TRANSLATIONS = {
     addressSectionLabel: "أدخل عنوان الشحن",
     addressSectionText: "أدخل عنوان الشحن الخاص بك",
 
-    firstNameLabel: "الاسم الأول",
+    firstNameLabel: "firstname",
     firstNamePlaceholder: "الاسم الأول",
     firstNameError: "يرجى إدخال اسم أول صالح",
 
-    lastNameLabel: "الاسم الأخير",
+    lastNameLabel: "lastname",
     lastNamePlaceholder: "الاسم الأخير",
     lastNameError: "يرجى إدخال اسم أخير صالح",
 
-    phoneLabel: "رقم الهاتف",
+    phoneLabel: "phonenumber",
     phonePlaceholder: "رقم الهاتف",
     phoneError: "يرجى إدخال رقم هاتف صالح",
 
-    addressLabel: "العنوان",
+    addressLabel: "address",
     addressPlaceholder: "العنوان",
     addressError: "يرجى إدخال عنوان صالح",
 
-    address2Label: "العنوان 2",
+    address2Label: "address2",
     address2Placeholder: "العنوان 2 (اختياري)",
 
-    provinceLabel: "المحافظة",
+    provinceLabel: "province",
     provincePlaceholder: "المحافظة",
     provinceError: "يرجى إدخال محافظة صالحة",
 
-    cityLabel: "المدينة",
+    cityLabel: "city",
     cityPlaceholder: "المدينة",
     cityError: "يرجى إدخال مدينة صالحة",
 
-    zipLabel: "الرمز البريدي",
+    zipLabel: "zipcode",
     zipPlaceholder: "الرمز البريدي",
     zipError: "يرجى إدخال رمز بريدي صالح",
 
-    emailLabel: "البريد الإلكتروني",
+    emailLabel: "email",
     emailPlaceholder: "عنوان البريد الإلكتروني",
     emailError: "يرجى إدخال عنوان بريد إلكتروني صالح",
 
@@ -441,38 +441,38 @@ export const TRANSLATIONS = {
     addressSectionLabel: "Entrez votre adresse de livraison",
     addressSectionText: "Entrez votre adresse de livraison",
 
-    firstNameLabel: "Prénom",
+    firstNameLabel: "firstname",
     firstNamePlaceholder: "Prénom",
     firstNameError: "Veuillez entrer un prénom valide",
 
-    lastNameLabel: "Nom",
+    lastNameLabel: "lastname",
     lastNamePlaceholder: "Nom",
     lastNameError: "Veuillez entrer un nom valide",
 
-    phoneLabel: "Numéro de téléphone",
+    phoneLabel: "phonenumber",
     phonePlaceholder: "Numéro de téléphone",
     phoneError: "Veuillez entrer un numéro de téléphone valide",
 
-    addressLabel: "Adresse",
+    addressLabel: "address",
     addressPlaceholder: "Adresse",
     addressError: "Veuillez entrer une adresse valide",
 
-    address2Label: "Adresse 2",
+    address2Label: "address2",
     address2Placeholder: "Adresse 2 (optionnel)",
 
-    provinceLabel: "Province",
+    provinceLabel: "province",
     provincePlaceholder: "Province",
     provinceError: "Veuillez entrer une province valide",
 
-    cityLabel: "Ville",
+    cityLabel: "city",
     cityPlaceholder: "Ville",
     cityError: "Veuillez entrer une ville valide",
 
-    zipLabel: "Code postal",
+    zipLabel: "zipcode",
     zipPlaceholder: "Code postal",
     zipError: "Veuillez entrer un code postal valide",
 
-    emailLabel: "Email",
+    emailLabel: "email",
     emailPlaceholder: "Adresse email",
     emailError: "Veuillez entrer une adresse email valide",
 
@@ -507,38 +507,38 @@ export const TRANSLATIONS = {
     addressSectionLabel: "Ingrese su dirección de envío",
     addressSectionText: "Ingrese su dirección de envío",
 
-    firstNameLabel: "Nombre",
+    firstNameLabel: "firstname",
     firstNamePlaceholder: "Nombre",
     firstNameError: "Por favor ingrese un nombre válido",
 
-    lastNameLabel: "Apellido",
+    lastNameLabel: "lastname",
     lastNamePlaceholder: "Apellido",
     lastNameError: "Por favor ingrese un apellido válido",
 
-    phoneLabel: "Número de teléfono",
+    phoneLabel: "phonenumber",
     phonePlaceholder: "Número de teléfono",
     phoneError: "Por favor ingrese un número de teléfono válido",
 
-    addressLabel: "Dirección",
+    addressLabel: "address",
     addressPlaceholder: "Dirección",
     addressError: "Por favor ingrese una dirección válida",
 
-    address2Label: "Dirección 2",
+    address2Label: "address2",
     address2Placeholder: "Dirección 2 (opcional)",
 
-    provinceLabel: "Provincia",
+    provinceLabel: "province",
     provincePlaceholder: "Provincia",
     provinceError: "Por favor ingrese una provincia válida",
 
-    cityLabel: "Ciudad",
+    cityLabel: "city",
     cityPlaceholder: "Ciudad",
     cityError: "Por favor ingrese una ciudad válida",
 
-    zipLabel: "Código postal",
+    zipLabel: "zipcode",
     zipPlaceholder: "Código postal",
     zipError: "Por favor ingrese un código postal válido",
 
-    emailLabel: "Email",
+    emailLabel: "email",
     emailPlaceholder: "Dirección de email",
     emailError: "Por favor ingrese una dirección de email válida",
 
@@ -573,38 +573,38 @@ export const TRANSLATIONS = {
     addressSectionLabel: "Geben Sie Ihre Lieferadresse ein",
     addressSectionText: "Geben Sie Ihre Lieferadresse ein",
 
-    firstNameLabel: "Vorname",
+    firstNameLabel: "firstname",
     firstNamePlaceholder: "Vorname",
     firstNameError: "Bitte geben Sie einen gültigen Vornamen ein",
 
-    lastNameLabel: "Nachname",
+    lastNameLabel: "lastname",
     lastNamePlaceholder: "Nachname",
     lastNameError: "Bitte geben Sie einen gültigen Nachnamen ein",
 
-    phoneLabel: "Telefonnummer",
+    phoneLabel: "phonenumber",
     phonePlaceholder: "Telefonnummer",
     phoneError: "Bitte geben Sie eine gültige Telefonnummer ein",
 
-    addressLabel: "Adresse",
+    addressLabel: "address",
     addressPlaceholder: "Adresse",
     addressError: "Bitte geben Sie eine gültige Adresse ein",
 
-    address2Label: "Adresse 2",
+    address2Label: "address2",
     address2Placeholder: "Adresse 2 (optional)",
 
-    provinceLabel: "Bundesland",
+    provinceLabel: "province",
     provincePlaceholder: "Bundesland",
     provinceError: "Bitte geben Sie ein gültiges Bundesland ein",
 
-    cityLabel: "Stadt",
+    cityLabel: "city",
     cityPlaceholder: "Stadt",
     cityError: "Bitte geben Sie eine gültige Stadt ein",
 
-    zipLabel: "Postleitzahl",
+    zipLabel: "zipcode",
     zipPlaceholder: "Postleitzahl",
     zipError: "Bitte geben Sie eine gültige Postleitzahl ein",
 
-    emailLabel: "E-Mail",
+    emailLabel: "email",
     emailPlaceholder: "E-Mail-Adresse",
     emailError: "Bitte geben Sie eine gültige E-Mail-Adresse ein",
 
@@ -639,38 +639,38 @@ export const TRANSLATIONS = {
     addressSectionLabel: "Teslimat adresinizi girin",
     addressSectionText: "Teslimat adresinizi girin",
 
-    firstNameLabel: "Ad",
+    firstNameLabel: "firstname",
     firstNamePlaceholder: "Ad",
     firstNameError: "Lütfen geçerli bir ad girin",
 
-    lastNameLabel: "Soyad",
+    lastNameLabel: "lastname",
     lastNamePlaceholder: "Soyad",
     lastNameError: "Lütfen geçerli bir soyad girin",
 
-    phoneLabel: "Telefon numarası",
+    phoneLabel: "phonenumber",
     phonePlaceholder: "Telefon numarası",
     phoneError: "Lütfen geçerli bir telefon numarası girin",
 
-    addressLabel: "Adres",
+    addressLabel: "address",
     addressPlaceholder: "Adres",
     addressError: "Lütfen geçerli bir adres girin",
 
-    address2Label: "Adres 2",
+    address2Label: "address2",
     address2Placeholder: "Adres 2 (isteğe bağlı)",
 
-    provinceLabel: "İl",
+    provinceLabel: "province",
     provincePlaceholder: "İl",
     provinceError: "Lütfen geçerli bir il girin",
 
-    cityLabel: "Şehir",
+    cityLabel: "city",
     cityPlaceholder: "Şehir",
     cityError: "Lütfen geçerli bir şehir girin",
 
-    zipLabel: "Posta kodu",
+    zipLabel: "zipcode",
     zipPlaceholder: "Posta kodu",
     zipError: "Lütfen geçerli bir posta kodu girin",
 
-    emailLabel: "E-posta",
+    emailLabel: "email",
     emailPlaceholder: "E-posta adresi",
     emailError: "Lütfen geçerli bir e-posta adresi girin",
 

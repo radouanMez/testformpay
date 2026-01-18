@@ -42,8 +42,8 @@ export function FieldsManager({ formFields, setFormFields }: FieldsManagerProps)
         setEditingDiscount,
         editingButton,
         setEditingButton,
-        editingSubscribe, // تأكد من وجود هذا
-        setEditingSubscribe, // تأكد من وجود هذا
+        editingSubscribe, 
+        setEditingSubscribe,
         moveField,
         toggleFieldVisibility
     } = useFieldsManager();

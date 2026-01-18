@@ -392,6 +392,12 @@ export default function DownsellManager() {
         throw new Error(result.error);
       }
     } catch (error: any) {
+      console.error('Save error details:', {
+        message: error.message,
+        response: error.response,
+        status: error.status
+      });
+
       setToastContent(error.message || "Failed to save");
       setToastError(true);
       setToastActive(true);

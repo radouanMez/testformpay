@@ -145,7 +145,7 @@ export const loader: LoaderFunction = async ({ request, params }) => {
         }));
 
         const aggregate = await prisma.order.aggregate({
-            where, // نفس فلتر البحث
+            where,
             _sum: {
                 totalAmount: true
             }

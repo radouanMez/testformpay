@@ -747,6 +747,11 @@ export default function UpsellCreatePage() {
         throw new Error(result.error || "Failed to save upsell");
       }
     } catch (error: any) {
+      console.error('Save error details:', {
+        message: error.message,
+        response: error.response,
+        status: error.status
+      });
       setToastContent(`Error saving upsell: ${error.message}`);
       setToastError(true);
       setToastActive(true);
@@ -836,7 +841,7 @@ export default function UpsellCreatePage() {
                             <h3 style={{ fontSize: '15px' }}>
                               <strong>{upsell.name}</strong>
                             </h3>
-                            <p style={{ color: '#323232', fontSize: '13px' }}>
+                            <p style={{ color: '#323232', fontSize: '13px', marginTop: '5px' }}>
                               <strong> Created: </strong> {new Date(upsell.createdAt).toLocaleDateString()}
                             </p>
                             <p style={{ marginTop: '5px' }}>

@@ -383,7 +383,7 @@ export default function Dashboard() {
 
                 <Box padding="400">
                   <div className="image_steps_install">
-                    {/* <img src="/images/app_embed.png" alt="app embed" /> */}
+                    <img src="/images/app_embed.png" alt="app embed" />
                     <Text as="h4">
                       Navigate to Theme Customize {'>'} Apps section and activate our App embed COD FormPay App Embed.
                     </Text>

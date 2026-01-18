@@ -1,6 +1,6 @@
 import { FormConfig } from "../types/formTypes";
 
-export const logFormConfiguration = (formConfig: FormConfig) => {
+export const logFormConfiguration = (formConfig: FormConfig) => { 
   const saveData = {
     formType: formConfig.formType,
     selectedCountry: formConfig.selectedCountry,
@@ -27,7 +27,6 @@ export const logFormConfiguration = (formConfig: FormConfig) => {
       successMessage: formConfig.successMessage,
       errorMessage: formConfig.errorMessage
     },
-    // إضافة إعدادات زر الشراء
     buyButton: formConfig.buyButton ? {
       text: formConfig.buyButton.text,
       subtitle: formConfig.buyButton.subtitle,
@@ -56,7 +55,6 @@ export const logFormConfiguration = (formConfig: FormConfig) => {
         minLength: field.minLength,
         maxLength: field.maxLength,
         errorText: field.errorText,
-        // إضافة جميع الإعدادات الجديدة
         sectionSettings: field.sectionSettings ? {
           customText: field.sectionSettings.customText,
           alignment: field.sectionSettings.alignment,

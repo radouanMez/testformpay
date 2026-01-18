@@ -43,23 +43,7 @@ const getDefaultFormConfig = (): FormConfig => ({
         mobileSticky: false
     },
 
-    // buyButton: {
-    //     text: "Buy with Cash on Delivery",
-    //     subtitle: "",
-    //     animation: "none",
-    //     icon: "",
-    //     stickyPosition: "bottom",
-    //     backgroundColor: "rgba(0, 0, 0, 1)",
-    //     textColor: "rgba(255,255,255,1)",
-    //     fontSize: 16,
-    //     borderRadius: 8,
-    //     borderWidth: 1,
-    //     borderColor: "rgba(0, 0, 0, 1)",
-    //     shadow: true,
-    //     mobileSticky: false
-    // },
-
-    // ✅ جميع الحقول موجودة
+    // ✅ جميع الحقول موجودة مع إضافة displayLabel للحقول من نوع input
     fields: [
         {
             id: 15,
@@ -67,16 +51,16 @@ const getDefaultFormConfig = (): FormConfig => ({
             movable: true,
             visible: true,
             type: 'section',
-            totalSettings: {
-                subtotalTitle: 'Subtotal',
-                subtotalValue: '199.99$',
-                shippingTitle: 'Shipping',
-                shippingValue: 'Free',
-                totalTitle: 'Total',
-                totalValue: '199.99$',
-                showTaxesMessage: false,
-                backgroundColor: 'rgba(235,235,235,1)'
-            }
+            // totalSettings: {
+            //     subtotalTitle: 'Subtotal',
+            //     subtotalValue: '199.99$',
+            //     shippingTitle: 'Shipping',
+            //     shippingValue: 'Free',
+            //     totalTitle: 'Total',
+            //     totalValue: '199.99$',
+            //     showTaxesMessage: false,
+            //     backgroundColor: 'rgba(235,235,235,1)'
+            // }
         },
         {
             id: 2,
@@ -90,29 +74,29 @@ const getDefaultFormConfig = (): FormConfig => ({
                 fontSize: 16
             }
         },
-        // {
-        //     id: 4,
-        //     label: 'DISCOUNT CODES',
-        //     movable: true,
-        //     visible: false,
-        //     type: 'section',
-        //     discountSettings: {
-        //         limitOnePerOrder: true,
-        //         discountsLineText: 'Discounts',
-        //         fieldLabel: 'Discount code',
-        //         applyButtonText: 'Apply',
-        //         buttonBackgroundColor: 'rgba(0,0,0,1)',
-        //         invalidCodeError: 'Enter a valid discount code.',
-        //         limitError: 'Only 1 discount per order is allowed.'
-        //     }
-        // },
-        // {
-        //     id: 3,
-        //     label: 'UPSELL AREAS',
-        //     movable: true,
-        //     visible: false,
-        //     type: 'section'
-        // },
+        {
+            id: 4,
+            label: 'DISCOUNT CODES',
+            movable: true,
+            visible: false,
+            type: 'section',
+            discountSettings: {
+                limitOnePerOrder: true,
+                discountsLineText: 'Discounts',
+                fieldLabel: 'Discount code',
+                applyButtonText: 'Apply',
+                buttonBackgroundColor: 'rgba(0,0,0,1)',
+                invalidCodeError: 'Enter a valid discount code.',
+                limitError: 'Only 1 discount per order is allowed.'
+            }
+        },
+        {
+            id: 3,
+            label: 'UPSELL AREAS',
+            movable: true,
+            visible: false,
+            type: 'section'
+        },
         {
             id: 5,
             label: 'Enter your shipping address',
@@ -129,12 +113,12 @@ const getDefaultFormConfig = (): FormConfig => ({
         },
         {
             id: 6,
-            label: 'First name',
+            label: 'First name', // الثابت - اسم الحقل الأساسي
+            displayLabel: 'First name', // قابل للتعديل - التسمية المعروضة
             movable: true,
             visible: true,
             type: 'input',
             required: true,
-            displayLabel: 'First name',
             placeholder: 'First name',
             showIcon: false,
             minLength: 2,
@@ -144,11 +128,11 @@ const getDefaultFormConfig = (): FormConfig => ({
         {
             id: 7,
             label: 'Last name',
+            displayLabel: 'Last name',
             movable: true,
             visible: true,
             type: 'input',
             required: true,
-            displayLabel: 'Last name',
             placeholder: 'Last name',
             showIcon: false,
             minLength: 2,
@@ -158,11 +142,11 @@ const getDefaultFormConfig = (): FormConfig => ({
         {
             id: 8,
             label: 'Phone number',
+            displayLabel: 'Phone number',
             movable: true,
             visible: true,
             type: 'input',
             required: true,
-            displayLabel: 'Phone number',
             placeholder: 'Phone number',
             showIcon: false,
             minLength: 10,
@@ -172,11 +156,11 @@ const getDefaultFormConfig = (): FormConfig => ({
         {
             id: 9,
             label: 'Address',
+            displayLabel: 'Address',
             movable: true,
             visible: true,
             type: 'input',
             required: true,
-            displayLabel: 'Address',
             placeholder: 'Address',
             showIcon: false,
             minLength: 5,
@@ -186,11 +170,11 @@ const getDefaultFormConfig = (): FormConfig => ({
         {
             id: 10,
             label: 'Address 2',
+            displayLabel: 'Address 2',
             movable: true,
             visible: true,
             type: 'input',
             required: false,
-            displayLabel: 'Address 2',
             placeholder: 'Address 2 (optional)',
             showIcon: false,
             minLength: 0,
@@ -200,11 +184,11 @@ const getDefaultFormConfig = (): FormConfig => ({
         {
             id: 11,
             label: 'Province',
+            displayLabel: 'Province',
             movable: true,
             visible: true,
             type: 'input',
             required: true,
-            displayLabel: 'Province',
             placeholder: 'Province',
             showIcon: false,
             minLength: 2,
@@ -214,11 +198,11 @@ const getDefaultFormConfig = (): FormConfig => ({
         {
             id: 12,
             label: 'City',
+            displayLabel: 'City',
             movable: true,
             visible: true,
             type: 'input',
             required: true,
-            displayLabel: 'City',
             placeholder: 'City',
             showIcon: false,
             minLength: 2,
@@ -228,11 +212,11 @@ const getDefaultFormConfig = (): FormConfig => ({
         {
             id: 13,
             label: 'Zip code',
+            displayLabel: 'Zip code',
             movable: true,
             visible: true,
             type: 'input',
             required: true,
-            displayLabel: 'Zip code',
             placeholder: 'Zip code',
             showIcon: false,
             minLength: 3,
@@ -242,11 +226,11 @@ const getDefaultFormConfig = (): FormConfig => ({
         {
             id: 14,
             label: 'Email',
+            displayLabel: 'Email',
             movable: true,
             visible: true,
             type: 'input',
             required: true,
-            displayLabel: 'Email',
             placeholder: 'Email address',
             showIcon: false,
             minLength: 5,
@@ -333,7 +317,7 @@ export const useFormConfig = () => {
     const [isLoading, setIsLoading] = useState(true);
 
     // جلب الإعدادات من API عند التحميل
-    useEffect(() => { 
+    useEffect(() => {
         const loadFormConfig = async () => {
             setIsLoading(true);
             try {
@@ -343,7 +327,23 @@ export const useFormConfig = () => {
                     setFormConfig(prev => ({
                         ...prev,
                         ...dbConfig,
-                        fields: dbConfig.fields || prev.fields,
+                        // دمج الحقول بشكل ذكي للحفاظ على label الأصلي
+                        fields: dbConfig.fields
+                            ? prev.fields.map(prevField => {
+                                const dbField = dbConfig.fields?.find(f => f.id === prevField.id);
+                                if (dbField) {
+                                    return {
+                                        ...prevField,
+                                        ...dbField,
+                                        // احتفظ بـ label الأصلي من prevField
+                                        label: prevField.label,
+                                        // استخدم displayLabel من dbField إذا كان موجوداً
+                                        displayLabel: dbField.displayLabel || prevField.displayLabel
+                                    };
+                                }
+                                return prevField;
+                            })
+                            : prev.fields,
                         buyButton: dbConfig.buyButton ? { ...prev.buyButton, ...dbConfig.buyButton } : prev.buyButton
                     }));
                 }
@@ -357,7 +357,7 @@ export const useFormConfig = () => {
         loadFormConfig();
     }, []);
 
-    // دوال التحديث (نفسها كما كانت)
+    // دوال التحديث
     const updateFormType = (formType: "POPUP" | "EMBEDDED") => {
         setFormConfig(prev => ({ ...prev, formType }));
     };

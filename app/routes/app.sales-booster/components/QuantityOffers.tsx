@@ -291,6 +291,11 @@ export default function QuantityOfferManager() {
         throw new Error(result.error || "Failed to save");
       }
     } catch (error: any) {
+      console.error('Save error details:', {
+        message: error.message,
+        response: error.response,
+        status: error.status
+      });
       setToastContent(error.message || "Failed to save offer");
       setToastError(true);
       setToastActive(true);
@@ -535,7 +540,6 @@ export default function QuantityOfferManager() {
 
             <LegacyCard title="3. Customize the design and behaviour" sectioned>
               <BlockStack gap="500">
-                {/* خيارات الألوان */}
                 <Grid>
                   <Grid.Cell columnSpan={{ xs: 6, md: 3 }}>
                     <SmallColorPicker
@@ -554,8 +558,6 @@ export default function QuantityOfferManager() {
                 </Grid>
 
                 <Divider />
-
-                {/* خيارات السلوك (Behaviour) */}
                 <BlockStack gap="200">
                   <Checkbox
                     label="Hide product image"
@@ -612,9 +614,6 @@ export default function QuantityOfferManager() {
                     marginBottom: '10px',
                   }}>
 
-                    {/* تم حذف كود الـ Radio Button من هنا */}
-
-                    {/* صورة المنتج (تظهر إذا لم تكن مخفية) */}
                     {!hideProductImage && (selectedProducts[0]?.featuredImage?.url || t.imageUrl) && (
                       <div
                         style={{
@@ -637,8 +636,6 @@ export default function QuantityOfferManager() {
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                         <Text variant="bodyMd" fontWeight="bold" as="span">{t.title}</Text>
-
-                        {/* الملصق (Plaque) */}
                         {t.plaqueText && (
                           <div>
                             <span style={{
@@ -656,16 +653,12 @@ export default function QuantityOfferManager() {
                         )}
                       </div>
                     </div>
-
                     <div style={{ textAlign: 'right' }}>
-                      {/* السعر القديم */}
                       {!t.hideComparisonPrice && t.discountType !== "NONE" && basePrice > 0 && (
                         <Text as="span" variant="bodySm" tone="subdued">
                           {totalPrice.toFixed(2)} $
                         </Text>
                       )}
-
-                      {/* السعر الجديد */}
                       <div style={{
                         color: colorToRgba(t.priceColor),
                         fontWeight: 'bold',
@@ -682,8 +675,6 @@ export default function QuantityOfferManager() {
         </Grid.Cell>
 
       </Grid>
-
-
       {/* Configuration Modal */}
       <Modal
         open={tierModal}
@@ -803,7 +794,7 @@ export default function QuantityOfferManager() {
   );
 
   const listView = (
-    <LegacyCard  title="Your offers" sectioned>
+    <LegacyCard title="Your offers" sectioned>
       <ResourceList
         resourceName={{ singular: 'offer', plural: 'offers' }}
         items={offers}
@@ -821,22 +812,24 @@ export default function QuantityOfferManager() {
               id={item.id}
               onClick={() => handleEdit(item)}
               persistActions
-              media={
-                <Badge
-                  tone={item.status === "ACTIVE" ? "success" : "info"}
-                >
-                  {item.status}
-                </Badge>
-              }
             >
               <InlineStack align="space-between" blockAlign="center">
                 <div className="offerListingDetails">
                   <TextContainer>
-                    <p><strong>{item.name}</strong></p>
-                    <p style={{ color: '#6d7175', fontSize: '13px' }}>
-                      • Products: {item.productSettings?.productIds?.length || 0}
+                    <h3 style={{ fontSize: '15px' }}>
+                      <strong>{item.name}</strong>
+                    </h3>
+                    <p style={{ color: '#323232', fontSize: '13px', marginTop: '5px' }}>
+                      <strong>Products: </strong> {item.productSettings?.productIds?.length || 0}
                       <br />
-                      • Created: {new Date(item.createdAt).toLocaleDateString()}
+                      <strong>Created: </strong> {new Date(item.createdAt).toLocaleDateString()}
+                    </p>
+                    <p style={{ marginTop: '5px' }}>
+                      <Badge
+                        tone={item.status === "ACTIVE" ? "success" : "info"}
+                      >
+                        {item.status}
+                      </Badge>
                     </p>
                   </TextContainer>
                 </div>
@@ -886,39 +879,39 @@ export default function QuantityOfferManager() {
   return (
     <Frame>
       <div style={{ backgroundColor: 'rgb(241 241 241)', minHeight: '100vh', width: '100%', border: "1px solid rgb(233 232 232)", borderRadius: "8px" }}>
-      {view === "LIST" ? (
-        <Page
-          title="Quantity Offers"
-          primaryAction={{
-            content: "Create Offer",
-            onAction: handleCreateNew
-          }}
-        >
-          {loading ?
-            <Box padding="1000">
-              <BlockStack align="center" inlineAlign="center" gap="400">
-                <Spinner size="large" />
-                <p style={{ color: 'var(--p-color-text-secondary)' }}>
-                  Loading your quantity offers...
-                </p>
-              </BlockStack>
-            </Box>
-            : (
-              listView
-            )}
-        </Page>
-      ) : (
-        editOffer
-      )}
+        {view === "LIST" ? (
+          <Page
+            title="Quantity Offers"
+            primaryAction={{
+              content: "Create Offer",
+              onAction: handleCreateNew
+            }}
+          >
+            {loading ?
+              <Box padding="1000">
+                <BlockStack align="center" inlineAlign="center" gap="400">
+                  <Spinner size="large" />
+                  <p style={{ color: 'var(--p-color-text-secondary)' }}>
+                    Loading your quantity offers...
+                  </p>
+                </BlockStack>
+              </Box>
+              : (
+                listView
+              )}
+          </Page>
+        ) : (
+          editOffer
+        )}
 
-      {/* Toast Notification (مضافة من Downsells) */}
-      {toastActive && (
-        <Toast
-          content={toastContent}
-          onDismiss={() => setToastActive(false)}
-          error={toastError}
-        />
-      )}
+        {/* Toast Notification (مضافة من Downsells) */}
+        {toastActive && (
+          <Toast
+            content={toastContent}
+            onDismiss={() => setToastActive(false)}
+            error={toastError}
+          />
+        )}
       </div>
     </Frame>
   );

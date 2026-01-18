@@ -671,7 +671,7 @@ class ProductFormBuilder {
             case 'button':
                 return this.renderButtonField(field);
             case 'subscribe':
-                return this.renderSubscribeField(field);
+                return this.renderSubscribeField(field); 
             default:
                 return '';
         }

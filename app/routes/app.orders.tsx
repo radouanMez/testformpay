@@ -32,7 +32,7 @@ import {
 import {
     SearchIcon,
     FilterIcon,
-    // EyeIcon,
+    ViewIcon,
     // DownloadIcon,
 } from "@shopify/polaris-icons";
 import { useState, useEffect, useCallback } from "react";
@@ -412,10 +412,8 @@ export default function OrdersPage() {
                                 { title: 'Customer' },
                                 { title: 'Total' },
                                 { title: 'Items' },
-                                { title: 'Actions' },
                             ]}
                             hasZebraStriping
-                            // التعديل هنا:
                             pagination={{
                                 hasNext: paginationInfo.hasNext,
                                 hasPrevious: paginationInfo.hasPrevious,
@@ -464,10 +462,10 @@ export default function OrdersPage() {
                                             <Button
                                                 size="slim"
                                                 variant="tertiary"
-                                                // icon={EyeIcon}
+                                                icon={ViewIcon}
                                                 onClick={() => handleViewOrderDetails(row.id)}
                                             >
-                                                View
+                                                
                                             </Button>
                                         </InlineStack>
                                     </IndexTable.Cell>

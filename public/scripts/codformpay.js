@@ -1,4 +1,4 @@
-console.log("CODFORMPAY V.1.1.1");
+console.log("CODFORMPAY V.1.1.2");
 
 // ============================================
 // القسم 1: كاشف صفحة المنتج (ProductPageDetector)
@@ -343,7 +343,7 @@ class ProductFormBuilder {
         this.activeDiscount = null;
         this.activeQuantityOffer = null;
         this.originalFormHTML = null;
-        this.apiBaseUrl = "https://bell-privilege-vat-comments.trycloudflare.com";
+        this.apiBaseUrl = "https://monetary-payroll-sapphire-das.trycloudflare.com";
         this.isSubmitting = false;
         this.init();
     }
@@ -1186,20 +1186,25 @@ ProductFormBuilder.prototype.handleFormSubmit = async function (e) {
         submitButton.disabled = true;
 
         if (!submitButton.dataset.originalContent) {
+            // حفظ العنصر الداخلي كاملاً
             const innerContent = submitButton.querySelector('.elementButtonGROWCOD');
             if (innerContent) {
                 submitButton.dataset.originalContent = innerContent.outerHTML;
             }
         }
 
+        // إخفاء المحتوى الأصلي وإظهار spinner فقط
         submitButton.innerHTML = `
                 <div class="formino-spinner"></div>
             `;
 
+        // إضافة فئة لتوسيع الزر إذا لزم الأمر
         submitButton.classList.add('formino-loading-state');
+
     }
 
     try {
+
         const formData = new FormData(form);
         const data = Object.fromEntries(formData.entries());
 
@@ -1230,9 +1235,12 @@ ProductFormBuilder.prototype.handleFormSubmit = async function (e) {
             this.showBlockedUserMessage(result.message);
             return result;
         }
-
+        // 1. تحقق من وجود عروض Upsell تنطبق على المنتج الحالي
         const currentProductId = `gid://shopify/Product/${this.detector.currentProduct.id}`;
+
+        // البحث في مصفوفة الـ upsells (التي أرسلت بياناتها سابقاً)
         const activeUpsell = this.upsells?.find(upsell => {
+            // التحقق من حالة العرض ونوعه
             if (upsell.status !== "ACTIVE" || upsell.type !== "POST_PURCHASE") {
                 return false;
             }
@@ -1240,11 +1248,14 @@ ProductFormBuilder.prototype.handleFormSubmit = async function (e) {
             const triggerMode = upsell.displayRules?.triggerMode || "SPECIFIC";
             const triggerProducts = upsell.displayRules?.triggerProducts;
 
+            // إذا كان النمط هو ALL، يظهر العرض لجميع المنتجات
             if (triggerMode === "ALL" || triggerProducts === "ALL") {
                 return true;
             }
 
+            // إذا كان النمط SPECIFIC وكان triggerProducts مصفوفة
             if (triggerMode === "SPECIFIC" && Array.isArray(triggerProducts)) {
+                // التحقق إذا كان المنتج الحالي موجود في المصفوفة
                 const isTriggered = triggerProducts.includes(currentProductId);
                 if (isTriggered) {
                     // console.log('✅ Upsell triggered for specific product:', currentProductId);
@@ -1252,12 +1263,16 @@ ProductFormBuilder.prototype.handleFormSubmit = async function (e) {
                 return isTriggered;
             }
 
+            // الحالات الأخرى
             return false;
         });
 
         if (activeUpsell) {
+            // إذا وجد عرض، أظهر النافذة المنبثقة بدلاً من رسالة النجاح التقليدية أو بعدها
+            // console.log(activeUpsell)
             this.showUpsellPopup(activeUpsell, result);
         } else {
+            // إذا لم يوجد عرض، أظهر رسالة النجاح المعتادة
             this.showSuccessMessage(result);
         }
 
@@ -1274,6 +1289,8 @@ ProductFormBuilder.prototype.handleFormSubmit = async function (e) {
             submitButton.classList.remove('formino-loading-state');
             submitButton.disabled = false;
             submitButton.innerHTML = submitButton.dataset.originalContent;
+
+            // إعادة ربط الأحداث إذا لزم الأمر
             this.setupFormHandlers();
         }
     }
@@ -1293,14 +1310,14 @@ ProductFormBuilder.prototype.submitOrder = async function (payload = {}) {
         const shop = window.Shopify?.shop || this.extractShopFromDOM() || window.location.hostname;
         formDataToSend.append('shop', shop);
 
-        formDataToSend.append('first_name', formData.first_name || '');
-        formDataToSend.append('last_name', formData.last_name || '');
+        formDataToSend.append('first_name', formData.firstname || '');
+        formDataToSend.append('last_name', formData.lastname || '');
         formDataToSend.append('address', formData.address || '');
-        formDataToSend.append('address_2', formData.address_2 || '');
+        formDataToSend.append('address_2', formData.address2 || '');
         formDataToSend.append('city', formData.city || '');
         formDataToSend.append('province', formData.province || '');
-        formDataToSend.append('phone_number', formData.phone_number || '');
-        formDataToSend.append('zip_code', formData.zip_code || '');
+        formDataToSend.append('phone_number', formData.phonenumber || '');
+        formDataToSend.append('zipcode', formData.zip_code || '');
         formDataToSend.append('email', formData.email || '');
 
         const shipping = payload.shipping || this.currentShipping || formData.shipping || null;
@@ -1314,7 +1331,9 @@ ProductFormBuilder.prototype.submitOrder = async function (payload = {}) {
         let finalPriceUnit = 0;
         let originalPriceUnit = this.detector.getCurrentPrice() / 100;
 
+        // console.log("qty offer externe")
         if (this.activeQuantityTier) {
+            // console.log("qty offer interne")
             const quantity = this.activeQuantityTier.quantity || 1;
             const discountType = this.activeQuantityTier.discountType;
             const discountValue = parseFloat(this.activeQuantityTier.discountValue);
@@ -2737,6 +2756,140 @@ ProductFormBuilder.prototype.setupUpsellPopupHandlers = function (upsellOffer, p
     };
     document.addEventListener('keydown', handleEscape);
 };
+
+ProductFormBuilder.prototype.addUpsellToOrder = async function (upsellOffer, selectedVariantId, originalOrderResult) {
+    try {
+
+        if (!originalOrderResult?.localOrder?.id) {
+            throw new Error('Original order ID not found');
+        }
+
+        const productHandle = upsellOffer.productSettings?.upsellProductHandle;
+        if (!productHandle) {
+            throw new Error('Product handle not found in upsell offer');
+        }
+
+        let productData;
+        try {
+            productData = await this.fetchProductByHandle(productHandle);
+        } catch (error) {
+            console.error('❌ Failed to fetch product data, creating fallback data');
+            productData = {
+                id: this.extractIdFromGid(upsellOffer.productSettings.upsellProductId) || 'unknown',
+                title: upsellOffer.name || 'Upsell Product',
+                handle: productHandle,
+                price: upsellOffer.productSettings.calculatedPrice * 100, // تحويل إلى سنتات
+                featured_image: '',
+                variants: [
+                    {
+                        id: selectedVariantId,
+                        price: upsellOffer.productSettings.calculatedPrice * 100,
+                        title: 'Default',
+                        available: true
+                    }
+                ]
+            };
+        }
+
+        // التحقق من بيانات المنتج
+        if (!productData || !productData.id) {
+            console.error('❌ Invalid product data:', productData);
+            throw new Error('Invalid product data received');
+        }
+
+        const discount = upsellOffer.productSettings?.discount;
+        if (!discount) {
+            throw new Error('Discount information not found');
+        }
+
+        // حساب السعر النهائي
+        let finalPrice;
+        if (upsellOffer.productSettings.calculatedPrice) {
+            // استخدام calculatedPrice إذا كان متوفراً
+            finalPrice = upsellOffer.productSettings.calculatedPrice / 100;
+        } else if (discount.type === 'PERCENTAGE') {
+            const originalPrice = upsellOffer.productSettings.price / 100;
+            const discountPercent = parseFloat(discount.value);
+            finalPrice = originalPrice * (1 - discountPercent / 100);
+        } else {
+            finalPrice = upsellOffer.productSettings.price / 100;
+        }
+
+        // إعداد بيانات الطلب
+        const orderData = {
+            shop: window.Shopify?.shop || this.extractShopFromDOM() || window.location.hostname,
+            product: {
+                id: productData.id,
+                title: productData.title,
+                handle: productHandle,
+                price: finalPrice,
+                featured_image: productData.featured_image || '',
+                variants: productData.variants || [],
+                calculatedPrice: upsellOffer.productSettings.calculatedPrice,
+                originalPrice: upsellOffer.productSettings.price
+            },
+            variantId: selectedVariantId,
+            quantity: 1,
+            discount: discount,
+            originalOrderId: originalOrderResult.localOrder.id,
+            upsellId: upsellOffer.id
+        };
+
+        // محاولة الحصول على IP العميل
+        try {
+            orderData.clientIP = await this.getClientIP();
+        } catch (ipError) {
+            orderData.clientIP = 'unknown';
+        }
+
+        const response = await fetch(`${this.apiBaseUrl}/api/add-upsell-order`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(orderData)
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ API response error:', errorText);
+            throw new Error(`API request failed: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (result.success) {
+
+            this.createCustomPopup({
+                type: 'success',
+                message: `✅ ${productData.title} has been added to your order!`
+            });
+
+            setTimeout(() => {
+                this.showSuccessMessage(originalOrderResult);
+            }, 2000);
+
+        } else {
+            console.error('❌ API returned failure:', result);
+            throw new Error(result.error || result.message || 'Failed to add upsell product');
+        }
+
+    } catch (error) {
+        console.error('❌ Error in addUpsellToOrder:', error);
+        this.createCustomPopup({
+            type: 'error',
+            message: error.message || 'Failed to add product to your order. Please try again.'
+        });
+        const acceptBtn = document.querySelector('#accept-upsell');
+        if (acceptBtn) {
+            acceptBtn.disabled = false;
+            acceptBtn.innerHTML = 'Add to my order';
+        }
+        setTimeout(() => {
+            this.showSuccessMessage(originalOrderResult);
+        }, 3000);
+    }
+}
 
 // ********************************************
 // ********************************************
