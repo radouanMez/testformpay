@@ -52,6 +52,21 @@ export function FieldEditorModal({
                             <BlockStack gap="400">
                                 <InlineStack align="start" blockAlign="start" gap="400">
                                     <div style={{ flex: 1 }}>
+                                        <Text variant="headingMd" as="h3">Label</Text>
+                                        <TextField
+                                            labelHidden
+                                            label="Label (Shown in Form)"
+                                            value={fieldSettings.label}
+                                            onChange={(value) => setFieldSettings((prev: any) => ({ ...prev, label: value }))}
+                                            autoComplete="off"
+                                        />
+                                    </div>
+                                </InlineStack>
+                            </BlockStack>
+
+                            <BlockStack gap="400">
+                                <InlineStack align="start" blockAlign="start" gap="400">
+                                    <div style={{ flex: 1 }}>
                                         <Text variant="headingMd" as="h3">Display Label (Shown in Form)</Text>
                                         <TextField
                                             labelHidden

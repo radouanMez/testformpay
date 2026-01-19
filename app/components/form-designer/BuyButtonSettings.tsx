@@ -403,7 +403,7 @@ export function BuyButtonSettings({ formConfig, updatePartialConfig }: BuyButton
                         })}
                       />
                     </div>
-                   <div style={{ flex: 1 }}>
+                    <div style={{ flex: 1 }}>
                       <Text as="h3" variant="bodyMd" fontWeight="bold">Button subtitle</Text>
                       {/* Mobile Sticky Button */}
                       <Checkbox
@@ -441,9 +441,10 @@ export function BuyButtonSettings({ formConfig, updatePartialConfig }: BuyButton
                   <button
                     ref={previewButtonRef}
                     style={{
-                      backgroundColor: hsbToRgba(buyButton.backgroundColor || { hue: 0, brightness: 0, saturation: 0, alpha: 1 }),
-                      color: hsbToRgba(buyButton.textColor || { hue: 0, brightness: 1, saturation: 0, alpha: 1 }),
-                      border: `${buyButton.borderWidth || '1'}px solid ${hsbToRgba(buyButton.borderColor || { hue: 0, brightness: 0, saturation: 0, alpha: 1 })}`,
+                      // دالة مساعدة للتحقق والتأكد من اللون
+                      backgroundColor: ensureColor(buyButton.backgroundColor, { h: 0, s: 0, b: 50, a: 1 }),
+                      color: ensureColor(buyButton.textColor, { h: 0, s: 0, b: 100, a: 1 }),
+                      border: `${buyButton.borderWidth || '1'}px solid ${ensureColor(buyButton.borderColor, { h: 0, s: 0, b: 0, a: 1 })}`,
                       padding: '12px 24px',
                       borderRadius: `${buyButton.borderRadius || '8'}px`,
                       fontSize: `${buyButton.fontSize || '16'}px`,
@@ -503,6 +504,7 @@ export function BuyButtonSettings({ formConfig, updatePartialConfig }: BuyButton
                   <div>Mobile Sticky: {buyButton.mobileSticky ? 'Yes' : 'No'}</div>
                 </div> */}
               </div>
+
             </Grid.Cell>
           </Grid>
         </Modal.Section>
@@ -511,6 +513,33 @@ export function BuyButtonSettings({ formConfig, updatePartialConfig }: BuyButton
   );
 }
 
+const ensureColor = (colorValue: any, defaultValue: any) => {
+  if (!colorValue) {
+    return hsbToRgba(defaultValue);
+  }
+
+  if (typeof colorValue === 'string') {
+    if (colorValue.startsWith('rgba(') || colorValue.startsWith('rgb(')) {
+      return colorValue;
+    }
+
+    if (colorValue.startsWith('#')) {
+      if (colorValue === '#000000') {
+        return hsbToRgba({ ...defaultValue, b: defaultValue.b || 50 });
+      }
+      return colorValue;
+    }
+  }
+
+  if (typeof colorValue === 'object') {
+    if (colorValue.b === 0 || colorValue.brightness === 0) {
+      return hsbToRgba({ ...colorValue, b: 50, brightness: 50 });
+    }
+    return hsbToRgba(colorValue);
+  }
+
+  return hsbToRgba(defaultValue);
+};
 
 function getIconSvg(icon: string) {
   switch (icon) {

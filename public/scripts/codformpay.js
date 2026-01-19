@@ -343,7 +343,7 @@ class ProductFormBuilder {
         this.activeDiscount = null;
         this.activeQuantityOffer = null;
         this.originalFormHTML = null;
-        this.apiBaseUrl = "https://monetary-payroll-sapphire-das.trycloudflare.com";
+        this.apiBaseUrl = "https://kingdom-wage-parking-confidentiality.trycloudflare.com";
         this.isSubmitting = false;
         this.init();
     }
@@ -536,12 +536,47 @@ ProductFormBuilder.prototype.setupPopupButtonStyles = function () {
 
     const buyButton = this.config.form.buyButton;
 
+    // دالة مساعدة للتحقق إذا كانت القيمة بصيغة rgba()
+    const isRgbaColor = (color) => {
+        return typeof color === 'string' &&
+            (color.startsWith('rgba(') || color.startsWith('rgb('));
+    };
+
+    // دالة للحصول على اللون بالشكل الصحيح
+    const getColorValue = (color) => {
+        if (!color) return this.hsbToRgba({ h: 0, s: 0, b: 100 });
+
+        if (isRgbaColor(color)) {
+            return color;
+        }
+
+        if (typeof color === 'string' && color.startsWith('#')) {
+            return color;
+        }
+
+        if (typeof color === 'object' && color.h !== undefined) {
+            return this.hsbToRgba(color);
+        }
+
+        try {
+            return this.hsbToRgba(color);
+        } catch (e) {
+            return 'rgba(255, 255, 255, 1)'; // أبيض افتراضي
+        }
+    };
+
+    // الحصول على الألوان مع التحقق من صيغتها
+    const bgColor = getColorValue(buyButton.backgroundColor);
+    const textColor = getColorValue(buyButton.textColor);
+    const borderColor = getColorValue(buyButton.borderColor);
+
+
     button.style.cssText = `
         font-size: ${buyButton.fontSize}px;
         border-radius: ${buyButton.borderRadius}px;
-        color: ${this.hsbToRgba(buyButton.textColor)};
-        background-color: ${this.hsbToRgba(buyButton.backgroundColor)};
-        border: ${buyButton.borderWidth}px solid ${this.hsbToRgba(buyButton.borderColor)};
+        color: ${textColor};
+        background-color: ${bgColor};
+        border: ${buyButton.borderWidth}px solid ${borderColor};
         ${buyButton.shadow ? 'box-shadow: 0 2px 10px rgba(0,0,0,0.2)' : ''};
         padding: 16px 24px;
         margin-top: 6px;
@@ -630,6 +665,7 @@ ProductFormBuilder.prototype.renderField = function (field) {
 
 ProductFormBuilder.prototype.renderInputField = function (field) {
     const iconHTML = field.showIcon ? this.getIconForField(field.label) : '';
+    console.log(field)
     let label = '';
     if (this.config['form'].hideFieldLabels == false) {
         label = field.displayLabel ? field.displayLabel : field.label;
@@ -1310,13 +1346,13 @@ ProductFormBuilder.prototype.submitOrder = async function (payload = {}) {
         const shop = window.Shopify?.shop || this.extractShopFromDOM() || window.location.hostname;
         formDataToSend.append('shop', shop);
 
-        formDataToSend.append('first_name', formData.firstname || '');
-        formDataToSend.append('last_name', formData.lastname || '');
+        formDataToSend.append('first_name', formData.first_name || '');
+        formDataToSend.append('last_name', formData.last_name || '');
         formDataToSend.append('address', formData.address || '');
         formDataToSend.append('address_2', formData.address2 || '');
         formDataToSend.append('city', formData.city || '');
         formDataToSend.append('province', formData.province || '');
-        formDataToSend.append('phone_number', formData.phonenumber || '');
+        formDataToSend.append('phone_number', formData.phone_number || '');
         formDataToSend.append('zipcode', formData.zip_code || '');
         formDataToSend.append('email', formData.email || '');
 

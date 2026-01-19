@@ -3,6 +3,7 @@ import { FormField } from "../../../types/formTypes";
 
 export function useFieldEditor() {
   const [fieldSettings, setFieldSettings] = useState({
+    label: '',
     displayLabel: '',
     placeholder: '',
     showIcon: false,
@@ -14,6 +15,7 @@ export function useFieldEditor() {
 
   const openFieldEditor = (field: FormField) => {
     setFieldSettings({
+      label: field.label,
       displayLabel: field.displayLabel || field.label,
       placeholder: field.placeholder || field.label,
       showIcon: field.showIcon || false,
@@ -33,6 +35,7 @@ export function useFieldEditor() {
         field.id === editingField.id
           ? {
             ...field,
+            label: fieldSettings.label,
             displayLabel: fieldSettings.displayLabel !== field.label ? fieldSettings.displayLabel : undefined,
             placeholder: fieldSettings.placeholder,
             showIcon: fieldSettings.showIcon,
